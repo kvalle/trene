@@ -11,7 +11,13 @@ En avgrenset treningsperiode der brukeren utfører og registrerer én eller fler
 En styrkeaktivitet som kan utføres i ett eller flere sett.
 
 **Sett**:
-Én utførelse av en øvelse med en registrert belastning i kilogram og et registrert antall repetisjoner.
+En planlagt eller gjennomført utførelse av en øvelse.
+
+**Planlagt sett**:
+Et sett som ennå ikke er bekreftet gjennomført. Det kan inneholde foreslått belastning og antall repetisjoner.
+
+**Gjennomført sett**:
+Et sett som brukeren har bekreftet utført med registrert belastning og antall repetisjoner.
 
 **Belastning**:
 Vekten i kilogram som brukes i et sett.
