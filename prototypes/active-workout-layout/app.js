@@ -1,8 +1,7 @@
-// PROTOTYPE: Three active-workout layouts, switchable with ?variant=A|B|C.
+// PROTOTYPE: Two refinements of the card-stack layout, switchable with ?variant=A1|A2.
 const variants = {
-  A: { name: "Kortstokk" },
-  B: { name: "Fokusmodus" },
-  C: { name: "Kompakt liste" },
+  A1: { name: "Kompakte rader" },
+  A2: { name: "Delt arbeidsflate" },
 };
 
 const state = {
@@ -34,41 +33,68 @@ const app = document.querySelector("#app");
 
 function currentVariant() {
   const key = new URLSearchParams(location.search).get("variant")?.toUpperCase();
-  return variants[key] ? key : "A";
+  return variants[key] ? key : "A1";
 }
 
 function completedCount(exercise) {
   return exercise.sets.filter((set) => set.status === "complete").length;
 }
 
-function setRow(exerciseIndex, set, setIndex, compact = false) {
-  const isComplete = set.status === "complete";
+function progress(exercise) {
+  return `${completedCount(exercise)} av ${exercise.sets.length} sett gjennomført`;
+}
+
+function completedRow(exerciseIndex, set, setIndex, grouped = false) {
   return `
-    <div class="set-row ${isComplete ? "is-complete" : ""} ${compact ? "set-row--compact" : ""}" data-set-row>
-      <span class="set-number" aria-label="Sett ${setIndex + 1}">${setIndex + 1}</span>
-      <label>
-        <span class="field-label">Belastning</span>
-        <span class="input-unit"><input inputmode="decimal" value="${set.load}" aria-label="Belastning for sett ${setIndex + 1}" data-field="load" data-exercise="${exerciseIndex}" data-set="${setIndex}" /><span>kg</span></span>
-      </label>
-      <label>
-        <span class="field-label">Repetisjoner</span>
-        <input inputmode="numeric" value="${set.reps}" aria-label="Repetisjoner for sett ${setIndex + 1}" data-field="reps" data-exercise="${exerciseIndex}" data-set="${setIndex}" />
-      </label>
-      <button class="confirm ${isComplete ? "confirm--complete" : ""}" data-confirm="${exerciseIndex}:${setIndex}" aria-label="${isComplete ? `Rediger gjennomført sett ${setIndex + 1}` : `Bekreft sett ${setIndex + 1}`}">
-        ${isComplete ? "✓ Gjennomført" : "Bekreft"}
-      </button>
+    <div class="completed-row ${grouped ? "completed-row--grouped" : ""}">
+      <span class="set-number">${setIndex + 1}</span>
+      <span class="completed-value"><strong>${set.load} kg</strong><small>Belastning</small></span>
+      <span class="completed-value"><strong>${set.reps}</strong><small>Repetisjoner</small></span>
+      <span class="completed-mark"><span aria-hidden="true">✓</span><span class="sr-only">Gjennomført</span></span>
+      <button class="undo-button" data-unconfirm="${exerciseIndex}:${setIndex}" aria-label="Avkreft sett ${setIndex + 1}">Avkreft</button>
     </div>`;
 }
 
-function exerciseCard(exercise, exerciseIndex, expanded) {
-  const count = completedCount(exercise);
+function suggestedRow(exerciseIndex, set, setIndex) {
+  return `
+    <div class="set-row">
+      <div class="set-row-heading">
+        <strong>Sett ${setIndex + 1}</strong>
+        <span>Ikke gjennomført</span>
+        <button class="remove-button" data-remove="${exerciseIndex}:${setIndex}" aria-label="Fjern sett ${setIndex + 1}">Fjern</button>
+      </div>
+      <label>
+        <span class="field-label">Belastning</span>
+        <span class="input-unit"><input inputmode="decimal" value="${set.load}" aria-label="Belastning for sett ${setIndex + 1}" data-field="load" data-exercise-index="${exerciseIndex}" data-set="${setIndex}" /><span>kg</span></span>
+      </label>
+      <label>
+        <span class="field-label">Repetisjoner</span>
+        <input inputmode="numeric" value="${set.reps}" aria-label="Repetisjoner for sett ${setIndex + 1}" data-field="reps" data-exercise-index="${exerciseIndex}" data-set="${setIndex}" />
+      </label>
+      <button class="confirm" data-confirm="${exerciseIndex}:${setIndex}">✓ Bekreft sett</button>
+    </div>`;
+}
+
+function cardContentsA1(exercise, exerciseIndex) {
+  return `<div class="sets sets--a1">${exercise.sets.map((set, index) => set.status === "complete" ? completedRow(exerciseIndex, set, index) : suggestedRow(exerciseIndex, set, index)).join("")}</div>`;
+}
+
+function cardContentsA2(exercise, exerciseIndex) {
+  const completed = exercise.sets.map((set, index) => ({ set, index })).filter(({ set }) => set.status === "complete");
+  const suggested = exercise.sets.map((set, index) => ({ set, index })).filter(({ set }) => set.status === "suggested");
+  return `
+    ${completed.length ? `<section class="completed-group"><h3>Gjennomført</h3>${completed.map(({ set, index }) => completedRow(exerciseIndex, set, index, true)).join("")}</section>` : ""}
+    ${suggested.length ? `<section class="next-group"><h3>Neste sett</h3><div class="sets">${suggested.map(({ set, index }) => suggestedRow(exerciseIndex, set, index)).join("")}</div></section>` : ""}`;
+}
+
+function exerciseCard(exercise, exerciseIndex, expanded, variant) {
   return `
     <article class="exercise-card ${expanded ? "is-expanded" : ""}">
-      <button class="exercise-heading" data-exercise="${exerciseIndex}" aria-expanded="${expanded}">
-        <span><strong>${exercise.name}</strong><small>${count} ${count === 1 ? "sett" : "sett"} gjennomført</small></span>
-        <span aria-hidden="true">${expanded ? "−" : "+"}</span>
+      <button class="exercise-heading" data-toggle-exercise="${exerciseIndex}" aria-expanded="${expanded}">
+        <span><strong>${exercise.name}</strong><small>${progress(exercise)}</small></span>
+        <span class="toggle-label"><span>${expanded ? "Lukk" : "Åpne"}</span><span aria-hidden="true">${expanded ? "−" : "+"}</span></span>
       </button>
-      ${expanded ? `<div class="sets">${exercise.sets.map((set, index) => setRow(exerciseIndex, set, index)).join("")}</div><button class="secondary full" data-add-set="${exerciseIndex}">+ Legg til sett</button>` : ""}
+      ${expanded ? `<div class="card-body">${variant === "A1" ? cardContentsA1(exercise, exerciseIndex) : cardContentsA2(exercise, exerciseIndex)}<button class="secondary full" data-add-set="${exerciseIndex}">+ Legg til sett</button></div>` : ""}
     </article>`;
 }
 
@@ -79,44 +105,18 @@ function header() {
       <button class="icon-button" aria-label="Tilbake til hovedskjermen">‹</button>
       <div><span class="eyebrow">Pågående</span><h1>Treningsøkt</h1></div>
       <button class="text-button">Ferdig</button>
-      <p class="workout-status" aria-live="polite">${total} sett gjennomført</p>
+      <p class="workout-status" aria-live="polite">${total} sett gjennomført totalt</p>
     </header>`;
 }
 
-function variantA() {
+function workout(variant) {
+  const note = variant === "A1"
+    ? "Gjennomførte og ufullførte sett står i samme rekkefølge, men ferdige rader trekkes sammen."
+    : "Gjennomførte sett samles øverst, mens ufullførte sett får en egen arbeidsflate.";
   return `${header()}
     <main class="stack-layout">
-      <p class="variant-note">Alle øvelser i én rullbar kortstokk. Trykk et kort for å registrere.</p>
-      ${state.exercises.map((exercise, index) => exerciseCard(exercise, index, index === state.activeExercise)).join("")}
-      <button class="primary full">+ Legg til øvelse</button>
-    </main>`;
-}
-
-function variantB() {
-  const exercise = state.exercises[state.activeExercise];
-  return `${header()}
-    <nav class="exercise-tabs" aria-label="Øvelser">
-      ${state.exercises.map((item, index) => `<button class="exercise-tab ${index === state.activeExercise ? "is-active" : ""}" data-exercise="${index}" aria-current="${index === state.activeExercise ? "page" : "false"}"><strong>${item.name}</strong><small>${completedCount(item)}/${item.sets.length} sett</small></button>`).join("")}
-      <button class="exercise-tab exercise-tab--add">+ Ny</button>
-    </nav>
-    <main class="focus-layout">
-      <p class="variant-note">Én øvelse fyller arbeidsflaten. Øvelsesstripen bytter fokus.</p>
-      <div class="focus-title"><div><span class="eyebrow">Øvelse ${state.activeExercise + 1} av ${state.exercises.length}</span><h2>${exercise.name}</h2></div><button class="icon-button" aria-label="Flere valg for ${exercise.name}">•••</button></div>
-      <div class="sets focus-sets">${exercise.sets.map((set, index) => setRow(state.activeExercise, set, index)).join("")}</div>
-      <button class="secondary full" data-add-set="${state.activeExercise}">+ Legg til sett</button>
-    </main>`;
-}
-
-function variantC() {
-  return `${header()}
-    <main class="table-layout">
-      <p class="variant-note">Alle sett er synlige samtidig i en tett arbeidsliste uten ekspandering.</p>
-      ${state.exercises.map((exercise, exerciseIndex) => `
-        <section class="table-exercise">
-          <div class="table-heading"><h2>${exercise.name}</h2><button class="icon-button" aria-label="Flere valg for ${exercise.name}">•••</button></div>
-          <div class="sets compact-sets">${exercise.sets.map((set, setIndex) => setRow(exerciseIndex, set, setIndex, true)).join("")}</div>
-          <button class="inline-add" data-add-set="${exerciseIndex}">+ Sett</button>
-        </section>`).join("")}
+      <p class="variant-note">${note}</p>
+      ${state.exercises.map((exercise, index) => exerciseCard(exercise, index, index === state.activeExercise, variant)).join("")}
       <button class="primary full">+ Legg til øvelse</button>
     </main>`;
 }
@@ -131,39 +131,59 @@ function switcher(variant) {
 
 function render() {
   const variant = currentVariant();
-  app.innerHTML = `<div class="phone-shell">${variant === "A" ? variantA() : variant === "B" ? variantB() : variantC()}</div>${switcher(variant)}`;
+  app.innerHTML = `<div class="phone-shell">${workout(variant)}</div>${switcher(variant)}`;
 }
 
 function cycle(direction) {
   const keys = Object.keys(variants);
   const index = keys.indexOf(currentVariant());
-  const next = keys[(index + direction + keys.length) % keys.length];
   const url = new URL(location.href);
-  url.searchParams.set("variant", next);
+  url.searchParams.set("variant", keys[(index + direction + keys.length) % keys.length]);
   history.replaceState({}, "", url);
   render();
+}
+
+function indices(value) {
+  return value.split(":").map(Number);
 }
 
 app.addEventListener("input", (event) => {
   const input = event.target.closest("input[data-field]");
   if (!input) return;
-  state.exercises[input.dataset.exercise].sets[input.dataset.set][input.dataset.field] = input.value;
+  state.exercises[input.dataset.exerciseIndex].sets[input.dataset.set][input.dataset.field] = input.value;
 });
 
 app.addEventListener("click", (event) => {
   const cycleButton = event.target.closest("[data-cycle]");
   if (cycleButton) return cycle(Number(cycleButton.dataset.cycle));
 
-  const exerciseButton = event.target.closest("[data-exercise]:not(input)");
+  const exerciseButton = event.target.closest("[data-toggle-exercise]");
   if (exerciseButton) {
-    state.activeExercise = Number(exerciseButton.dataset.exercise);
+    const selected = Number(exerciseButton.dataset.toggleExercise);
+    state.activeExercise = state.activeExercise === selected ? null : selected;
     return render();
   }
 
   const confirmButton = event.target.closest("[data-confirm]");
   if (confirmButton) {
-    const [exerciseIndex, setIndex] = confirmButton.dataset.confirm.split(":").map(Number);
+    const [exerciseIndex, setIndex] = indices(confirmButton.dataset.confirm);
     state.exercises[exerciseIndex].sets[setIndex].status = "complete";
+    return render();
+  }
+
+  const unconfirmButton = event.target.closest("[data-unconfirm]");
+  if (unconfirmButton) {
+    const [exerciseIndex, setIndex] = indices(unconfirmButton.dataset.unconfirm);
+    state.exercises[exerciseIndex].sets[setIndex].status = "suggested";
+    return render();
+  }
+
+  const removeButton = event.target.closest("[data-remove]");
+  if (removeButton) {
+    const [exerciseIndex, setIndex] = indices(removeButton.dataset.remove);
+    if (state.exercises[exerciseIndex].sets[setIndex].status === "suggested") {
+      state.exercises[exerciseIndex].sets.splice(setIndex, 1);
+    }
     return render();
   }
 
