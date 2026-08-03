@@ -16,4 +16,14 @@ describe('exercise names', () => {
     expect(validateExerciseName('🏋️'.repeat(100))).toMatchObject({ name: '🏋️'.repeat(100) });
     expect(validateExerciseName('🏋️'.repeat(101))).toEqual({ error: EXERCISE_NAME_TOO_LONG });
   });
+
+  test('does not depend on Intl.Segmenter support in the app runtime', () => {
+    const segmenter = Intl.Segmenter;
+    Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: undefined });
+    try {
+      expect(validateExerciseName('Knebøy')).toMatchObject({ name: 'Knebøy' });
+    } finally {
+      Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: segmenter });
+    }
+  });
 });
