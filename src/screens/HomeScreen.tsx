@@ -1,13 +1,52 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useTheme } from '@react-navigation/native';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, usePreventRemove, useTheme } from '@react-navigation/native';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { RootStackParamList } from '../AppNavigator';
+import { useDatabase } from '../database/DatabaseContext';
+import { getActiveWorkoutId, startWorkout } from '../database/workouts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export function HomeScreen({ navigation }: Props) {
+  const database = useDatabase();
   const { colors } = useTheme();
+  const [activeWorkoutId, setActiveWorkoutId] = useState<number | null>();
+  const [starting, setStarting] = useState(false);
+  const [error, setError] = useState(false);
+  const [reload, setReload] = useState(0);
+  const allowNavigation = useRef(false);
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    getActiveWorkoutId(database).then(
+      (id) => { if (active) { setActiveWorkoutId(id); setError(false); } },
+      () => { if (active) setError(true); },
+    );
+    return () => { active = false; };
+  }, [database, reload]));
+  usePreventRemove(starting, ({ data }) => {
+    if (allowNavigation.current) navigation.dispatch(data.action);
+  });
+
+  async function openWorkout() {
+    if (activeWorkoutId !== null) {
+      navigation.navigate('Workout');
+      return;
+    }
+    setStarting(true);
+    setError(false);
+    try {
+      await startWorkout(database);
+      allowNavigation.current = true;
+      navigation.navigate('Workout');
+    } catch {
+      setError(true);
+    } finally {
+      setStarting(false);
+    }
+  }
 
   return (
     <ScrollView
@@ -21,9 +60,26 @@ export function HomeScreen({ navigation }: Props) {
         Registrer øvelser og sett mens du trener.
       </Text>
       <View style={styles.actions}>
-        <Action colors={colors} label="Start økt" onPress={() => navigation.navigate('Workout')} primary />
-        <Action colors={colors} label="Tidligere økter" onPress={() => navigation.navigate('History')} />
-        <Action colors={colors} label="Øvelser" onPress={() => navigation.navigate('Exercises')} />
+        {error ? (
+          <Action colors={colors} label="Prøv igjen" onPress={() => {
+            setError(false);
+            setActiveWorkoutId(undefined);
+            setReload((value) => value + 1);
+          }} primary />
+        ) : activeWorkoutId === undefined ? (
+          <ActivityIndicator accessibilityLabel="Laster aktiv økt" />
+        ) : (
+          <Action
+            colors={colors}
+            disabled={starting}
+            label={starting ? 'Starter økt' : activeWorkoutId === null ? 'Start økt' : 'Fortsett økt'}
+            onPress={() => void openWorkout()}
+            primary
+          />
+        )}
+        {error && <Text accessibilityRole="alert" style={{ color: colors.notification }}>Kunne ikke laste inn</Text>}
+        <Action colors={colors} disabled={starting} label="Tidligere økter" onPress={() => navigation.navigate('History')} />
+        <Action colors={colors} disabled={starting} label="Øvelser" onPress={() => navigation.navigate('Exercises')} />
       </View>
     </ScrollView>
   );
@@ -33,16 +89,20 @@ function Action({
   colors,
   label,
   onPress,
+  disabled = false,
   primary = false,
 }: {
   colors: { background: string; border: string; primary: string; text: string };
   label: string;
   onPress: () => void;
+  disabled?: boolean;
   primary?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.action,

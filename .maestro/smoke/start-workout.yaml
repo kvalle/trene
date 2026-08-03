@@ -1,0 +1,35 @@
+appId: no.kvalle.trene
+name: Start and persist a workout
+tags:
+  - smoke
+  - android
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Start økt"
+- assertVisible: "Ingen øvelser lagt til ennå"
+- assertVisible: "Ferdig"
+- tapOn: "Legg til øvelse"
+- tapOn: "Opprett første øvelse"
+
+- tapOn:
+    id: "exercise-name-input"
+- setClipboard: "Knebøy"
+- pasteText
+- tapOn:
+    id: "create-exercise-submit"
+
+- assertVisible: "Knebøy"
+- assertVisible: "Planlagt sett"
+- assertVisible: "Belastning"
+- assertVisible: "Repetisjoner"
+
+# Restart the native process without clearing SQLite.
+- stopApp
+- launchApp
+
+- assertVisible: "Fortsett økt"
+- tapOn: "Fortsett økt"
+- assertVisible: "Knebøy"
+- assertVisible: "Planlagt sett"

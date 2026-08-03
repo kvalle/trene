@@ -7,8 +7,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "smoke:android": "maestro test .maestro/smoke/create-exercise.yaml",
-    "smoke:android:sandbox": "MAESTRO_OPTS=\"-Duser.home=$TMPDIR\" MAESTRO_CLI_NO_ANALYTICS=true MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true MAESTRO_DISABLE_UPDATE_CHECK=true ADB_SERVER_SOCKET=tcp:127.0.0.1:5037 maestro test .maestro/smoke/create-exercise.yaml",
+    "smoke:android": "maestro test .maestro/smoke/create-exercise.yaml && maestro test .maestro/smoke/start-workout.yaml",
+    "smoke:android:sandbox": "mkdir -p .artifacts/maestro/home .artifacts/maestro/tmp .artifacts/maestro/debug && MAESTRO_OPTS=\"-Duser.home=$PWD/.artifacts/maestro/home\" JAVA_TOOL_OPTIONS=\"-Djava.io.tmpdir=$PWD/.artifacts/maestro/tmp -Djansi.tmpdir=$PWD/.artifacts/maestro/tmp -Djava.rmi.server.hostname=localhost -Djava.net.preferIPv4Stack=true\" MAESTRO_CLI_NO_ANALYTICS=true MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true MAESTRO_DISABLE_UPDATE_CHECK=true ADB_SERVER_SOCKET=tcp:127.0.0.1:5037 maestro test --debug-output .artifacts/maestro/debug .maestro/smoke/create-exercise.yaml && MAESTRO_OPTS=\"-Duser.home=$PWD/.artifacts/maestro/home\" JAVA_TOOL_OPTIONS=\"-Djava.io.tmpdir=$PWD/.artifacts/maestro/tmp -Djansi.tmpdir=$PWD/.artifacts/maestro/tmp -Djava.rmi.server.hostname=localhost -Djava.net.preferIPv4Stack=true\" MAESTRO_CLI_NO_ANALYTICS=true MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true MAESTRO_DISABLE_UPDATE_CHECK=true ADB_SERVER_SOCKET=tcp:127.0.0.1:5037 maestro test --debug-output .artifacts/maestro/debug .maestro/smoke/start-workout.yaml",
     "test": "jest --runInBand",
     "typecheck": "tsc --noEmit"
   },

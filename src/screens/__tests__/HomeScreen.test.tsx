@@ -1,20 +1,63 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 
 import { HomeScreen } from '../HomeScreen';
+import { DatabaseProvider } from '../../database/DatabaseContext';
+import type { Database } from '../../database/types';
+import { getActiveWorkoutId, startWorkout } from '../../database/workouts';
+
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  usePreventRemove: jest.fn(),
+}));
+jest.mock('../../database/workouts', () => ({
+  getActiveWorkoutId: jest.fn(),
+  startWorkout: jest.fn(),
+}));
+
+const database = {} as Database;
+const mockedGetActiveWorkoutId = jest.mocked(getActiveWorkoutId);
+const mockedStartWorkout = jest.mocked(startWorkout);
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockedGetActiveWorkoutId.mockResolvedValue(null);
+});
 
 test('shows the empty Home actions and opens them hierarchically', async () => {
   const navigate = jest.fn();
-  await render(
-    <NavigationContainer>
-      <HomeScreen navigation={{ navigate } as never} route={{} as never} />
-    </NavigationContainer>,
-  );
+  renderScreen({ navigate });
 
-  expect(screen.getByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Tidligere økter' })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Øvelser' })).toBeOnTheScreen();
 
   fireEvent.press(screen.getByRole('button', { name: 'Tidligere økter' }));
   expect(navigate).toHaveBeenCalledWith('History');
 });
+
+test('persists the workout before opening it and resumes an existing workout', async () => {
+  const navigate = jest.fn();
+  let finishStart: (id: number) => void = () => undefined;
+  mockedStartWorkout.mockImplementation(() => new Promise((resolve) => { finishStart = resolve; }));
+  renderScreen({ navigate });
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Start økt' }));
+  expect(await screen.findByRole('button', { name: 'Starter økt' })).toBeDisabled();
+  await act(async () => finishStart(7));
+  await waitFor(() => expect(navigate).toHaveBeenCalledWith('Workout'));
+
+  mockedGetActiveWorkoutId.mockResolvedValue(7);
+  renderScreen();
+  expect(await screen.findByRole('button', { name: 'Fortsett økt' })).toBeOnTheScreen();
+});
+
+function renderScreen(navigation: Record<string, jest.Mock> = {}) {
+  return render(
+    <DatabaseProvider database={database}>
+      <NavigationContainer>
+        <HomeScreen navigation={{ navigate: jest.fn(), ...navigation } as never} route={{} as never} />
+      </NavigationContainer>
+    </DatabaseProvider>,
+  );
+}

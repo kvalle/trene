@@ -6,15 +6,22 @@ import { HomeScreen } from './screens/HomeScreen';
 import { CreateExerciseScreen } from './screens/CreateExerciseScreen';
 import { ExerciseDetailScreen } from './screens/ExerciseDetailScreen';
 import { ExercisesScreen } from './screens/ExercisesScreen';
+import { ExercisePickerScreen } from './screens/ExercisePickerScreen';
 import { PlaceholderScreen } from './screens/PlaceholderScreen';
+import { WorkoutScreen } from './screens/WorkoutScreen';
 import { darkTheme, lightTheme } from './theme';
 
 export type RootStackParamList = {
   Home: undefined;
-  Workout: undefined;
+  Workout: { focusExerciseId?: number; focusAddExercise?: boolean } | undefined;
   History: undefined;
   Exercises: undefined;
-  CreateExercise: { initialName?: string } | undefined;
+  ExercisePicker: { workoutId: number };
+  CreateExercise: {
+    initialName?: string;
+    origin?: 'exercises' | 'workout';
+    workoutId?: number;
+  } | undefined;
   ExerciseDetail: { exerciseId: number };
 };
 
@@ -28,13 +35,16 @@ export function AppNavigator() {
     <NavigationContainer theme={theme}>
       <Stack.Navigator screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
         <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Trene' }} />
-        <Stack.Screen name="Workout" options={{ title: 'Treningsøkt' }}>
-          {() => <PlaceholderScreen title="Treningsøkt" />}
-        </Stack.Screen>
+        <Stack.Screen name="Workout" component={WorkoutScreen} options={{ title: 'Treningsøkt' }} />
         <Stack.Screen name="History" options={{ title: 'Tidligere økter' }}>
           {() => <PlaceholderScreen title="Tidligere økter" />}
         </Stack.Screen>
         <Stack.Screen name="Exercises" component={ExercisesScreen} options={{ title: 'Øvelser' }} />
+        <Stack.Screen
+          name="ExercisePicker"
+          component={ExercisePickerScreen}
+          options={{ presentation: 'modal', title: 'Legg til øvelse' }}
+        />
         <Stack.Screen
           name="CreateExercise"
           component={CreateExerciseScreen}

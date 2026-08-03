@@ -10,6 +10,7 @@ import {
   DuplicateExerciseNameError,
   DUPLICATE_EXERCISE_NAME,
 } from '../database/exercises';
+import { createExerciseInWorkout } from '../database/workouts';
 import { validateExerciseName } from '../domain/exerciseName';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateExercise'>;
@@ -43,9 +44,14 @@ export function CreateExerciseScreen({ navigation, route }: Props) {
 
     setSaving(true);
     try {
-      const exerciseId = await createExercise(database, validation.name, validation.key);
+      const workoutId = route.params?.workoutId;
+      const fromWorkout = route.params?.origin === 'workout' && workoutId !== undefined;
+      const exerciseId = fromWorkout
+        ? await createExerciseInWorkout(database, workoutId, validation.name, validation.key)
+        : await createExercise(database, validation.name, validation.key);
       allowSuccessfulNavigation.current = true;
-      navigation.replace('ExerciseDetail', { exerciseId });
+      if (fromWorkout) navigation.popTo('Workout', { focusExerciseId: exerciseId });
+      else navigation.replace('ExerciseDetail', { exerciseId });
     } catch (saveError) {
       showError(saveError instanceof DuplicateExerciseNameError
         ? DUPLICATE_EXERCISE_NAME

@@ -8,6 +8,7 @@ import {
   DUPLICATE_EXERCISE_NAME,
 } from '../../database/exercises';
 import type { Database } from '../../database/types';
+import { createExerciseInWorkout } from '../../database/workouts';
 import { CreateExerciseScreen } from '../CreateExerciseScreen';
 
 jest.mock('@react-navigation/native', () => ({
@@ -19,9 +20,11 @@ jest.mock('../../database/exercises', () => ({
   ...jest.requireActual('../../database/exercises'),
   createExercise: jest.fn(),
 }));
+jest.mock('../../database/workouts', () => ({ createExerciseInWorkout: jest.fn() }));
 
 const database = {} as Database;
 const mockedCreateExercise = jest.mocked(createExercise);
+const mockedCreateExerciseInWorkout = jest.mocked(createExerciseInWorkout);
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -56,13 +59,30 @@ test('cancels to its unchanged origin', () => {
   expect(mockedCreateExercise).not.toHaveBeenCalled();
 });
 
-function renderScreen(navigation: Record<string, jest.Mock> = {}, initialName?: string) {
+test('creates and selects directly when opened from the workout picker', async () => {
+  const popTo = jest.fn();
+  mockedCreateExerciseInWorkout.mockResolvedValue(43);
+  renderScreen({ popTo }, 'press', { origin: 'workout', workoutId: 9 });
+
+  fireEvent.press(screen.getByRole('button', { name: 'Opprett' }));
+
+  await waitFor(() => expect(mockedCreateExerciseInWorkout)
+    .toHaveBeenCalledWith(database, 9, 'press', 'press'));
+  expect(popTo).toHaveBeenCalledWith('Workout', { focusExerciseId: 43 });
+});
+
+function renderScreen(
+  navigation: Record<string, jest.Mock> = {},
+  initialName?: string,
+  extraParams: Record<string, unknown> = {},
+) {
   return render(
     <DatabaseProvider database={database}>
       <NavigationContainer>
         <CreateExerciseScreen
           navigation={{ replace: jest.fn(), goBack: jest.fn(), ...navigation } as never}
-          route={{ params: initialName === undefined ? undefined : { initialName } } as never}
+          route={{ params: initialName === undefined && Object.keys(extraParams).length === 0
+            ? undefined : { initialName, ...extraParams } } as never}
         />
       </NavigationContainer>
     </DatabaseProvider>,
