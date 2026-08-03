@@ -33,3 +33,13 @@ tags:
 - tapOn: "Fortsett økt"
 - assertVisible: "Knebøy"
 - assertVisible: "Planlagt sett"
+
+- tapOn: "Avbryt"
+- assertVisible: "Avbryt økten?"
+- assertVisible: "Økten slettes permanent og vises ikke i historikken."
+- tapOn: "Behold økten"
+- assertVisible: "Knebøy"
+
+- tapOn: "Avbryt"
+- tapOn: "Avbryt økten"
+- assertVisible: "Start økt"

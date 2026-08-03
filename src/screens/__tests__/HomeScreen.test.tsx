@@ -1,11 +1,16 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { AccessibilityInfo } from 'react-native';
 
 import { HomeScreen } from '../HomeScreen';
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
 import { getActiveWorkoutId, startWorkout } from '../../database/workouts';
 
+jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
+  ...jest.requireActual('react-native/Libraries/ReactNative/RendererProxy'),
+  findNodeHandle: jest.fn(() => 12),
+}));
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
   usePreventRemove: jest.fn(),
@@ -52,11 +57,21 @@ test('persists the workout before opening it and resumes an existing workout', a
   expect(await screen.findByRole('button', { name: 'Fortsett økt' })).toBeOnTheScreen();
 });
 
-function renderScreen(navigation: Record<string, jest.Mock> = {}) {
+test('focuses Start økt after a cancelled workout', async () => {
+  const setParams = jest.fn();
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  renderScreen({ setParams }, { focusStartWorkout: true });
+
+  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+  await waitFor(() => expect(focus).toHaveBeenCalled());
+  expect(setParams).toHaveBeenCalledWith({ focusStartWorkout: undefined });
+});
+
+function renderScreen(navigation: Record<string, jest.Mock> = {}, params?: { focusStartWorkout?: boolean }) {
   return render(
     <DatabaseProvider database={database}>
       <NavigationContainer>
-        <HomeScreen navigation={{ navigate: jest.fn(), ...navigation } as never} route={{} as never} />
+        <HomeScreen navigation={{ navigate: jest.fn(), ...navigation } as never} route={{ params } as never} />
       </NavigationContainer>
     </DatabaseProvider>,
   );

@@ -12,7 +12,7 @@ import { WorkoutScreen } from './screens/WorkoutScreen';
 import { darkTheme, lightTheme } from './theme';
 
 export type RootStackParamList = {
-  Home: undefined;
+  Home: { focusStartWorkout?: boolean } | undefined;
   Workout: { focusExerciseId?: number; focusAddExercise?: boolean } | undefined;
   History: undefined;
   Exercises: undefined;

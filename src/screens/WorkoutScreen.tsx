@@ -1,10 +1,11 @@
-import { useFocusEffect, useTheme } from '@react-navigation/native';
+import { useFocusEffect, usePreventRemove, useTheme } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
   findNodeHandle,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,7 +16,7 @@ import {
 
 import type { RootStackParamList } from '../AppNavigator';
 import { useDatabase } from '../database/DatabaseContext';
-import { loadActiveWorkout, type ActiveWorkout } from '../database/workouts';
+import { cancelActiveWorkout, loadActiveWorkout, type ActiveWorkout } from '../database/workouts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Workout'>;
 type State = { status: 'loading' } | { status: 'failed' } | { status: 'ready'; workout: ActiveWorkout };
@@ -26,7 +27,14 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const [state, setState] = useState<State>({ status: 'loading' });
   const [reload, setReload] = useState(0);
   const [expandedId, setExpandedId] = useState<number>();
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelFailed, setCancelFailed] = useState(false);
   const addExerciseRef = useRef<View>(null);
+  const cancelRef = useRef<View>(null);
+  const confirmCancelRef = useRef<View>(null);
+  const retryCancelRef = useRef<View>(null);
+  const allowNavigation = useRef(false);
   const cardRefs = useRef(new Map<number, View>());
 
   useFocusEffect(useCallback(() => {
@@ -54,6 +62,39 @@ export function WorkoutScreen({ navigation, route }: Props) {
     if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
     if (target) navigation.setParams({ focusExerciseId: undefined, focusAddExercise: undefined });
   }, [navigation, route.params, state]);
+
+  usePreventRemove(cancelling, ({ data }) => {
+    if (allowNavigation.current) navigation.dispatch(data.action);
+  });
+
+  function focus(ref: React.RefObject<View | null>) {
+    const handle = findNodeHandle(ref.current);
+    if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
+  }
+
+  function closeCancelDialog() {
+    if (cancelling) return;
+    setCancelDialogOpen(false);
+    requestAnimationFrame(() => focus(cancelRef));
+  }
+
+  async function confirmCancellation(workoutId: number) {
+    setCancelling(true);
+    setCancelFailed(false);
+    try {
+      await cancelActiveWorkout(database, workoutId);
+      setCancelDialogOpen(false);
+      allowNavigation.current = true;
+      navigation.popTo('Home', { focusStartWorkout: true });
+    } catch {
+      setCancelDialogOpen(false);
+      setCancelFailed(true);
+      AccessibilityInfo.announceForAccessibility('Kunne ikke avbryte økten. Prøv igjen.');
+      requestAnimationFrame(() => focus(retryCancelRef));
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   if (state.status === 'loading') return <ActivityIndicator accessibilityLabel="Laster treningsøkt" style={styles.center} />;
   if (state.status === 'failed') return (
@@ -118,7 +159,39 @@ export function WorkoutScreen({ navigation, route }: Props) {
         }}
       />
       <Button disabled label="Ferdig" onPress={() => undefined} primary />
-      <Button label="Avbryt" onPress={() => undefined} />
+      <Button buttonRef={cancelRef} label="Avbryt" onPress={() => {
+        setCancelFailed(false);
+        setCancelDialogOpen(true);
+      }} />
+      {cancelFailed && (
+        <View style={styles.failure}>
+          <Text accessibilityRole="alert" style={{ color: colors.notification }}>
+            Kunne ikke avbryte økten
+          </Text>
+          <Button buttonRef={retryCancelRef} label="Prøv igjen" onPress={() => setCancelDialogOpen(true)} />
+        </View>
+      )}
+      <Modal
+        animationType="none"
+        onRequestClose={closeCancelDialog}
+        onShow={() => focus(confirmCancelRef)}
+        transparent
+        visible={cancelDialogOpen}
+      >
+        <View accessibilityViewIsModal style={styles.modalBackdrop}>
+          <View style={[styles.dialog, { backgroundColor: colors.card }]}>
+            <Text accessibilityRole="header" style={[styles.dialogTitle, { color: colors.text }]}>Avbryt økten?</Text>
+            <Text style={{ color: colors.text }}>Økten slettes permanent og vises ikke i historikken.</Text>
+            <Button disabled={cancelling} label="Behold økten" onPress={closeCancelDialog} />
+            <Button
+              buttonRef={confirmCancelRef}
+              disabled={cancelling}
+              label={cancelling ? 'Avbryter' : 'Avbryt økten'}
+              onPress={() => void confirmCancellation(state.workout.id)}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -156,4 +229,8 @@ const styles = StyleSheet.create({
   button: { alignItems: 'center', borderRadius: 13, borderWidth: 1, justifyContent: 'center', minHeight: 50, paddingHorizontal: 18 },
   buttonText: { fontSize: 17, fontWeight: '700' },
   disabled: { opacity: 0.45 },
+  failure: { gap: 10 },
+  modalBackdrop: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.55)', flex: 1, justifyContent: 'center', padding: 24 },
+  dialog: { borderRadius: 16, gap: 16, maxWidth: 440, padding: 24, width: '100%' },
+  dialogTitle: { fontSize: 24, fontWeight: '700' },
 });

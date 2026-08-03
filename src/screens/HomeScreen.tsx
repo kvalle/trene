@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect, usePreventRemove, useTheme } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, findNodeHandle, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { RootStackParamList } from '../AppNavigator';
 import { useDatabase } from '../database/DatabaseContext';
@@ -9,7 +9,7 @@ import { getActiveWorkoutId, startWorkout } from '../database/workouts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
-export function HomeScreen({ navigation }: Props) {
+export function HomeScreen({ navigation, route }: Props) {
   const database = useDatabase();
   const { colors } = useTheme();
   const [activeWorkoutId, setActiveWorkoutId] = useState<number | null>();
@@ -17,6 +17,7 @@ export function HomeScreen({ navigation }: Props) {
   const [error, setError] = useState(false);
   const [reload, setReload] = useState(0);
   const allowNavigation = useRef(false);
+  const startWorkoutRef = useRef<View>(null);
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -29,6 +30,13 @@ export function HomeScreen({ navigation }: Props) {
   usePreventRemove(starting, ({ data }) => {
     if (allowNavigation.current) navigation.dispatch(data.action);
   });
+
+  useFocusEffect(useCallback(() => {
+    if (!route.params?.focusStartWorkout || activeWorkoutId !== null) return;
+    const handle = findNodeHandle(startWorkoutRef.current);
+    if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
+    navigation.setParams({ focusStartWorkout: undefined });
+  }, [activeWorkoutId, navigation, route.params?.focusStartWorkout]));
 
   async function openWorkout() {
     if (activeWorkoutId !== null) {
@@ -70,6 +78,7 @@ export function HomeScreen({ navigation }: Props) {
           <ActivityIndicator accessibilityLabel="Laster aktiv økt" />
         ) : (
           <Action
+            actionRef={startWorkoutRef}
             colors={colors}
             disabled={starting}
             label={starting ? 'Starter økt' : activeWorkoutId === null ? 'Start økt' : 'Fortsett økt'}
@@ -86,12 +95,14 @@ export function HomeScreen({ navigation }: Props) {
 }
 
 function Action({
+  actionRef,
   colors,
   label,
   onPress,
   disabled = false,
   primary = false,
 }: {
+  actionRef?: React.RefObject<View | null>;
   colors: { background: string; border: string; primary: string; text: string };
   label: string;
   onPress: () => void;
@@ -104,6 +115,7 @@ function Action({
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
+      ref={actionRef}
       style={({ pressed }) => [
         styles.action,
         { borderColor: primary ? colors.primary : colors.border },

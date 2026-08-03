@@ -6,6 +6,7 @@ import { migrateDatabase } from '../migrate';
 import type { Database, DatabaseValue } from '../types';
 import {
   addExerciseToWorkout,
+  cancelActiveWorkout,
   createExerciseInWorkout,
   countExercises,
   getActiveWorkoutId,
@@ -120,6 +121,54 @@ describe('active workout persistence', () => {
     expect((await loadActiveWorkout(database))?.exercises[0]).toMatchObject({
       exerciseId, name: 'Benkpress', position: 0,
     });
+  });
+
+  test('atomically deletes a populated active workout without changing history or exercises', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    const completed = await database.runAsync(
+      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'before', 'after')",
+    );
+    const completedMembership = await database.runAsync(
+      'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+      completed.lastInsertRowId, exerciseId,
+    );
+    await database.runAsync(
+      "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'after')",
+      completedMembership.lastInsertRowId,
+    );
+    const activeId = await startWorkout(database);
+    await addExerciseToWorkout(database, activeId, exerciseId);
+
+    await cancelActiveWorkout(database, activeId);
+
+    expect(await getActiveWorkoutId(database)).toBeNull();
+    expect(await database.getFirstAsync('SELECT id FROM workouts WHERE id = ?', completed.lastInsertRowId))
+      .toEqual({ id: completed.lastInsertRowId });
+    expect(await database.getFirstAsync(
+      'SELECT load_kg, repetitions, confirmed_at FROM workout_sets WHERE workout_exercise_id = ?',
+      completedMembership.lastInsertRowId,
+    )).toEqual({ load_kg: 80, repetitions: 5, confirmed_at: 'after' });
+    expect(await countExercises(database)).toBe(1);
+    expect(await database.getFirstAsync('SELECT id FROM workout_exercises WHERE workout_id = ?', activeId)).toBeNull();
+  });
+
+  test('rolls back cancellation when deletion fails', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const activeId = await startWorkout(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    await addExerciseToWorkout(database, activeId, exerciseId);
+    const workoutBefore = await loadActiveWorkout(database);
+    await database.execAsync(`
+      CREATE TRIGGER reject_workout_delete BEFORE DELETE ON workouts
+      BEGIN SELECT RAISE(ABORT, 'write failed'); END;
+    `);
+
+    await expect(cancelActiveWorkout(database, activeId)).rejects.toThrow('write failed');
+    expect(await getActiveWorkoutId(database)).toBe(activeId);
+    expect(await loadActiveWorkout(database)).toEqual(workoutBefore);
   });
 
   test('rolls back exercise creation when selection fails', async () => {

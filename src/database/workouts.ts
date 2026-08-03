@@ -69,6 +69,16 @@ export async function startWorkout(database: Database): Promise<number> {
   });
 }
 
+export async function cancelActiveWorkout(database: Database, workoutId: number): Promise<void> {
+  await transaction(database, async () => {
+    const result = await database.runAsync(
+      "DELETE FROM workouts WHERE id = ? AND status = 'active'",
+      workoutId,
+    );
+    if (result.changes !== 1) throw new Error('Active workout not found');
+  });
+}
+
 export async function loadActiveWorkout(database: Database): Promise<ActiveWorkout | null> {
   const id = await getActiveWorkoutId(database);
   if (id === null) return null;
