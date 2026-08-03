@@ -23,5 +23,16 @@ gh auth status --active --hostname github.com \
   --json hosts --jq '.hosts["github.com"][0].login'
 ```
 
-When assigning an issue to the active user, prefer `--add-assignee @me`; no
-login lookup is needed.
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs are tracked in GitHub Issues for `kvalle/trene`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage uses the default five-role label vocabulary. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Domain documentation uses a single-context layout. See `docs/agents/domain.md`.
