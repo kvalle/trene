@@ -1,6 +1,6 @@
 # Trene MVP specification
 
-Status: Draft pending the remaining Wayfinder decisions
+Status: Implementation-ready
 
 ## 1. Product goal
 
@@ -67,6 +67,7 @@ The active-workout screen contains:
   collapsed without expanding another;
 - a collapsed-card status in the form `x av y sett gjennomført`;
 - completed sets grouped above planned sets inside the expanded card;
+- completed sets rendered as compact receipt rows;
 - `Legg til sett` and `Legg til øvelse` actions;
 - `Ferdig` and the secondary destructive action `Avbryt`.
 
@@ -94,7 +95,8 @@ Exercise creation asks only for a name.
 
 ### 4.4 Workout history
 
-`Tidligere økter` lists all completed workouts in reverse completion order.
+`Tidligere økter` lists all completed workouts by completion timestamp
+descending, then stable database ID ascending.
 Each row shows the completion date and time and the number of exercises saved
 in that workout. Only exercises with at least one completed set were saved and
 therefore count. The whole row is one primary action that opens workout detail;
@@ -129,9 +131,11 @@ a search has no matches, it shows `Ingen øvelser funnet` and offers to create
 an exercise with the search text prefilled.
 
 Selecting an exercise opens one detail screen that shows its current name and
-completed-set history. History is grouped by completed workout, newest first,
-and each group shows the workout completion date and time. The same screen
-offers renaming and, when permitted by the domain rules, deletion.
+completed-set history. History is grouped by completed workout in the same
+deterministic newest-first order,
+and each group shows the workout completion date and time plus every set's load
+and repetitions. The same screen offers renaming and, when permitted by the
+domain rules, deletion.
 
 If the exercise has no remaining completed-workout history, the history area
 shows `Ingen fullførte økter med denne øvelsen ennå`. Renaming and eligible
@@ -145,16 +149,13 @@ Renaming changes the exercise everywhere, including historical workout views.
 
 1. The user selects `Start økt`; an empty active workout is created immediately.
 2. The user selects `Legg til øvelse` and chooses or creates an exercise.
-3. The app creates planned sets from the newest remaining completed workout
-   containing that exercise. If none exists, it creates one planned set with
-   empty fields.
+3. The app creates planned sets from the first remaining completed workout
+   containing that exercise under the deterministic history order. If none
+   exists, it creates one planned set with empty fields.
 4. The user accepts a valid planned set with one explicit confirmation action.
 5. The set becomes completed, gets a confirmation timestamp, moves to the
    completed group, and receives its derived display number.
 6. The user may switch freely between exercise cards and add exercises or sets.
-
-Selecting an exercise already present in the workout opens its existing card
-rather than adding a duplicate.
 
 ### 5.2 Add a set
 
@@ -214,6 +215,29 @@ There is no separate pre-save summary.
 including for an empty workout. Confirmation permanently deletes the active
 workout without creating history. Completed workout history is unaffected.
 
+### 5.8 Navigation and modal tasks
+
+The app uses hierarchical stack navigation from Home and has no permanent tab
+bar. Android system Back and the iOS back gesture match visible navigation:
+they close the topmost modal, otherwise move one stack level back, and use
+normal platform behavior from Home.
+
+The exercise picker and exercise creation are cancellable modal tasks. Closing
+the picker without choosing returns to the unchanged active workout and focuses
+`Legg til øvelse`; choosing closes it and focuses the selected exercise card.
+Cancelling creation returns unchanged to its origin. Creation from the picker
+selects the new exercise and returns to the active workout, while creation from
+the exercise list opens the new exercise detail.
+
+List-to-detail navigation preserves the originating list's search and scroll
+position. Back from a workout detail returns to Home when the detail was opened
+after completion, and to workout history when opened there.
+
+After confirmed workout cancellation, Home opens with focus on `Start økt`.
+After successful completed-workout deletion, workout history opens without a
+success message; focus moves to the next newer row, otherwise the next older
+row, otherwise the empty state's `Start økt` or `Fortsett økt` action.
+
 ## 6. Domain rules
 
 ### 6.1 Exercise identity and names
@@ -240,6 +264,22 @@ ID is the final tie-breaker for equal collation values.
 An exercise can be deleted only when no active or remaining completed workout
 references it. Deleting all completed workouts that reference an otherwise
 unused exercise makes that exercise deletable.
+
+Creating or renaming to a duplicate normalized name shows the announced inline
+error `En øvelse med dette navnet finnes allerede` beneath the name field. The
+draft is retained, focus returns to the field, and no data changes. A rename
+keeps the prior stored name until a valid unique name is saved. The error clears
+as soon as the field changes and is checked again on the next save attempt. A
+database uniqueness conflict has identical behavior and exposes no technical
+detail. No shortcut to the existing exercise is offered.
+
+Deleting an eligible exercise requires a destructive dialog that names the
+exercise and offers `Avbryt` and `Slett`; there is no undo after success.
+Cancelling returns focus to `Slett øvelse`. Successful deletion opens the
+exercise list without a success message and focuses the next exercise in
+Bokmål alphabetical order, otherwise the previous one, otherwise the empty
+state's `Opprett første øvelse` action. A deletion failure can instead be
+dismissed to continue on the unchanged detail screen without data loss.
 
 ### 6.2 Workout and exercise membership
 
@@ -282,6 +322,13 @@ workout's displayed order, so increasing IDs preserve the suggestion order.
 history. The database uses stable generated IDs, foreign-key constraints, and
 schema migrations from the first release.
 
+Database opening and migration use a blocking startup screen with the app name
+and an activity indicator. Navigation and data actions become available only
+when the database is ready. On failure, the screen shows `Trene kunne ikke
+starte`, explains that data was not changed, and offers `Prøv igjen`; persistent
+failure also suggests restarting the app. The MVP never responds by deleting
+data or offering partial or read-only use.
+
 Accepted mutations are written immediately in SQLite transactions. On launch
 and foregrounding, the app derives the active workout from SQLite.
 
@@ -295,15 +342,35 @@ For planned-set input:
 - confirming a set writes its valid values and confirmation atomically.
 
 If a transaction for a valid edit fails, the app retains the new value in
-memory, marks it visibly and accessibly as not saved, and retries at the next
-save point. Confirming that set and completing the workout remain blocked until
-the relevant change is durable. A persistent failure remains visible; a brief
-toast alone is insufficient.
+memory and marks it visibly and accessibly as not saved. Confirming that set and
+completing the workout remain blocked until an explicit retry makes the relevant
+change durable. A persistent failure remains visible; a brief toast alone is
+insufficient.
 
 Completing, cancelling, and deleting a completed workout are each atomic
 database operations. A failed destructive or completion transaction leaves the
 previous durable state intact and reports the failure without navigating as if
 it succeeded.
+
+A screen that cannot read required data shows `Kunne ikke laste inn` and `Prøv
+igjen` in place, never an empty state. Back navigation remains available while
+data-dependent actions are hidden or disabled. A detail whose workout or
+exercise no longer exists instead shows `Finnes ikke lenger` and a route to the
+relevant freshly loaded list, without retrying the missing resource.
+
+During any durable operation, its trigger shows activity and the trigger,
+competing data actions, and navigation that could interrupt it are blocked. The
+rest of the app is not blocked unnecessarily. Failed destructive operations
+keep the page and data, close the confirmation dialog, announce the failure,
+and focus `Prøv igjen`. Failed non-destructive writes keep the form and draft,
+show an accessible inline or status error, and focus retry or the relevant
+field. Navigation to a success destination occurs only after confirmed storage.
+
+A failed autosave in an active workout remains visibly and accessibly marked.
+The failed mutation is not presented as durable, and dependent actions remain
+blocked until manual retry succeeds. The user may return Home, where the active
+workout remains marked with a save error and can be reopened. The MVP never
+retries failed database operations automatically.
 
 ## 8. Visual and interaction direction
 
@@ -314,7 +381,7 @@ while the app runs. Concrete colors, spacing tokens, typography, and component
 styling are implementation choices constrained by this specification's
 accessibility acceptance criteria.
 
-The app plays no sound. It may use brief platform-appropriate haptic feedback
+The app plays no sound. It uses brief platform-appropriate haptic feedback
 for meaningful choices, confirmations, and errors, while respecting system
 settings. Haptics never carry information by themselves and are not emitted for
 every tap or routine accessibility focus movement.
@@ -416,6 +483,17 @@ phones, with the accessibility matrix applied to each core flow.
     TalkBack and VoiceOver, reduced motion, and with sound and haptics disabled.
 13. **Offline delivery:** Install the Android APK directly and complete the full
     start-record-restart-resume-complete-history flow with networking disabled.
+14. **Navigation:** Verify modal cancellation and system Back behavior, preserved
+    list search and scroll state, completion origins, and every specified
+    post-cancellation or post-deletion destination and focus target.
+15. **Exercise safeguards:** Trigger duplicate names in creation, rename, and a
+    simulated database uniqueness race; verify identical inline behavior and no
+    data change. Delete an eligible exercise only through its named confirmation
+    and verify cancellation, success focus, and failed-write retry behavior.
+16. **Startup and loading failures:** Simulate database-open, migration, screen
+    read, missing-resource, autosave, non-destructive write, and destructive
+    write failures; verify the specified blocking, retry, focus, announcement,
+    retained-data, and navigation behavior without automatic retry.
 
 ## 12. Implementation freedom
 
@@ -423,9 +501,3 @@ Implementation may choose concrete visual tokens, component internals,
 navigation and state-management libraries, database table names, and test-file
 organization. Those choices must preserve all behavior, domain invariants,
 failure semantics, platform constraints, and acceptance criteria above.
-
-The remaining Wayfinder decisions cover navigation destinations, exercise
-deletion safeguards, list rows and empty states, duplicate-name interaction,
-and startup or screen-level failure states. This status section must be changed
-to `Implementation-ready` only after those decisions are incorporated and the
-specification is revalidated.
