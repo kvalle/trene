@@ -46,7 +46,8 @@ run the Maestro smoke suite through the host ADB server:
 npm run smoke:android:sandbox
 ```
 
-The command keeps Maestro state inside cplt's writable temporary directory and
-connects to ADB at `127.0.0.1:5037`. Run this during final verification when a
-change affects an existing smoke flow, and extend `.maestro/smoke/` when a new
-cross-runtime user journey needs coverage.
+The command keeps Maestro state and debug output under the ignored
+`.artifacts/maestro/` directory and connects to ADB at `127.0.0.1:5037`. Run
+this during final verification when a change affects an existing smoke flow,
+and extend `.maestro/smoke/` when a new cross-runtime user journey needs
+coverage. The runner discovers its YAML files automatically.
