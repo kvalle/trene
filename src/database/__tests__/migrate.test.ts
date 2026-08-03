@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 
 import { migrateDatabase, SCHEMA_VERSION } from '../migrate';
-import type { Database } from '../types';
+import type { Database, DatabaseValue } from '../types';
 import { exerciseNameKey } from '../../domain/exerciseName';
 
 class TestDatabase implements Database {
@@ -11,8 +11,17 @@ class TestDatabase implements Database {
     this.database.exec(source);
   }
 
-  async getFirstAsync<T>(source: string): Promise<T | null> {
-    return (this.database.prepare(source).get() as T | undefined) ?? null;
+  async getFirstAsync<T>(source: string, ...params: DatabaseValue[]): Promise<T | null> {
+    return (this.database.prepare(source).get(...params) as T | undefined) ?? null;
+  }
+
+  async getAllAsync<T>(source: string, ...params: DatabaseValue[]): Promise<T[]> {
+    return this.database.prepare(source).all(...params) as T[];
+  }
+
+  async runAsync(source: string, ...params: DatabaseValue[]) {
+    const result = this.database.prepare(source).run(...params);
+    return { changes: Number(result.changes), lastInsertRowId: Number(result.lastInsertRowid) };
   }
 
   async closeAsync() {

@@ -8,6 +8,8 @@ const database: Database = {
   closeAsync: jest.fn(async () => undefined),
   execAsync: jest.fn(async () => undefined),
   getFirstAsync: jest.fn(async () => null),
+  getAllAsync: jest.fn(async () => []),
+  runAsync: jest.fn(async () => ({ lastInsertRowId: 1, changes: 1 })),
 };
 
 test('blocks the app until startup succeeds and retries manually', async () => {
