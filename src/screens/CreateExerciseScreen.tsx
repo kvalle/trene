@@ -70,6 +70,7 @@ export function CreateExerciseScreen({ navigation, route }: Props) {
         ref={inputRef}
         returnKeyType="done"
         style={[styles.input, { borderColor: error ? colors.notification : colors.border, color: colors.text }]}
+        testID="exercise-name-input"
         value={draft}
       />
       {error && (
@@ -81,6 +82,7 @@ export function CreateExerciseScreen({ navigation, route }: Props) {
         disabled={saving}
         onPress={() => void save()}
         style={({ pressed }) => [styles.save, { backgroundColor: colors.primary }, pressed && styles.pressed]}
+        testID="create-exercise-submit"
       >
         <Text style={[styles.saveText, { color: colors.background }]}>{saving ? 'Lagrer…' : 'Opprett'}</Text>
       </Pressable>

@@ -1,0 +1,30 @@
+appId: no.kvalle.trene
+name: Create and persist an exercise
+tags:
+  - smoke
+  - android
+---
+- launchApp:
+    clearState: true
+
+- assertVisible: "Klar for en økt?"
+- tapOn: "Øvelser"
+- tapOn: "Opprett første øvelse"
+
+- tapOn:
+    id: "exercise-name-input"
+# inputText does not support Unicode on Android; clipboard paste does.
+- setClipboard: "Knebøy"
+- pasteText
+- tapOn:
+    id: "create-exercise-submit"
+
+- assertVisible: "Knebøy"
+
+# Restart the native process without clearing SQLite.
+- stopApp
+- launchApp
+
+- assertVisible: "Klar for en økt?"
+- tapOn: "Øvelser"
+- assertVisible: "Knebøy"
