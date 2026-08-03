@@ -36,3 +36,17 @@ Triage uses the default five-role label vocabulary. See `docs/agents/triage-labe
 ### Domain docs
 
 Domain documentation uses a single-context layout. See `docs/agents/domain.md`.
+
+## Android smoke tests
+
+When an Android emulator is running and the app is installed, cplt agents can
+run the Maestro smoke suite through the host ADB server:
+
+```sh
+npm run smoke:android:sandbox
+```
+
+The command keeps Maestro state inside cplt's writable temporary directory and
+connects to ADB at `127.0.0.1:5037`. Run this during final verification when a
+change affects an existing smoke flow, and extend `.maestro/smoke/` when a new
+cross-runtime user journey needs coverage.

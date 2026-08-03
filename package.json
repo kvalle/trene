@@ -8,6 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "smoke:android": "maestro test .maestro/smoke/create-exercise.yaml",
+    "smoke:android:sandbox": "MAESTRO_OPTS=\"-Duser.home=$TMPDIR\" MAESTRO_CLI_NO_ANALYTICS=true MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true MAESTRO_DISABLE_UPDATE_CHECK=true ADB_SERVER_SOCKET=tcp:127.0.0.1:5037 maestro test .maestro/smoke/create-exercise.yaml",
     "test": "jest --runInBand",
     "typecheck": "tsc --noEmit"
   },

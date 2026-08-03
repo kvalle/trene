@@ -50,6 +50,10 @@ npm run android
 npm run smoke:android
 ```
 
+Agenter som kjører gjennom cplt-sandkassen bruker i stedet
+`npm run smoke:android:sandbox` for isolert Maestro-tilstand og tilkobling til
+vertens ADB-server.
+
 Testen begynner med `clearState: true` og sletter derfor eksisterende appdata på
 emulatoren. Maestro Studio kan også åpne samme YAML-fil for visuell steg-for-steg-
 kjøring og inspeksjon.
