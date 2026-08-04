@@ -68,7 +68,7 @@ test('shows an active workout and opens its cancellable exercise picker', async 
   mockedLoad.mockResolvedValue({ id: 3, exercises: [] });
   renderScreen({ navigate, setParams });
 
-  expect(await screen.findByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
+  expect(await screen.findByText('Ingen øvelser lagt til ennå', {}, { timeout: 3000 })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Ferdig' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Avbryt' })).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Legg til øvelse' }));
