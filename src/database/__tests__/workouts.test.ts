@@ -9,10 +9,14 @@ import {
   cancelActiveWorkout,
   createExerciseInWorkout,
   countExercises,
+  confirmWorkoutSet,
+  deletePlannedWorkoutSet,
   getActiveWorkoutId,
   listAvailableExercises,
   loadActiveWorkout,
+  savePlannedWorkoutSet,
   startWorkout,
+  unconfirmWorkoutSet,
 } from '../workouts';
 
 class TestDatabase implements Database {
@@ -181,5 +185,71 @@ describe('active workout persistence', () => {
       database, workoutId, 'Benkpress', exerciseNameKey('Benkpress'),
     )).rejects.toThrow('Active workout not found');
     expect(await countExercises(database)).toBe(0);
+  });
+
+  test('persists, confirms, orders, unconfirms, and reconfirms stable sets', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    await addExerciseToWorkout(database, workoutId, exerciseId);
+    const membershipId = (await loadActiveWorkout(database))!.exercises[0].id;
+    const firstId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
+    const secondId = (await database.runAsync(
+      'INSERT INTO workout_sets (workout_exercise_id) VALUES (?)', membershipId,
+    )).lastInsertRowId;
+
+    await savePlannedWorkoutSet(database, workoutId, firstId, 80.5, 5);
+    await savePlannedWorkoutSet(database, workoutId, secondId, 90, 3);
+    await confirmWorkoutSet(database, workoutId, secondId, 90, 3, '2026-01-01T10:00:00Z');
+    await confirmWorkoutSet(database, workoutId, firstId, 80.5, 5, '2026-01-01T10:00:00Z');
+
+    expect((await loadActiveWorkout(database))!.exercises[0].sets.map(({ id }) => id))
+      .toEqual([firstId, secondId]);
+
+    await unconfirmWorkoutSet(database, workoutId, firstId);
+    expect((await loadActiveWorkout(database))!.exercises[0].sets).toEqual([
+      { id: secondId, loadKg: 90, repetitions: 3, confirmedAt: '2026-01-01T10:00:00Z' },
+      { id: firstId, loadKg: 80.5, repetitions: 5, confirmedAt: null },
+    ]);
+
+    await confirmWorkoutSet(database, workoutId, firstId, 81, 6, '2026-01-01T10:02:00Z');
+    expect((await loadActiveWorkout(database))!.exercises[0].sets.map(({ id }) => id))
+      .toEqual([secondId, firstId]);
+  });
+
+  test('deletes only planned sets from an active workout', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    await addExerciseToWorkout(database, workoutId, exerciseId);
+    const setId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
+
+    await confirmWorkoutSet(database, workoutId, setId, 0, 1, 'now');
+    await expect(deletePlannedWorkoutSet(database, workoutId, setId)).rejects.toThrow('Planned set not found');
+    await unconfirmWorkoutSet(database, workoutId, setId);
+    await deletePlannedWorkoutSet(database, workoutId, setId);
+
+    expect((await loadActiveWorkout(database))!.exercises[0].sets).toEqual([]);
+  });
+
+  test('rolls back a failed confirmation without false success', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    await addExerciseToWorkout(database, workoutId, exerciseId);
+    const setId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
+    await database.execAsync(`
+      CREATE TRIGGER reject_set_confirmation BEFORE UPDATE ON workout_sets
+      WHEN NEW.confirmed_at IS NOT NULL
+      BEGIN SELECT RAISE(ABORT, 'write failed'); END;
+    `);
+
+    await expect(confirmWorkoutSet(database, workoutId, setId, 80, 5, 'now')).rejects.toThrow('write failed');
+    expect((await loadActiveWorkout(database))!.exercises[0].sets[0]).toEqual({
+      id: setId, loadKg: null, repetitions: null, confirmedAt: null,
+    });
   });
 });

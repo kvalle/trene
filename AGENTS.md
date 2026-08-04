@@ -50,10 +50,18 @@ adb devices -l
 An Android emulator must be listed as `device`. If port 8081 is already in use,
 assume the user owns that Metro process, notify them immediately, and wait for
 them to stop it before implementation. If port 8081 is free, start Metro with
-`npm start -- --clear` and keep ownership of that process so it can be stopped
-when work is complete. If the emulator is unavailable or Metro cannot be
-started, notify the user immediately and wait. Do this before implementation so
-the user gets an early warning.
+the following command and keep ownership of that process so it can be stopped
+when work is complete:
+
+```sh
+mkdir -p .artifacts/expo
+__UNSAFE_EXPO_HOME_DIRECTORY="$PWD/.artifacts/expo" npm start -- --clear
+```
+
+The redirected Expo home keeps Expo CLI state out of the sandbox-blocked
+`~/.expo` directory. If the emulator is unavailable or Metro cannot be started,
+notify the user immediately and wait. Do this before implementation so the user
+gets an early warning.
 
 When an Android emulator is running and the app is installed, cplt agents can
 run the Maestro smoke suite through the host ADB server:
