@@ -4,8 +4,7 @@ tags:
   - smoke
   - android
 ---
-- launchApp:
-    clearState: true
+- launchApp
 
 - assertVisible: "Klar for en økt?"
 - tapOn: "Øvelser"

@@ -4,8 +4,7 @@ tags:
   - smoke
   - android
 ---
-- launchApp:
-    clearState: true
+- launchApp
 
 - tapOn: "Start økt"
 - assertVisible: "Ingen øvelser lagt til ennå"
