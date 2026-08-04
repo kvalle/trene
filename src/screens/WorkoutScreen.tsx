@@ -29,29 +29,15 @@ import {
 } from '../database/workouts';
 import { parseLoad, parseRepetitions, validateWorkoutSet } from '../domain/workoutSet';
 import { formatLoad } from '../locale';
+import { type WorkoutSetDraft, useWorkoutDrafts } from '../workoutDrafts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Workout'>;
 type State = { status: 'loading' } | { status: 'failed' } | { status: 'ready'; workout: ActiveWorkout };
-type Draft = {
-  load: string;
-  repetitions: string;
-  loadError?: string;
-  repetitionsError?: string;
-  unsaved?: boolean;
-  confirmationFailed?: boolean;
-};
-
-function parsedValue(input: string, parser: (value: string) => { value: number } | { error: string }) {
-  const result = parser(input);
-  return 'value' in result ? result.value : undefined;
-}
-
-function isDirty(set: WorkoutSet, draft?: Draft): boolean {
+function isDirty(set: WorkoutSet, draft?: WorkoutSetDraft): boolean {
   if (!draft) return false;
-  const load = parsedValue(draft.load, parseLoad);
-  const repetitions = parsedValue(draft.repetitions, parseRepetitions);
-  return (load !== undefined && load !== set.loadKg)
-    || (repetitions !== undefined && repetitions !== set.repetitions);
+  const persistedLoad = set.loadKg === null ? '' : formatLoad(set.loadKg);
+  const persistedRepetitions = set.repetitions?.toString() ?? '';
+  return draft.load !== persistedLoad || draft.repetitions !== persistedRepetitions;
 }
 
 function compareWorkoutSets(left: WorkoutSet, right: WorkoutSet): number {
@@ -63,21 +49,28 @@ function compareWorkoutSets(left: WorkoutSet, right: WorkoutSet): number {
 export function WorkoutScreen({ navigation, route }: Props) {
   const database = useDatabase();
   const { colors } = useTheme();
+  const { drafts, setDrafts } = useWorkoutDrafts();
   const [state, setState] = useState<State>({ status: 'loading' });
   const [reload, setReload] = useState(0);
   const [expandedId, setExpandedId] = useState<number>();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelFailed, setCancelFailed] = useState(false);
-  const [drafts, setDrafts] = useState<Record<number, Draft>>({});
   const [pendingSetId, setPendingSetId] = useState<number>();
   const [setFailure, setSetFailure] = useState<{ setId: number; message: string; retry: () => void }>();
+  const [setRetryFocus, setSetRetryFocus] = useState<{ setId: number }>();
   const addExerciseRef = useRef<View>(null);
   const cancelRef = useRef<View>(null);
   const confirmCancelRef = useRef<View>(null);
   const retryCancelRef = useRef<View>(null);
   const allowNavigation = useRef(false);
+  const saveQueue = useRef(Promise.resolve());
+  const saveQueueFailed = useRef(Object.values(drafts).some((draft) => draft.unsaved));
+  const pendingSaves = useRef(0);
   const cardRefs = useRef(new Map<number, View>());
+  const loadInputRefs = useRef(new Map<number, TextInput>());
+  const repetitionsInputRefs = useRef(new Map<number, TextInput>());
+  const retryRefs = useRef(new Map<number, View>());
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -108,10 +101,13 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const hasDirtyDraft = state.status === 'ready' && state.workout.exercises.some((exercise) =>
     exercise.sets.some((set) => set.confirmedAt === null && isDirty(set, drafts[set.id])),
   );
+  const hasUnsavedDraft = Object.values(drafts).some((draft) => draft.unsaved);
 
   usePreventRemove(cancelling || pendingSetId !== undefined || hasDirtyDraft, ({ data }) => {
     if (allowNavigation.current) navigation.dispatch(data.action);
-    else if (!cancelling && pendingSetId === undefined) {
+    else if (!cancelling && pendingSetId === undefined && hasUnsavedDraft) {
+      navigation.dispatch(data.action);
+    } else if (!cancelling && pendingSetId === undefined) {
       void flushDrafts().then((saved) => {
         if (!saved) return;
         allowNavigation.current = true;
@@ -125,6 +121,15 @@ export function WorkoutScreen({ navigation, route }: Props) {
     if (nextState !== 'active') void flushDrafts();
   }).remove, [state, drafts]);
 
+  useEffect(() => {
+    if (!setRetryFocus) return;
+    focus({ current: retryRefs.current.get(setRetryFocus.setId) ?? null });
+  }, [setRetryFocus]);
+
+  useEffect(() => {
+    if (cancelFailed) focus(retryCancelRef);
+  }, [cancelFailed]);
+
   function focus(ref: React.RefObject<View | null>) {
     const handle = findNodeHandle(ref.current);
     if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
@@ -136,14 +141,14 @@ export function WorkoutScreen({ navigation, route }: Props) {
     requestAnimationFrame(() => focus(cancelRef));
   }
 
-  function draftFor(set: WorkoutSet): Draft {
+  function draftFor(set: WorkoutSet): WorkoutSetDraft {
     return drafts[set.id] ?? {
       load: set.loadKg === null ? '' : formatLoad(set.loadKg),
       repetitions: set.repetitions?.toString() ?? '',
     };
   }
 
-  function updateDraft(set: WorkoutSet, update: Partial<Draft>) {
+  function updateDraft(set: WorkoutSet, update: Partial<WorkoutSetDraft>) {
     setDrafts((current) => ({
       ...current,
       [set.id]: {
@@ -178,6 +183,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
     set: WorkoutSet,
     exerciseName: string,
     draft = draftFor(set),
+    manualRetry = false,
   ): Promise<boolean> {
     const load = parseLoad(draft.load);
     const repetitions = parseRepetitions(draft.repetitions);
@@ -188,19 +194,34 @@ export function WorkoutScreen({ navigation, route }: Props) {
       repetitionsError: 'error' in repetitions ? repetitions.error : undefined,
     });
     if (loadValue === set.loadKg && repetitionsValue === set.repetitions) return true;
+    pendingSaves.current += 1;
     setPendingSetId(set.id);
-    try {
-      await savePlannedWorkoutSet(database, workoutId, set.id, loadValue, repetitionsValue);
-      updateDraft(set, { unsaved: false });
-      updateWorkoutSet(set.id, (current) => ({ ...current, loadKg: loadValue, repetitions: repetitionsValue }));
-      return true;
-    } catch {
-      updateDraft(set, { unsaved: true });
-      AccessibilityInfo.announceForAccessibility(`Endringene for ${exerciseName} er ikke lagret.`);
-      return false;
-    } finally {
-      setPendingSetId(undefined);
-    }
+    const operation = async () => {
+      try {
+        if ((saveQueueFailed.current || draft.unsaved) && !manualRetry) {
+          updateDraft(set, { unsaved: true });
+          setSetRetryFocus({ setId: set.id });
+          return false;
+        }
+        await savePlannedWorkoutSet(database, workoutId, set.id, loadValue, repetitionsValue);
+        saveQueueFailed.current = false;
+        updateDraft(set, { unsaved: false });
+        updateWorkoutSet(set.id, (current) => ({ ...current, loadKg: loadValue, repetitions: repetitionsValue }));
+        return true;
+      } catch {
+        saveQueueFailed.current = true;
+        updateDraft(set, { unsaved: true });
+        AccessibilityInfo.announceForAccessibility(`Endringene for ${exerciseName} er ikke lagret.`);
+        setSetRetryFocus({ setId: set.id });
+        return false;
+      } finally {
+        pendingSaves.current -= 1;
+        if (pendingSaves.current === 0) setPendingSetId(undefined);
+      }
+    };
+    const queued = saveQueue.current.then(operation, operation);
+    saveQueue.current = queued.then(() => undefined);
+    return queued;
   }
 
   async function flushDrafts(): Promise<boolean> {
@@ -222,6 +243,10 @@ export function WorkoutScreen({ navigation, route }: Props) {
     if (!('loadKg' in validation)) {
       updateDraft(set, validation);
       AccessibilityInfo.announceForAccessibility('Kontroller belastning og repetisjoner.');
+      const invalidInput = validation.loadError
+        ? loadInputRefs.current.get(set.id)
+        : repetitionsInputRefs.current.get(set.id);
+      requestAnimationFrame(() => focus({ current: invalidInput ?? null }));
       return;
     }
     const confirmedAt = new Date().toISOString();
@@ -239,6 +264,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
     } catch {
       updateDraft(set, { confirmationFailed: true });
       AccessibilityInfo.announceForAccessibility('Kunne ikke bekrefte settet. Prøv igjen.');
+      setSetRetryFocus({ setId: set.id });
     } finally {
       setPendingSetId(undefined);
     }
@@ -249,15 +275,24 @@ export function WorkoutScreen({ navigation, route }: Props) {
     operation: () => Promise<void>,
     apply: (set: WorkoutSet) => WorkoutSet | null,
     failure: string,
+    removeDraft = false,
   ) {
     setPendingSetId(setId);
     setSetFailure(undefined);
     try {
       await operation();
       updateWorkoutSet(setId, apply);
+      if (removeDraft) {
+        setDrafts((current) => { const next = { ...current }; delete next[setId]; return next; });
+      }
     } catch {
       AccessibilityInfo.announceForAccessibility(failure);
-      setSetFailure({ setId, message: failure, retry: () => void mutateSet(setId, operation, apply, failure) });
+      setSetFailure({
+        setId,
+        message: failure,
+        retry: () => void mutateSet(setId, operation, apply, failure, removeDraft),
+      });
+      setSetRetryFocus({ setId });
     } finally {
       setPendingSetId(undefined);
     }
@@ -268,6 +303,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
     setCancelFailed(false);
     try {
       await cancelActiveWorkout(database, workoutId);
+      setDrafts({});
       setCancelDialogOpen(false);
       allowNavigation.current = true;
       navigation.popTo('Home', { focusStartWorkout: true });
@@ -275,7 +311,6 @@ export function WorkoutScreen({ navigation, route }: Props) {
       setCancelDialogOpen(false);
       setCancelFailed(true);
       AccessibilityInfo.announceForAccessibility('Kunne ikke avbryte økten. Prøv igjen.');
-      requestAnimationFrame(() => focus(retryCancelRef));
     } finally {
       setCancelling(false);
     }
@@ -332,7 +367,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                 {setFailure?.setId === set.id && (
                   <View style={styles.failure}>
                     <Text accessibilityRole="alert" style={{ color: colors.notification }}>{setFailure.message}</Text>
-                    <Button label="Prøv igjen" onPress={setFailure.retry} />
+                    <Button label="Prøv igjen" onPress={setFailure.retry} setButtonRef={(node) => { if (node) retryRefs.current.set(set.id, node); }} />
                   </View>
                 )}
               </View>
@@ -345,35 +380,41 @@ export function WorkoutScreen({ navigation, route }: Props) {
                   <View style={styles.fields}>
                     <View style={styles.field}>
                       <TextInput
+                        aria-describedby={draft.loadError ? `load-error-${set.id}` : undefined}
+                        aria-invalid={Boolean(draft.loadError)}
                         accessibilityLabel={`Belastning for ${exercise.name}`}
                         keyboardType="decimal-pad"
                         onBlur={() => void saveDraft(state.workout.id, set, exercise.name)}
                         onChangeText={(load) => updateDraft(set, { load, loadError: undefined })}
                         placeholder="Belastning"
                         placeholderTextColor={colors.border}
+                        ref={(node) => { if (node) loadInputRefs.current.set(set.id, node); }}
                         style={[styles.input, { borderColor: draft.loadError ? colors.notification : colors.border, color: colors.text }]}
                         value={draft.load}
                       />
-                      {draft.loadError && <Text accessibilityRole="alert" style={{ color: colors.notification }}>{draft.loadError}</Text>}
+                      {draft.loadError && <Text accessibilityRole="alert" nativeID={`load-error-${set.id}`} style={{ color: colors.notification }}>{draft.loadError}</Text>}
                     </View>
                     <View style={styles.field}>
                       <TextInput
+                        aria-describedby={draft.repetitionsError ? `repetitions-error-${set.id}` : undefined}
+                        aria-invalid={Boolean(draft.repetitionsError)}
                         accessibilityLabel={`Repetisjoner for ${exercise.name}`}
                         keyboardType="number-pad"
                         onBlur={() => void saveDraft(state.workout.id, set, exercise.name)}
                         onChangeText={(repetitions) => updateDraft(set, { repetitions, repetitionsError: undefined })}
                         placeholder="Repetisjoner"
                         placeholderTextColor={colors.border}
+                        ref={(node) => { if (node) repetitionsInputRefs.current.set(set.id, node); }}
                         style={[styles.input, { borderColor: draft.repetitionsError ? colors.notification : colors.border, color: colors.text }]}
                         value={draft.repetitions}
                       />
-                      {draft.repetitionsError && <Text accessibilityRole="alert" style={{ color: colors.notification }}>{draft.repetitionsError}</Text>}
+                      {draft.repetitionsError && <Text accessibilityRole="alert" nativeID={`repetitions-error-${set.id}`} style={{ color: colors.notification }}>{draft.repetitionsError}</Text>}
                     </View>
                   </View>
                   {draft.unsaved && !draft.confirmationFailed && (
                     <View style={styles.failure}>
                       <Text accessibilityRole="alert" style={{ color: colors.notification }}>Endringene er ikke lagret</Text>
-                      <Button disabled={busy} label="Prøv å lagre igjen" onPress={() => void saveDraft(state.workout.id, set, exercise.name)} />
+                      <Button disabled={busy} label="Prøv å lagre igjen" onPress={() => void saveDraft(state.workout.id, set, exercise.name, undefined, true)} setButtonRef={(node) => { if (node) retryRefs.current.set(set.id, node); }} />
                     </View>
                   )}
                   {draft.confirmationFailed && (
@@ -383,6 +424,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         disabled={busy}
                         label="Prøv å bekrefte igjen"
                         onPress={() => void confirmSet(state.workout.id, set, exercise.name)}
+                        setButtonRef={(node) => { if (node) retryRefs.current.set(set.id, node); }}
                       />
                     </View>
                   )}
@@ -403,13 +445,14 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         () => deletePlannedWorkoutSet(database, state.workout.id, set.id),
                         () => null,
                         'Kunne ikke slette settet. Prøv igjen.',
+                        true,
                       )}
                     />
                   </View>
                   {setFailure?.setId === set.id && (
                     <View style={styles.failure}>
                       <Text accessibilityRole="alert" style={{ color: colors.notification }}>{setFailure.message}</Text>
-                      <Button label="Prøv igjen" onPress={setFailure.retry} />
+                      <Button label="Prøv igjen" onPress={setFailure.retry} setButtonRef={(node) => { if (node) retryRefs.current.set(set.id, node); }} />
                     </View>
                   )}
                 </View>
@@ -421,7 +464,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
       })}
       <Button
         buttonRef={addExerciseRef}
-        disabled={pendingSetId !== undefined}
+        disabled={pendingSetId !== undefined || hasUnsavedDraft}
         label="Legg til øvelse"
         onPress={() => void flushDrafts().then((saved) => { if (saved) {
           navigation.setParams({ focusAddExercise: true });
@@ -466,10 +509,11 @@ export function WorkoutScreen({ navigation, route }: Props) {
   );
 }
 
-function Button({ accessibilityLabel, buttonRef, disabled = false, label, onPress, primary = false }: {
+function Button({ accessibilityLabel, buttonRef, disabled = false, label, onPress, primary = false, setButtonRef }: {
   accessibilityLabel?: string;
   buttonRef?: React.RefObject<View | null>;
   disabled?: boolean; label: string; onPress: () => void; primary?: boolean;
+  setButtonRef?: (node: View | null) => void;
 }) {
   const { colors } = useTheme();
   return (
@@ -479,7 +523,10 @@ function Button({ accessibilityLabel, buttonRef, disabled = false, label, onPres
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      ref={buttonRef}
+      ref={(node) => {
+        if (buttonRef) buttonRef.current = node;
+        setButtonRef?.(node);
+      }}
       style={[styles.button, { backgroundColor: primary ? colors.primary : colors.card, borderColor: colors.border }, disabled && styles.disabled]}
     >
       <Text style={[styles.buttonText, { color: primary ? colors.background : colors.text }]}>{label}</Text>

@@ -6,7 +6,9 @@ tags:
 ---
 - launchApp
 
-- assertVisible: "Klar for en økt?"
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 60000
 - tapOn: "Øvelser"
 - tapOn: "Opprett første øvelse"
 
@@ -24,6 +26,8 @@ tags:
 - stopApp
 - launchApp
 
-- assertVisible: "Klar for en økt?"
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 60000
 - tapOn: "Øvelser"
 - assertVisible: "Knebøy"

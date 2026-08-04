@@ -6,6 +6,7 @@ import { HomeScreen } from '../HomeScreen';
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
 import { getActiveWorkoutId, startWorkout } from '../../database/workouts';
+import { WorkoutDraftProvider } from '../../workoutDrafts';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual('react-native/Libraries/ReactNative/RendererProxy'),
@@ -67,12 +68,27 @@ test('focuses Start økt after a cancelled workout', async () => {
   expect(setParams).toHaveBeenCalledWith({ focusStartWorkout: undefined });
 });
 
-function renderScreen(navigation: Record<string, jest.Mock> = {}, params?: { focusStartWorkout?: boolean }) {
+test('marks an active workout when a set edit has not been saved', async () => {
+  mockedGetActiveWorkoutId.mockResolvedValue(7);
+  renderScreen({}, undefined, true);
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Økten har endringer som ikke er lagret');
+});
+
+function renderScreen(
+  navigation: Record<string, jest.Mock> = {},
+  params?: { focusStartWorkout?: boolean },
+  failedDraft = false,
+) {
   return render(
     <DatabaseProvider database={database}>
-      <NavigationContainer>
-        <HomeScreen navigation={{ navigate: jest.fn(), ...navigation } as never} route={{ params } as never} />
-      </NavigationContainer>
+      <WorkoutDraftProvider initialDrafts={failedDraft ? {
+        6: { load: '80', repetitions: '5', unsaved: true },
+      } : undefined}>
+        <NavigationContainer>
+          <HomeScreen navigation={{ navigate: jest.fn(), ...navigation } as never} route={{ params } as never} />
+        </NavigationContainer>
+      </WorkoutDraftProvider>
     </DatabaseProvider>,
   );
 }
