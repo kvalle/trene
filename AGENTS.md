@@ -56,6 +56,8 @@ through an implementation skill, deliver the work through a pull request:
 If local changes prevent safely switching or creating branches, stop and ask the
 user how to proceed rather than moving or discarding their work.
 
+After pushing and creating the pull request, wait for its GitHub Actions workflow to complete. Use gh run view/gh run watch because fine-grained PATs may not permit gh pr checks. If a job fails, inspect its logs, fix the issue, push, and wait for the new run. Treat the ticket as incomplete and do not ask for review until every required job has succeeded. Return the PR URL and final check results.
+
 ## Android smoke tests
 
 Before starting work on any implementation ticket, verify that the Android smoke
