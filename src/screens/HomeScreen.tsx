@@ -6,12 +6,14 @@ import { AccessibilityInfo, ActivityIndicator, findNodeHandle, Pressable, Scroll
 import type { RootStackParamList } from '../AppNavigator';
 import { useDatabase } from '../database/DatabaseContext';
 import { getActiveWorkoutId, startWorkout } from '../database/workouts';
+import { useWorkoutDrafts } from '../workoutDrafts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export function HomeScreen({ navigation, route }: Props) {
   const database = useDatabase();
   const { colors } = useTheme();
+  const { drafts } = useWorkoutDrafts();
   const [activeWorkoutId, setActiveWorkoutId] = useState<number | null>();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState(false);
@@ -85,6 +87,11 @@ export function HomeScreen({ navigation, route }: Props) {
             onPress={() => void openWorkout()}
             primary
           />
+        )}
+        {activeWorkoutId !== null && Object.values(drafts).some((draft) => draft.unsaved) && (
+          <Text accessibilityRole="alert" style={{ color: colors.notification }}>
+            Økten har endringer som ikke er lagret
+          </Text>
         )}
         {error && <Text accessibilityRole="alert" style={{ color: colors.notification }}>Kunne ikke laste inn</Text>}
         <Action colors={colors} disabled={starting} label="Tidligere økter" onPress={() => navigation.navigate('History')} />

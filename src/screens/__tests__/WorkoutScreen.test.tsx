@@ -8,15 +8,18 @@ import {
   cancelActiveWorkout,
   confirmWorkoutSet,
   deletePlannedWorkoutSet,
+  getActiveWorkoutId,
   loadActiveWorkout,
   savePlannedWorkoutSet,
   unconfirmWorkoutSet,
 } from '../../database/workouts';
 import { WorkoutScreen } from '../WorkoutScreen';
+import { WorkoutDraftProvider } from '../../workoutDrafts';
+import { HomeScreen } from '../HomeScreen';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual('react-native/Libraries/ReactNative/RendererProxy'),
-  findNodeHandle: jest.fn(() => 12),
+  findNodeHandle: jest.fn((node) => node ? 12 : null),
 }));
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
@@ -26,6 +29,7 @@ jest.mock('../../database/workouts', () => ({
   cancelActiveWorkout: jest.fn(),
   confirmWorkoutSet: jest.fn(),
   deletePlannedWorkoutSet: jest.fn(),
+  getActiveWorkoutId: jest.fn(),
   loadActiveWorkout: jest.fn(),
   savePlannedWorkoutSet: jest.fn(),
   unconfirmWorkoutSet: jest.fn(),
@@ -35,6 +39,7 @@ const mockedLoad = jest.mocked(loadActiveWorkout);
 const mockedCancel = jest.mocked(cancelActiveWorkout);
 const mockedConfirm = jest.mocked(confirmWorkoutSet);
 const mockedDelete = jest.mocked(deletePlannedWorkoutSet);
+const mockedGetActiveWorkoutIdForSharedDraft = jest.mocked(getActiveWorkoutId);
 const mockedSave = jest.mocked(savePlannedWorkoutSet);
 const mockedUnconfirm = jest.mocked(unconfirmWorkoutSet);
 
@@ -99,6 +104,7 @@ test('shows completed receipts above planned sets with derived numbering', async
 });
 
 test('validates input and atomically confirms comma decimals', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
   mockedConfirm.mockResolvedValue();
   renderScreen();
@@ -109,6 +115,9 @@ test('validates input and atomically confirms comma decimals', async () => {
   fireEvent.changeText(repetitions, '0');
   fireEvent.press(screen.getByRole('button', { name: 'Bekreft planlagt sett for Knebøy' }));
   expect(await screen.findAllByRole('alert')).toHaveLength(2);
+  expect(load).toHaveProp('aria-invalid', true);
+  expect(repetitions).toHaveProp('aria-invalid', true);
+  expect(focus).toHaveBeenCalled();
   expect(mockedConfirm).not.toHaveBeenCalled();
 
   fireEvent.changeText(load, '80,5');
@@ -131,6 +140,88 @@ test('keeps a failed valid autosave visible until manual retry succeeds', async 
 
   await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(2));
   expect(screen.queryByText('Endringene er ikke lagret')).not.toBeOnTheScreen();
+});
+
+test('focuses manual retry after autosave fails', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
+  mockedSave.mockRejectedValue(new Error('write failed'));
+  renderScreen();
+  const load = await screen.findByLabelText('Belastning for Knebøy');
+
+  fireEvent.changeText(load, '80');
+  fireEvent(load, 'blur');
+
+  expect(await screen.findByRole('button', { name: 'Prøv å lagre igjen' })).toBeOnTheScreen();
+  expect(focus).toHaveBeenCalled();
+});
+
+test('serializes field autosaves', async () => {
+  let finishFirst: () => void = () => undefined;
+  mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
+  mockedSave.mockImplementationOnce(() => new Promise<void>((resolve) => { finishFirst = resolve; })).mockResolvedValueOnce();
+  renderScreen();
+  const load = await screen.findByLabelText('Belastning for Knebøy');
+  const repetitions = screen.getByLabelText('Repetisjoner for Knebøy');
+  fireEvent.changeText(load, '80');
+  fireEvent.changeText(repetitions, '5');
+
+  fireEvent(load, 'blur');
+  fireEvent(repetitions, 'blur');
+  await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
+  finishFirst();
+
+  await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(2));
+});
+
+test('stops queued autosaves after failure until manual retry', async () => {
+  mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
+  mockedSave.mockRejectedValueOnce(new Error('write failed')).mockResolvedValue();
+  renderScreen();
+  const load = await screen.findByLabelText('Belastning for Knebøy');
+  const repetitions = screen.getByLabelText('Repetisjoner for Knebøy');
+  fireEvent.changeText(load, '80');
+  fireEvent.changeText(repetitions, '5');
+
+  fireEvent(load, 'blur');
+  fireEvent(repetitions, 'blur');
+
+  expect(await screen.findByText('Endringene er ikke lagret')).toBeOnTheScreen();
+  await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
+  fireEvent.press(screen.getByRole('button', { name: 'Prøv å lagre igjen' }));
+  await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(2));
+});
+
+test('retains a failed draft across Home and reopening the workout', async () => {
+  mockedGetActiveWorkoutIdForSharedDraft.mockResolvedValue(3);
+  mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
+  mockedSave.mockRejectedValue(new Error('write failed'));
+  const view = renderSharedScreen('workout');
+  const load = await screen.findByLabelText('Belastning for Knebøy');
+  fireEvent.changeText(load, '80');
+  fireEvent(load, 'blur');
+  expect(await screen.findByText('Endringene er ikke lagret')).toBeOnTheScreen();
+
+  view.rerender(sharedScreen('home'));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Økten har endringer som ikke er lagret');
+  view.rerender(sharedScreen('workout'));
+  const reopenedLoad = await screen.findByLabelText('Belastning for Knebøy');
+  expect(reopenedLoad).toHaveProp('value', '80');
+  expect(screen.getByRole('button', { name: 'Prøv å lagre igjen' })).toBeOnTheScreen();
+  fireEvent(reopenedLoad, 'blur');
+  await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
+});
+
+test('focuses retry after a set mutation fails', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedUnconfirm.mockRejectedValue(new Error('write failed'));
+  renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Rediger sett 1' }));
+
+  expect(await screen.findByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
+  expect(focus).toHaveBeenCalled();
 });
 
 test('persists a valid field without overwriting invalid input in the other field', async () => {
@@ -248,12 +339,37 @@ function renderScreen(navigation: Record<string, jest.Mock> = {}) {
   const mergedNavigation = { navigate: jest.fn(), popTo: jest.fn(), setParams: jest.fn(), ...navigation };
   return render(
     <DatabaseProvider database={database}>
-      <NavigationContainer>
-        <WorkoutScreen
-          navigation={mergedNavigation as never}
-          route={{ params: undefined } as never}
-        />
-      </NavigationContainer>
+      <WorkoutDraftProvider>
+        <NavigationContainer>
+          <WorkoutScreen
+            navigation={mergedNavigation as never}
+            route={{ params: undefined } as never}
+          />
+        </NavigationContainer>
+      </WorkoutDraftProvider>
     </DatabaseProvider>,
   );
+}
+
+function sharedScreen(screenName: 'home' | 'workout') {
+  return (
+    <DatabaseProvider database={database}>
+      <WorkoutDraftProvider>
+        <NavigationContainer>
+          {screenName === 'home' ? (
+            <HomeScreen navigation={{ navigate: jest.fn() } as never} route={{ params: undefined } as never} />
+          ) : (
+            <WorkoutScreen
+              navigation={{ navigate: jest.fn(), popTo: jest.fn(), setParams: jest.fn() } as never}
+              route={{ params: undefined } as never}
+            />
+          )}
+        </NavigationContainer>
+      </WorkoutDraftProvider>
+    </DatabaseProvider>
+  );
+}
+
+function renderSharedScreen(screenName: 'home' | 'workout') {
+  return render(sharedScreen(screenName));
 }

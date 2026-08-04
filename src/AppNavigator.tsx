@@ -10,6 +10,7 @@ import { ExercisePickerScreen } from './screens/ExercisePickerScreen';
 import { PlaceholderScreen } from './screens/PlaceholderScreen';
 import { WorkoutScreen } from './screens/WorkoutScreen';
 import { darkTheme, lightTheme } from './theme';
+import { WorkoutDraftProvider } from './workoutDrafts';
 
 export type RootStackParamList = {
   Home: { focusStartWorkout?: boolean } | undefined;
@@ -32,30 +33,32 @@ export function AppNavigator() {
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
   return (
-    <NavigationContainer theme={theme}>
-      <Stack.Navigator screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
-        <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Trene' }} />
-        <Stack.Screen name="Workout" component={WorkoutScreen} options={{ title: 'Treningsøkt' }} />
-        <Stack.Screen name="History" options={{ title: 'Tidligere økter' }}>
-          {() => <PlaceholderScreen title="Tidligere økter" />}
-        </Stack.Screen>
-        <Stack.Screen name="Exercises" component={ExercisesScreen} options={{ title: 'Øvelser' }} />
-        <Stack.Screen
-          name="ExercisePicker"
-          component={ExercisePickerScreen}
-          options={{ presentation: 'modal', title: 'Legg til øvelse' }}
-        />
-        <Stack.Screen
-          name="CreateExercise"
-          component={CreateExerciseScreen}
-          options={{ presentation: 'modal', title: 'Ny øvelse' }}
-        />
-        <Stack.Screen
-          name="ExerciseDetail"
-          component={ExerciseDetailScreen}
-          options={{ title: 'Øvelse' }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <WorkoutDraftProvider>
+      <NavigationContainer theme={theme}>
+        <Stack.Navigator screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
+          <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Trene' }} />
+          <Stack.Screen name="Workout" component={WorkoutScreen} options={{ title: 'Treningsøkt' }} />
+          <Stack.Screen name="History" options={{ title: 'Tidligere økter' }}>
+            {() => <PlaceholderScreen title="Tidligere økter" />}
+          </Stack.Screen>
+          <Stack.Screen name="Exercises" component={ExercisesScreen} options={{ title: 'Øvelser' }} />
+          <Stack.Screen
+            name="ExercisePicker"
+            component={ExercisePickerScreen}
+            options={{ presentation: 'modal', title: 'Legg til øvelse' }}
+          />
+          <Stack.Screen
+            name="CreateExercise"
+            component={CreateExerciseScreen}
+            options={{ presentation: 'modal', title: 'Ny øvelse' }}
+          />
+          <Stack.Screen
+            name="ExerciseDetail"
+            component={ExerciseDetailScreen}
+            options={{ title: 'Øvelse' }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </WorkoutDraftProvider>
   );
 }

@@ -81,7 +81,6 @@ export async function cancelActiveWorkout(database: Database, workoutId: number)
 
 async function updateActiveWorkoutSet(
   database: Database,
-  workoutId: number,
   assignments: string,
   condition: string,
   ...params: (number | string | null)[]
@@ -107,7 +106,7 @@ export async function savePlannedWorkoutSet(
   repetitions: number | null,
 ): Promise<void> {
   await transaction(database, () => updateActiveWorkoutSet(
-    database, workoutId,
+    database,
     'load_kg = ?, repetitions = ?', 'AND confirmed_at IS NULL',
     loadKg, repetitions, setId, workoutId,
   ));
@@ -122,7 +121,7 @@ export async function confirmWorkoutSet(
   confirmedAt = new Date().toISOString(),
 ): Promise<void> {
   await transaction(database, () => updateActiveWorkoutSet(
-    database, workoutId,
+    database,
     'load_kg = ?, repetitions = ?, confirmed_at = ?', 'AND confirmed_at IS NULL',
     loadKg, repetitions, confirmedAt, setId, workoutId,
   ));
@@ -134,7 +133,7 @@ export async function unconfirmWorkoutSet(
   setId: number,
 ): Promise<void> {
   await transaction(database, () => updateActiveWorkoutSet(
-    database, workoutId, 'confirmed_at = NULL', 'AND confirmed_at IS NOT NULL', setId, workoutId,
+    database, 'confirmed_at = NULL', 'AND confirmed_at IS NOT NULL', setId, workoutId,
   ));
 }
 
