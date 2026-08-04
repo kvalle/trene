@@ -37,6 +37,25 @@ Triage uses the default five-role label vocabulary. See `docs/agents/triage-labe
 
 Domain documentation uses a single-context layout. See `docs/agents/domain.md`.
 
+## Ticket implementation workflow
+
+When the user asks to implement a GitHub ticket, whether in natural language or
+through an implementation skill, deliver the work through a pull request:
+
+1. Fetch the ticket and its comments before making changes.
+2. Start from an up-to-date `origin/main` and create a dedicated branch named
+   `issue-<number>-<short-description>`. If a branch or open pull request already
+   exists for the ticket, continue there instead of creating a duplicate.
+3. Implement, test, and review the ticket on that branch. Never push ticket work
+   directly to `main`.
+4. Commit only the intended changes, push the branch, and create a pull request
+   against `main`. Include `Closes #<number>` in the pull request body.
+5. Treat the ticket implementation as incomplete until the pull request exists
+   and return its URL to the user.
+
+If local changes prevent safely switching or creating branches, stop and ask the
+user how to proceed rather than moving or discarding their work.
+
 ## Android smoke tests
 
 Before starting work on any implementation ticket, verify that the Android smoke
