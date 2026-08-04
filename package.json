@@ -5,10 +5,10 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
+    "start:android": "sh scripts/start-android-metro.sh",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "smoke:android": "sh scripts/run-android-smoke.sh",
-    "smoke:android:sandbox": "sh scripts/run-android-smoke.sh --sandbox",
     "test": "jest --runInBand",
     "typecheck": "tsc --noEmit"
   },

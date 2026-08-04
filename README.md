@@ -15,6 +15,10 @@ npm install
 npm start
 ```
 
+For Android-emulator brukes `npm run start:android`. Den setter opp ADB-tunnelen,
+starter Metro med IPv4-støtte og annonserer `127.0.0.1`, slik at emulatoren ikke
+er avhengig av å nå maskinens LAN-adresse.
+
 Kjør `npm run android` eller `npm run ios` for en lokal native-bygg. En direkte
 installerbar Android APK kan bygges med `eas build --platform android --profile preview`.
 
@@ -50,10 +54,12 @@ npm run android
 npm run smoke:android
 ```
 
-Agenter som kjører gjennom cplt-sandkassen bruker i stedet
-`npm run smoke:android:sandbox` for isolert Maestro-tilstand og tilkobling til
-vertens ADB-server.
+Hvis appen allerede er installert, start Metro separat med
+`npm run start:android` før smoke-testen.
 
-Testen begynner med `clearState: true` og sletter derfor eksisterende appdata på
-emulatoren. Maestro Studio kan også åpne samme YAML-fil for visuell steg-for-steg-
-kjøring og inspeksjon.
+Kommandoen bruker prosjektlokal Maestro-tilstand under `.artifacts/maestro/` og
+fungerer både lokalt og gjennom cplt-sandkassen.
+
+Runneren sletter eksisterende appdata på emulatoren før hver smoke-flyt. Maestro
+Studio kan også åpne samme YAML-fil for visuell steg-for-steg-kjøring og
+inspeksjon, men nullstiller ikke appdata automatisk.

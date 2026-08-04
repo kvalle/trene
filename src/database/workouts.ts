@@ -79,6 +79,84 @@ export async function cancelActiveWorkout(database: Database, workoutId: number)
   });
 }
 
+async function updateActiveWorkoutSet(
+  database: Database,
+  workoutId: number,
+  assignments: string,
+  condition: string,
+  ...params: (number | string | null)[]
+): Promise<void> {
+  const result = await database.runAsync(`
+    UPDATE workout_sets SET ${assignments}
+    WHERE workout_sets.id = ? ${condition}
+      AND EXISTS (
+        SELECT 1 FROM workout_exercises
+        JOIN workouts ON workouts.id = workout_exercises.workout_id
+        WHERE workout_exercises.id = workout_sets.workout_exercise_id
+          AND workouts.id = ? AND workouts.status = 'active'
+      )
+  `, ...params);
+  if (result.changes !== 1) throw new Error('Workout set not found');
+}
+
+export async function savePlannedWorkoutSet(
+  database: Database,
+  workoutId: number,
+  setId: number,
+  loadKg: number | null,
+  repetitions: number | null,
+): Promise<void> {
+  await transaction(database, () => updateActiveWorkoutSet(
+    database, workoutId,
+    'load_kg = ?, repetitions = ?', 'AND confirmed_at IS NULL',
+    loadKg, repetitions, setId, workoutId,
+  ));
+}
+
+export async function confirmWorkoutSet(
+  database: Database,
+  workoutId: number,
+  setId: number,
+  loadKg: number,
+  repetitions: number,
+  confirmedAt = new Date().toISOString(),
+): Promise<void> {
+  await transaction(database, () => updateActiveWorkoutSet(
+    database, workoutId,
+    'load_kg = ?, repetitions = ?, confirmed_at = ?', 'AND confirmed_at IS NULL',
+    loadKg, repetitions, confirmedAt, setId, workoutId,
+  ));
+}
+
+export async function unconfirmWorkoutSet(
+  database: Database,
+  workoutId: number,
+  setId: number,
+): Promise<void> {
+  await transaction(database, () => updateActiveWorkoutSet(
+    database, workoutId, 'confirmed_at = NULL', 'AND confirmed_at IS NOT NULL', setId, workoutId,
+  ));
+}
+
+export async function deletePlannedWorkoutSet(
+  database: Database,
+  workoutId: number,
+  setId: number,
+): Promise<void> {
+  await transaction(database, async () => {
+    const result = await database.runAsync(`
+      DELETE FROM workout_sets WHERE id = ? AND confirmed_at IS NULL
+        AND EXISTS (
+          SELECT 1 FROM workout_exercises
+          JOIN workouts ON workouts.id = workout_exercises.workout_id
+          WHERE workout_exercises.id = workout_sets.workout_exercise_id
+            AND workouts.id = ? AND workouts.status = 'active'
+        )
+    `, setId, workoutId);
+    if (result.changes !== 1) throw new Error('Planned set not found');
+  });
+}
+
 export async function loadActiveWorkout(database: Database): Promise<ActiveWorkout | null> {
   const id = await getActiveWorkoutId(database);
   if (id === null) return null;

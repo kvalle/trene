@@ -4,8 +4,7 @@ tags:
   - smoke
   - android
 ---
-- launchApp:
-    clearState: true
+- launchApp
 
 - tapOn: "Start økt"
 - assertVisible: "Ingen øvelser lagt til ennå"
@@ -25,6 +24,14 @@ tags:
 - assertVisible: "Belastning"
 - assertVisible: "Repetisjoner"
 
+- tapOn: "Belastning"
+- inputText: "80.5"
+- tapOn: "Repetisjoner"
+- inputText: "5"
+- tapOn: "Bekreft"
+- assertVisible: "Sett 1"
+- assertVisible: "80,5 kg · 5 repetisjoner"
+
 # Restart the native process without clearing SQLite.
 - stopApp
 - launchApp
@@ -32,7 +39,14 @@ tags:
 - assertVisible: "Fortsett økt"
 - tapOn: "Fortsett økt"
 - assertVisible: "Knebøy"
+- assertVisible: "Sett 1"
+- assertVisible: "80,5 kg · 5 repetisjoner"
+- tapOn: "Rediger"
 - assertVisible: "Planlagt sett"
+- assertVisible: "80,5"
+- assertVisible: "5"
+- tapOn: "Bekreft"
+- assertVisible: "Sett 1"
 
 - tapOn: "Avbryt"
 - assertVisible: "Avbryt økten?"
