@@ -34,6 +34,12 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      ANDROID_API_LEVEL: '34'
+      ANDROID_ARCH: x86_64
+      ANDROID_PROFILE: pixel_7
+      ANDROID_DISK_SIZE: 4096M
+      AVD_CACHE_VERSION: '1'
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -46,6 +52,10 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v5
+        with:
+          # PR caches are branch-scoped, so writes speed up later commits without
+          # allowing untrusted PR state to replace main's cache.
+          cache-read-only: false
       - run: npm ci
 
       - name: Install Android SDK 36
@@ -64,13 +74,37 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - name: Restore Android emulator snapshot
+        id: avd-cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ runner.os }}-v${{ env.AVD_CACHE_VERSION }}-api${{ env.ANDROID_API_LEVEL }}-${{ env.ANDROID_ARCH }}-${{ env.ANDROID_PROFILE }}-${{ env.ANDROID_DISK_SIZE }}
+
+      - name: Create Android emulator snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.ANDROID_API_LEVEL }}
+          arch: ${{ env.ANDROID_ARCH }}
+          disk-size: ${{ env.ANDROID_DISK_SIZE }}
+          profile: ${{ env.ANDROID_PROFILE }}
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo 'Created clean Android emulator snapshot.'
+
       - name: Build app and run smoke tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
-          arch: x86_64
-          disk-size: 4096M
-          profile: pixel_7
+          api-level: ${{ env.ANDROID_API_LEVEL }}
+          arch: ${{ env.ANDROID_ARCH }}
+          disk-size: ${{ env.ANDROID_DISK_SIZE }}
+          profile: ${{ env.ANDROID_PROFILE }}
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: bash scripts/ci-android-smoke.sh
 
       - name: Upload smoke diagnostics
