@@ -16,6 +16,7 @@ fi
 
 if [[ "$phase" == "assemble" || "$phase" == "all" ]]; then
   ./android/gradlew -p android \
+    --build-cache \
     --no-daemon \
     --console=plain \
     -PreactNativeArchitectures=x86_64 \
