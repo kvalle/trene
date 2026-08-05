@@ -48,9 +48,14 @@ through an implementation skill, deliver the work through a pull request:
    exists for the ticket, continue there instead of creating a duplicate.
 3. Implement, test, and review the ticket on that branch. Never push ticket work
    directly to `main`.
-4. Commit only the intended changes, push the branch, and create a pull request
-   against `main`. Include `Closes #<number>` in the pull request body.
-5. Treat the ticket implementation as incomplete until the pull request exists
+4. Decide whether the ticket causes user-visible changes. For visible changes,
+   capture before and after screenshots of every relevant screen, commit them
+   under `docs/pr-screenshots/<issue-number>/`, and include them in the pull
+   request description. See `docs/pr-screenshots/README.md`.
+5. Commit only the intended changes, push the branch, and create a pull request
+   against `main`. Write a concise description of what changed and why so the
+   result is easy to review. Include `Closes #<number>` in the pull request body.
+6. Treat the ticket implementation as incomplete until the pull request exists
    and return its URL to the user.
 
 If local changes prevent safely switching or creating branches, stop and ask the
@@ -60,17 +65,21 @@ After pushing and creating the pull request, wait for its GitHub Actions workflo
 
 ## Android smoke tests
 
-Before starting work on any implementation ticket, verify that the Android smoke
-environment is ready:
+Do not prepare the local Android smoke environment before implementing a ticket.
+Wait for the smoke tests to run in CI. If they fail, inspect and download the CI
+logs before deciding whether local reproduction is needed.
+
+Run the smoke tests locally only when needed for diagnosis. Before doing so,
+check whether Metro's port is available:
 
 ```sh
 lsof -nP -iTCP:8081 -sTCP:LISTEN
 ```
 
 If port 8081 is already in use, assume the user owns that Metro process, notify
-them immediately, and wait for them to stop it before implementation. If port
-8081 is free, start Metro with the following command and keep ownership of that
-process so it can be stopped when work is complete:
+them, and wait for them to stop it. If port 8081 is free, start Metro with the
+following command and keep ownership of that process so it can be stopped when
+local testing is complete:
 
 ```sh
 npm run start:android
@@ -78,8 +87,7 @@ npm run start:android
 
 The command verifies the emulator, configures the ADB reverse tunnel, keeps Expo
 state under `.artifacts/expo/`, binds Metro for IPv4 access, and advertises
-`127.0.0.1` to the app. If it fails, notify the user immediately and wait so
-they get an early warning.
+`127.0.0.1` to the app. If it fails, notify the user and wait.
 
 When an Android emulator is running and the app is installed, cplt agents can
 run the Maestro smoke suite through the host ADB server:
@@ -91,6 +99,5 @@ npm run smoke:android
 The command verifies the emulator and reverse tunnel, keeps Maestro state and
 debug output under the ignored `.artifacts/maestro/` directory, and connects to
 ADB at `127.0.0.1:5037` so the same command works locally and in the cplt
-sandbox. Run this during final verification when a change affects an existing
-smoke flow, and extend `.maestro/smoke/` when a new cross-runtime user journey
-needs coverage. The runner discovers its YAML files automatically.
+sandbox. Extend `.maestro/smoke/` when a new cross-runtime user journey needs
+coverage. The runner discovers its YAML files automatically.
