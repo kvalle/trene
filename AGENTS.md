@@ -48,9 +48,14 @@ through an implementation skill, deliver the work through a pull request:
    exists for the ticket, continue there instead of creating a duplicate.
 3. Implement, test, and review the ticket on that branch. Never push ticket work
    directly to `main`.
-4. Commit only the intended changes, push the branch, and create a pull request
-   against `main`. Include `Closes #<number>` in the pull request body.
-5. Treat the ticket implementation as incomplete until the pull request exists
+4. Decide whether the ticket causes user-visible changes. For visible changes,
+   capture before and after screenshots of every relevant screen, commit them
+   under `docs/pr-screenshots/<issue-number>/`, and include them in the pull
+   request description. See `docs/pr-screenshots/README.md`.
+5. Commit only the intended changes, push the branch, and create a pull request
+   against `main`. Write a concise description of what changed and why so the
+   result is easy to review. Include `Closes #<number>` in the pull request body.
+6. Treat the ticket implementation as incomplete until the pull request exists
    and return its URL to the user.
 
 If local changes prevent safely switching or creating branches, stop and ask the
