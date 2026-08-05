@@ -36,8 +36,10 @@ tags:
 - pressKey: HOME
 - launchApp
 - extendedWaitUntil:
-    visible: "Knebøy"
+    visible: "Fortsett økt"
     timeout: 120000
+- tapOn: "Fortsett økt"
+- assertVisible: "Knebøy"
 - assertVisible: "80,5"
 - assertVisible: "5"
 
