@@ -4,6 +4,7 @@ import { useColorScheme } from 'react-native';
 
 import { HomeScreen } from './screens/HomeScreen';
 import { CreateExerciseScreen } from './screens/CreateExerciseScreen';
+import { CompletedWorkoutScreen } from './screens/CompletedWorkoutScreen';
 import { ExerciseDetailScreen } from './screens/ExerciseDetailScreen';
 import { ExercisesScreen } from './screens/ExercisesScreen';
 import { ExercisePickerScreen } from './screens/ExercisePickerScreen';
@@ -15,6 +16,7 @@ import { WorkoutDraftProvider } from './workoutDrafts';
 export type RootStackParamList = {
   Home: { focusStartWorkout?: boolean } | undefined;
   Workout: { focusExerciseId?: number; focusAddExercise?: boolean } | undefined;
+  CompletedWorkout: { workoutId: number; fromCompletion?: boolean };
   History: undefined;
   Exercises: undefined;
   ExercisePicker: { workoutId: number };
@@ -38,6 +40,7 @@ export function AppNavigator() {
         <Stack.Navigator screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
           <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Trene' }} />
           <Stack.Screen name="Workout" component={WorkoutScreen} options={{ title: 'Treningsøkt' }} />
+          <Stack.Screen name="CompletedWorkout" component={CompletedWorkoutScreen} options={{ title: 'Fullført økt' }} />
           <Stack.Screen name="History" options={{ title: 'Tidligere økter' }}>
             {() => <PlaceholderScreen title="Tidligere økter" />}
           </Stack.Screen>

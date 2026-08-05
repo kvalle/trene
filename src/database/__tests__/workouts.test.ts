@@ -8,12 +8,14 @@ import {
   addExerciseToWorkout,
   addWorkoutSet,
   cancelActiveWorkout,
+  completeWorkout,
   createExerciseInWorkout,
   countExercises,
   confirmWorkoutSet,
   deletePlannedWorkoutSet,
   getActiveWorkoutId,
   listAvailableExercises,
+  loadCompletedWorkout,
   loadActiveWorkout,
   removeExerciseFromWorkout,
   savePlannedWorkoutSet,
@@ -175,6 +177,73 @@ describe('active workout persistence', () => {
     await expect(cancelActiveWorkout(database, activeId)).rejects.toThrow('write failed');
     expect(await getActiveWorkoutId(database)).toBe(activeId);
     expect(await loadActiveWorkout(database)).toEqual(workoutBefore);
+  });
+
+  test('atomically completes and prunes a workout while preserving card and set order', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const firstExerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    const secondExerciseId = await createExercise(database, 'Benkpress', exerciseNameKey('Benkpress'));
+    const emptyExerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
+    await addExerciseToWorkout(database, workoutId, firstExerciseId);
+    await addExerciseToWorkout(database, workoutId, secondExerciseId);
+    await addExerciseToWorkout(database, workoutId, emptyExerciseId);
+    const active = (await loadActiveWorkout(database))!;
+    const firstSet = active.exercises[0].sets[0].id;
+    const secondSet = active.exercises[1].sets[0].id;
+    const laterFirstSet = (await addWorkoutSet(database, workoutId, active.exercises[0].id)).id;
+    await confirmWorkoutSet(database, workoutId, laterFirstSet, 90, 3, '2026-08-05T10:02:00Z');
+    await confirmWorkoutSet(database, workoutId, firstSet, 80, 5, '2026-08-05T10:01:00Z');
+    await confirmWorkoutSet(database, workoutId, secondSet, 60, 8, '2026-08-05T10:03:00Z');
+    await addWorkoutSet(database, workoutId, active.exercises[1].id);
+
+    await completeWorkout(database, workoutId, '2026-08-05T10:30:00Z');
+
+    expect(await getActiveWorkoutId(database)).toBeNull();
+    expect(await loadCompletedWorkout(database, workoutId)).toEqual({
+      id: workoutId,
+      completedAt: '2026-08-05T10:30:00Z',
+      exercises: [
+        { ...active.exercises[0], sets: [
+          { id: firstSet, loadKg: 80, repetitions: 5, confirmedAt: '2026-08-05T10:01:00Z' },
+          { id: laterFirstSet, loadKg: 90, repetitions: 3, confirmedAt: '2026-08-05T10:02:00Z' },
+        ] },
+        { ...active.exercises[1], sets: [
+          { id: secondSet, loadKg: 60, repetitions: 8, confirmedAt: '2026-08-05T10:03:00Z' },
+        ] },
+      ],
+    });
+  });
+
+  test('rejects completion without a completed set', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+
+    await expect(completeWorkout(database, workoutId, 'now')).rejects.toThrow('Completable workout not found');
+    expect(await getActiveWorkoutId(database)).toBe(workoutId);
+  });
+
+  test('rolls back every completion change when the transaction fails', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    await addExerciseToWorkout(database, workoutId, exerciseId);
+    const setId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
+    await confirmWorkoutSet(database, workoutId, setId, 80, 5, 'confirmed');
+    await addWorkoutSet(database, workoutId, (await loadActiveWorkout(database))!.exercises[0].id);
+    const before = await loadActiveWorkout(database);
+    await database.execAsync(`
+      CREATE TRIGGER reject_workout_completion BEFORE UPDATE ON workouts
+      WHEN NEW.status = 'completed'
+      BEGIN SELECT RAISE(ABORT, 'write failed'); END;
+    `);
+
+    await expect(completeWorkout(database, workoutId, 'completed')).rejects.toThrow('write failed');
+    expect(await loadActiveWorkout(database)).toEqual(before);
+    expect(await loadCompletedWorkout(database, workoutId)).toBeNull();
   });
 
   test('rolls back exercise creation when selection fails', async () => {

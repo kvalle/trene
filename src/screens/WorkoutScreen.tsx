@@ -21,6 +21,7 @@ import { useDatabase } from '../database/DatabaseContext';
 import {
   addWorkoutSet,
   cancelActiveWorkout,
+  completeWorkout,
   confirmWorkoutSet,
   deletePlannedWorkoutSet,
   loadActiveWorkout,
@@ -57,8 +58,11 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const [reload, setReload] = useState(0);
   const [expandedId, setExpandedId] = useState<number>();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [removeExerciseId, setRemoveExerciseId] = useState<number>();
   const [cancelling, setCancelling] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [completeFailed, setCompleteFailed] = useState(false);
   const [cancelFailed, setCancelFailed] = useState(false);
   const [pendingSetId, setPendingSetId] = useState<number>();
   const [pendingExerciseOperation, setPendingExerciseOperation] = useState<'add-set' | 'remove-exercise'>();
@@ -69,6 +73,9 @@ export function WorkoutScreen({ navigation, route }: Props) {
   }>();
   const addExerciseRef = useRef<View>(null);
   const cancelRef = useRef<View>(null);
+  const completeRef = useRef<View>(null);
+  const confirmCompleteRef = useRef<View>(null);
+  const retryCompleteRef = useRef<View>(null);
   const confirmCancelRef = useRef<View>(null);
   const retryCancelRef = useRef<View>(null);
   const confirmRemoveRef = useRef<View>(null);
@@ -128,11 +135,11 @@ export function WorkoutScreen({ navigation, route }: Props) {
     draft.workoutId === state.workout.id && draft.unsaved,
   );
 
-  usePreventRemove(cancelling || pendingSetId !== undefined || pendingExerciseOperation !== undefined || hasDirtyDraft, ({ data }) => {
+  usePreventRemove(cancelling || completing || pendingSetId !== undefined || pendingExerciseOperation !== undefined || hasDirtyDraft, ({ data }) => {
     if (allowNavigation.current) navigation.dispatch(data.action);
-    else if (!cancelling && pendingSetId === undefined && pendingExerciseOperation === undefined && hasUnsavedDraft) {
+    else if (!cancelling && !completing && pendingSetId === undefined && pendingExerciseOperation === undefined && hasUnsavedDraft) {
       navigation.dispatch(data.action);
-    } else if (!cancelling && pendingSetId === undefined && pendingExerciseOperation === undefined) {
+    } else if (!cancelling && !completing && pendingSetId === undefined && pendingExerciseOperation === undefined) {
       void flushDrafts().then((saved) => {
         if (!saved) return;
         allowNavigation.current = true;
@@ -157,6 +164,10 @@ export function WorkoutScreen({ navigation, route }: Props) {
   useEffect(() => {
     if (cancelFailed) focus(retryCancelRef);
   }, [cancelFailed]);
+
+  useEffect(() => {
+    if (completeFailed) focus(retryCompleteRef);
+  }, [completeFailed]);
 
   useEffect(() => {
     if (exerciseFailure) {
@@ -380,6 +391,25 @@ export function WorkoutScreen({ navigation, route }: Props) {
     }
   }
 
+  async function confirmCompletion(workoutId: number) {
+    setCompleting(true);
+    setCompleteFailed(false);
+    try {
+      await completeWorkout(database, workoutId);
+      setDrafts({});
+      setCompleteDialogOpen(false);
+      allowNavigation.current = true;
+      navigation.replace('CompletedWorkout', { workoutId, fromCompletion: true });
+    } catch {
+      setCompleteDialogOpen(false);
+      setCompleteFailed(true);
+      AccessibilityInfo.announceForAccessibility('Kunne ikke fullføre økten. Prøv igjen.');
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setCompleting(false);
+    }
+  }
+
   async function addSet(workoutId: number, workoutExerciseId: number, exerciseName: string) {
     setPendingExerciseOperation('add-set');
     setExerciseFailure(undefined);
@@ -436,6 +466,14 @@ export function WorkoutScreen({ navigation, route }: Props) {
       <Button label="Prøv igjen" onPress={() => setReload((value) => value + 1)} />
     </View>
   );
+
+  const hasCompletedSet = state.workout.exercises.some((exercise) =>
+    exercise.sets.some((set) => set.confirmedAt !== null),
+  );
+  const hasPlannedSet = state.workout.exercises.some((exercise) =>
+    exercise.sets.some((set) => set.confirmedAt === null),
+  );
+  const workoutBusy = completing || pendingSetId !== undefined || pendingExerciseOperation !== undefined;
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -615,7 +653,19 @@ export function WorkoutScreen({ navigation, route }: Props) {
           navigation.navigate('ExercisePicker', { workoutId: state.workout.id });
         } })}
       />
-      <Button disabled label="Ferdig" onPress={() => undefined} primary />
+      <Button
+        buttonRef={completeRef}
+        disabled={!hasCompletedSet || workoutBusy || hasDirtyDraft || hasUnsavedDraft}
+        label="Ferdig"
+        onPress={() => { setCompleteFailed(false); setCompleteDialogOpen(true); }}
+        primary
+      />
+      {completeFailed && (
+        <View style={styles.failure}>
+          <Text accessibilityRole="alert" style={{ color: colors.notification }}>Kunne ikke fullføre økten</Text>
+          <Button buttonRef={retryCompleteRef} label="Prøv igjen" onPress={() => setCompleteDialogOpen(true)} />
+        </View>
+      )}
       <Button buttonRef={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} label="Avbryt" onPress={() => {
         setCancelFailed(false);
         setCancelDialogOpen(true);
@@ -654,6 +704,36 @@ export function WorkoutScreen({ navigation, route }: Props) {
                   const exercise = state.workout.exercises.find((candidate) => candidate.id === removeExerciseId);
                   if (exercise) void removeExercise(state.workout.id, exercise.id, exercise.name);
                 }}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+      {completeDialogOpen && (
+        <Modal
+          animationType="none"
+          onRequestClose={() => {
+            if (!completing) { setCompleteDialogOpen(false); requestAnimationFrame(() => focus(completeRef)); }
+          }}
+          onShow={() => focus(confirmCompleteRef)}
+          transparent
+          visible
+        >
+          <View accessibilityViewIsModal style={styles.modalBackdrop}>
+            <View style={[styles.dialog, { backgroundColor: colors.card }]}>
+              <Text accessibilityRole="header" style={[styles.dialogTitle, { color: colors.text }]}>Fullfør økten?</Text>
+              <Text style={{ color: colors.text }}>Økten lagres i historikken.</Text>
+              {hasPlannedSet && <Text style={{ color: colors.text }}>Planlagte sett blir forkastet.</Text>}
+              <Button disabled={completing} label="Fortsett økten" onPress={() => {
+                setCompleteDialogOpen(false);
+                requestAnimationFrame(() => focus(completeRef));
+              }} />
+              <Button
+                buttonRef={confirmCompleteRef}
+                disabled={completing}
+                label={completing ? 'Fullfører' : 'Fullfør økt'}
+                onPress={() => void confirmCompletion(state.workout.id)}
+                primary
               />
             </View>
           </View>

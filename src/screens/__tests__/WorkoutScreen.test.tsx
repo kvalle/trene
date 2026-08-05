@@ -8,6 +8,7 @@ import type { Database } from '../../database/types';
 import {
   addWorkoutSet,
   cancelActiveWorkout,
+  completeWorkout,
   confirmWorkoutSet,
   deletePlannedWorkoutSet,
   getActiveWorkoutId,
@@ -36,6 +37,7 @@ jest.mock('@react-navigation/native', () => ({
 jest.mock('../../database/workouts', () => ({
   addWorkoutSet: jest.fn(),
   cancelActiveWorkout: jest.fn(),
+  completeWorkout: jest.fn(),
   confirmWorkoutSet: jest.fn(),
   deletePlannedWorkoutSet: jest.fn(),
   getActiveWorkoutId: jest.fn(),
@@ -48,6 +50,7 @@ const database = {} as Database;
 const mockedAddSet = jest.mocked(addWorkoutSet);
 const mockedLoad = jest.mocked(loadActiveWorkout);
 const mockedCancel = jest.mocked(cancelActiveWorkout);
+const mockedComplete = jest.mocked(completeWorkout);
 const mockedConfirm = jest.mocked(confirmWorkoutSet);
 const mockedDelete = jest.mocked(deletePlannedWorkoutSet);
 const mockedGetActiveWorkoutIdForSharedDraft = jest.mocked(getActiveWorkoutId);
@@ -113,6 +116,113 @@ test('shows completed receipts above planned sets with derived numbering', async
   expect(screen.getByText('80 kg · 5 repetisjoner')).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Rediger sett 1' })).toBeOnTheScreen();
   expect(screen.getByText('Planlagt sett')).toBeOnTheScreen();
+});
+
+test('enables completion only for durable completed sets and warns about planned sets', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  renderScreen();
+
+  const complete = await screen.findByRole('button', { name: 'Ferdig' });
+  expect(complete).toBeEnabled();
+  fireEvent.press(complete);
+
+  expect(screen.getByRole('header', { name: 'Fullfør økten?' })).toBeOnTheScreen();
+  expect(screen.getByText('Planlagte sett blir forkastet.')).toBeOnTheScreen();
+  expect(mockedComplete).not.toHaveBeenCalled();
+});
+
+test('keeps completion disabled for a planned-only workout', async () => {
+  mockedLoad.mockResolvedValue({
+    ...workoutWithSets,
+    exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }],
+  });
+  renderScreen();
+
+  expect(await screen.findByRole('button', { name: 'Ferdig' })).toBeDisabled();
+});
+
+test('does not warn about planned sets when all sets are completed', async () => {
+  mockedLoad.mockResolvedValue({
+    ...workoutWithSets,
+    exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[0]] }],
+  });
+  renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
+  expect(screen.queryByText('Planlagte sett blir forkastet.')).not.toBeOnTheScreen();
+});
+
+test('focuses completion confirmation and restores focus when it is dismissed', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  const { UNSAFE_getAllByType } = renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
+  fireEvent(UNSAFE_getAllByType(Modal).find((modal) => modal.props.visible)!, 'show');
+  fireEvent.press(screen.getByRole('button', { name: 'Fortsett økten' }));
+
+  expect(screen.queryByRole('header', { name: 'Fullfør økten?' })).not.toBeOnTheScreen();
+  expect(focus).toHaveBeenCalledTimes(2);
+});
+
+test('platform Back dismisses completion confirmation without saving', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  const { UNSAFE_getAllByType } = renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
+  fireEvent(UNSAFE_getAllByType(Modal).find((modal) => modal.props.visible)!, 'requestClose');
+
+  expect(screen.queryByRole('header', { name: 'Fullfør økten?' })).not.toBeOnTheScreen();
+  expect(mockedComplete).not.toHaveBeenCalled();
+});
+
+test('blocks completion while relevant data is not durable', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedSave.mockRejectedValue(new Error('write failed'));
+  renderScreen();
+  const load = await screen.findByLabelText('Belastning for Knebøy');
+  fireEvent.changeText(load, '90');
+  fireEvent(load, 'blur');
+
+  expect(await screen.findByText('Endringene er ikke lagret')).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Ferdig' })).toBeDisabled();
+});
+
+test('opens completed detail only after the completion transaction succeeds', async () => {
+  let finish: () => void = () => undefined;
+  const replace = jest.fn();
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedComplete.mockImplementation(() => new Promise<void>((resolve) => { finish = resolve; }));
+  renderScreen({ replace });
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Fullfør økt' }));
+  expect(replace).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Fullfører' })).toBeDisabled();
+
+  finish();
+  await waitFor(() => expect(replace).toHaveBeenCalledWith('CompletedWorkout', {
+    workoutId: 3, fromCompletion: true,
+  }));
+});
+
+test('preserves the active workout, announces retry, focuses it, and stays put on completion failure', async () => {
+  const replace = jest.fn();
+  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedComplete.mockRejectedValue(new Error('write failed'));
+  renderScreen({ replace });
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Fullfør økt' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke fullføre økten');
+  expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
+  expect(screen.getByText('Knebøy')).toBeOnTheScreen();
+  expect(announce).toHaveBeenCalledWith('Kunne ikke fullføre økten. Prøv igjen.');
+  expect(focus).toHaveBeenCalled();
+  expect(replace).not.toHaveBeenCalled();
 });
 
 test('adds a separately confirmable set returned by durable storage', async () => {
@@ -596,7 +706,7 @@ test('preserves the workout, announces retry, and does not navigate when cancell
 });
 
 function renderScreen(navigation: Record<string, jest.Mock> = {}) {
-  const mergedNavigation = { navigate: jest.fn(), popTo: jest.fn(), setParams: jest.fn(), ...navigation };
+  const mergedNavigation = { navigate: jest.fn(), popTo: jest.fn(), replace: jest.fn(), setParams: jest.fn(), ...navigation };
   return render(
     <DatabaseProvider database={database}>
       <WorkoutDraftProvider>
