@@ -30,7 +30,7 @@ tags:
 - tapOn: "Bekreft"
 - tapOn: "Ferdig"
 - assertVisible: "Fullfør økten?"
-- tapOn: "Fullfør økten"
+- tapOn: "Fullfør økt"
 - assertVisible: "Fullført økt"
 - assertVisible: "Knebøy"
 - tapOn: "Tilbake til forsiden"
