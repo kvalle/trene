@@ -13,7 +13,13 @@ step.
 
 ## Results
 
-Cold-cache and reused-APK timings will be recorded here from the pull request CI
-runs before this change is retained.
+The successful cold-cache [CI run 30984557762][cold] on 5 August 2026 built the
+APK in 9m37s. The complete APK job took 11m08s, and the separate smoke job took
+6m22s. The smoke job installed that artifact and passed both existing Maestro
+flows.
+
+A documentation-only follow-up run verifies the APK cache hit and records the
+reused-APK timings below before this change is retained.
 
 [baseline]: https://github.com/kvalle/trene/actions/runs/30942455877
+[cold]: https://github.com/kvalle/trene/actions/runs/30984557762
