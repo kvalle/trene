@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+apk="${ANDROID_SMOKE_APK:-.artifacts/android/app-debug.apk}"
+
 mkdir -p .artifacts
 
 cleanup() {
@@ -16,9 +18,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# A clean checkout has no android/ directory. Expo generates it from app.json
-# before Gradle builds and installs the debug app on the running emulator.
-npx expo run:android --no-bundler
+if [[ ! -f "$apk" ]]; then
+  echo "Android smoke APK not found: $apk" >&2
+  exit 1
+fi
+
+adb install -r "$apk"
 
 npm run start:android > .artifacts/metro.log 2>&1 &
 metro_pid=$!

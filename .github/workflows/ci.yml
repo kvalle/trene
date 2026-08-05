@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  ANDROID_SMOKE_APK: .artifacts/android/app-debug.apk
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -28,12 +31,12 @@ jobs:
       - run: npm run typecheck
       - run: npm test -- --ci
 
-  android-smoke:
-    name: Android smoke tests
+  android-apk:
+    name: Android smoke APK
     needs: test
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -54,6 +57,66 @@ jobs:
       - name: Install Android SDK 36
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
 
+      - name: Restore Gradle build cache
+        id: gradle-build-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: gradle-build-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app.json', '.nvmrc') }}-${{ github.sha }}
+          restore-keys: |
+            gradle-build-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app.json', '.nvmrc') }}-
+
+      - name: Restore Android smoke APK
+        id: android-smoke-apk
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.ANDROID_SMOKE_APK }}
+          key: android-smoke-apk-${{ runner.os }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'eas.json', '.nvmrc', 'locales/**', 'assets/**', 'plugins/**', 'android/**', 'scripts/build-android-smoke-apk.sh', '.github/workflows/ci.yml') }}
+
+      - name: Build Android smoke APK
+        if: steps.android-smoke-apk.outputs.cache-hit != 'true'
+        run: bash scripts/build-android-smoke-apk.sh
+
+      - name: Save Android smoke APK
+        if: steps.android-smoke-apk.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.ANDROID_SMOKE_APK }}
+          key: ${{ steps.android-smoke-apk.outputs.cache-primary-key }}
+
+      - name: Upload Android smoke APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-smoke-apk
+          path: ${{ env.ANDROID_SMOKE_APK }}
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Save Gradle build cache
+        if: steps.gradle-build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: ${{ steps.gradle-build-cache.outputs.cache-primary-key }}
+
+  android-smoke:
+    name: Android smoke tests
+    needs: android-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+
       - name: Install Maestro
         env:
           MAESTRO_VERSION: 2.8.0
@@ -67,16 +130,13 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Restore Gradle build cache
-        id: gradle-build-cache
-        uses: actions/cache/restore@v5
+      - name: Download Android smoke APK
+        uses: actions/download-artifact@v7
         with:
-          path: ~/.gradle/caches/build-cache-1
-          key: gradle-build-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app.json', '.nvmrc') }}-${{ github.sha }}
-          restore-keys: |
-            gradle-build-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app.json', '.nvmrc') }}-
+          name: android-smoke-apk
+          path: .artifacts/android
 
-      - name: Build app and run smoke tests
+      - name: Install app and run smoke tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -84,13 +144,6 @@ jobs:
           disk-size: 4096M
           profile: pixel_7
           script: bash scripts/ci-android-smoke.sh
-
-      - name: Save Gradle build cache
-        if: steps.gradle-build-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: ~/.gradle/caches/build-cache-1
-          key: ${{ steps.gradle-build-cache.outputs.cache-primary-key }}
 
       - name: Upload smoke diagnostics
         if: always()
