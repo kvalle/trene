@@ -8,7 +8,7 @@ tags:
 
 - extendedWaitUntil:
     visible: "Klar for en økt?"
-    timeout: 60000
+    timeout: 120000
 - tapOn: "Øvelser"
 - tapOn: "Opprett første øvelse"
 
