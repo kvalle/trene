@@ -18,8 +18,15 @@ APK in 9m37s. The complete APK job took 11m08s, and the separate smoke job took
 6m22s. The smoke job installed that artifact and passed both existing Maestro
 flows.
 
-A documentation-only follow-up run verifies the APK cache hit and records the
-reused-APK timings below before this change is retained.
+The documentation-only [CI run 30985801317][reused] restored the compatible APK
+and skipped compilation. The APK job fell from 11m08s to 58s, while the smoke
+job took 6m07s and passed both flows again. End-to-end elapsed time after the
+unit-test gate fell from 13m43s at baseline to 7m08s with APK reuse, a 48%
+improvement. The cold path remains slower because its build and smoke jobs are
+sequential, but it is only used after a native-input change or an APK cache
+miss. No new smoke-test flakiness was observed across the cold and reused-APK
+runs, so the change is retained.
 
 [baseline]: https://github.com/kvalle/trene/actions/runs/30942455877
 [cold]: https://github.com/kvalle/trene/actions/runs/30984557762
+[reused]: https://github.com/kvalle/trene/actions/runs/30985801317
