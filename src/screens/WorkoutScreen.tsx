@@ -723,7 +723,11 @@ export function WorkoutScreen({ navigation, route }: Props) {
             <View style={[styles.dialog, { backgroundColor: colors.card }]}>
               <Text accessibilityRole="header" style={[styles.dialogTitle, { color: colors.text }]}>Fullfør økten?</Text>
               <Text style={{ color: colors.text }}>Økten lagres i historikken.</Text>
-              {hasPlannedSet && <Text style={{ color: colors.text }}>Planlagte sett blir forkastet.</Text>}
+              {hasPlannedSet && (
+                <Text style={{ color: colors.text }}>
+                  Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.
+                </Text>
+              )}
               <Button disabled={completing} label="Fortsett økten" onPress={() => {
                 setCompleteDialogOpen(false);
                 requestAnimationFrame(() => focus(completeRef));

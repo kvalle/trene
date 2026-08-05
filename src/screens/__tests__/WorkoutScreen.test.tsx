@@ -127,7 +127,9 @@ test('enables completion only for durable completed sets and warns about planned
   fireEvent.press(complete);
 
   expect(screen.getByRole('header', { name: 'Fullfør økten?' })).toBeOnTheScreen();
-  expect(screen.getByText('Planlagte sett blir forkastet.')).toBeOnTheScreen();
+  expect(screen.getByText(
+    'Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.',
+  )).toBeOnTheScreen();
   expect(mockedComplete).not.toHaveBeenCalled();
 });
 
@@ -149,7 +151,9 @@ test('does not warn about planned sets when all sets are completed', async () =>
   renderScreen();
 
   fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
-  expect(screen.queryByText('Planlagte sett blir forkastet.')).not.toBeOnTheScreen();
+  expect(screen.queryByText(
+    'Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.',
+  )).not.toBeOnTheScreen();
 });
 
 test('focuses completion confirmation and restores focus when it is dismissed', async () => {
