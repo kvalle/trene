@@ -1,6 +1,6 @@
 import { NavigationContainer } from '@react-navigation/native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { AccessibilityInfo, Modal } from 'react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { AccessibilityInfo, AppState, type AppStateStatus, Modal } from 'react-native';
 
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
@@ -172,6 +172,97 @@ test('serializes field autosaves', async () => {
   finishFirst();
 
   await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(2));
+});
+
+test('persists valid drafts before backgrounding', async () => {
+  let onAppStateChange: ((state: AppStateStatus) => void) | undefined;
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => {
+    onAppStateChange = listener;
+    return { remove: jest.fn() };
+  });
+  mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
+  mockedSave.mockResolvedValue();
+  renderScreen();
+  fireEvent.changeText(await screen.findByLabelText('Belastning for Knebøy'), '80');
+  fireEvent.changeText(screen.getByLabelText('Repetisjoner for Knebøy'), '5');
+
+  act(() => onAppStateChange?.('background'));
+
+  await waitFor(() => expect(mockedSave).toHaveBeenCalledWith(database, 3, 6, 80, 5));
+});
+
+test('reloads the active workout from SQLite on foreground', async () => {
+  let onAppStateChange: ((state: AppStateStatus) => void) | undefined;
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => {
+    onAppStateChange = listener;
+    return { remove: jest.fn() };
+  });
+  mockedLoad.mockResolvedValueOnce({ id: 3, exercises: [] }).mockResolvedValueOnce(workoutWithSets);
+  renderScreen();
+  expect(await screen.findByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
+
+  act(() => onAppStateChange?.('active'));
+
+  expect(await screen.findByText('Knebøy')).toBeOnTheScreen();
+  expect(mockedLoad).toHaveBeenCalledTimes(2);
+});
+
+test('waits for every background save before foreground reload', async () => {
+  let onAppStateChange: ((state: AppStateStatus) => void) | undefined;
+  let finishFirst: () => void = () => undefined;
+  let finishSecond: () => void = () => undefined;
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => {
+    onAppStateChange = listener;
+    return { remove: jest.fn() };
+  });
+  const twoPlannedSets = {
+    ...workoutWithSets,
+    exercises: [{
+      ...workoutWithSets.exercises[0],
+      sets: [
+        workoutWithSets.exercises[0].sets[1],
+        { id: 8, loadKg: null, repetitions: null, confirmedAt: null },
+      ],
+    }],
+  };
+  mockedLoad.mockResolvedValue(twoPlannedSets);
+  mockedSave
+    .mockImplementationOnce(() => new Promise<void>((resolve) => { finishFirst = resolve; }))
+    .mockImplementationOnce(() => new Promise<void>((resolve) => { finishSecond = resolve; }));
+  renderScreen();
+  const loads = await screen.findAllByLabelText('Belastning for Knebøy');
+  fireEvent.changeText(loads[0], '80');
+  fireEvent.changeText(loads[1], '90');
+
+  act(() => onAppStateChange?.('background'));
+  await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
+  act(() => onAppStateChange?.('active'));
+  await act(async () => finishFirst());
+  await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(2));
+  expect(mockedLoad).toHaveBeenCalledTimes(1);
+
+  await act(async () => finishSecond());
+  await waitFor(() => expect(mockedLoad).toHaveBeenCalledTimes(2));
+});
+
+test('does not retry a failed background save on foreground', async () => {
+  let onAppStateChange: ((state: AppStateStatus) => void) | undefined;
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => {
+    onAppStateChange = listener;
+    return { remove: jest.fn() };
+  });
+  mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
+  mockedSave.mockRejectedValue(new Error('write failed'));
+  renderScreen();
+  fireEvent.changeText(await screen.findByLabelText('Belastning for Knebøy'), '80');
+
+  act(() => onAppStateChange?.('background'));
+  expect(await screen.findByText('Endringene er ikke lagret')).toBeOnTheScreen();
+  act(() => onAppStateChange?.('active'));
+
+  await waitFor(() => expect(mockedLoad).toHaveBeenCalledTimes(2));
+  expect(mockedSave).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole('button', { name: 'Prøv å lagre igjen' })).toBeOnTheScreen();
 });
 
 test('stops queued autosaves after failure until manual retry', async () => {

@@ -252,4 +252,24 @@ describe('active workout persistence', () => {
       id: setId, loadKg: null, repetitions: null, confirmedAt: null,
     });
   });
+
+  test('keeps the previous planned values when autosave fails', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    await addExerciseToWorkout(database, workoutId, exerciseId);
+    const setId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
+    await savePlannedWorkoutSet(database, workoutId, setId, 80, 5);
+    await database.execAsync(`
+      CREATE TRIGGER reject_planned_set_save BEFORE UPDATE ON workout_sets
+      WHEN NEW.confirmed_at IS NULL
+      BEGIN SELECT RAISE(ABORT, 'write failed'); END;
+    `);
+
+    await expect(savePlannedWorkoutSet(database, workoutId, setId, 90, 3)).rejects.toThrow('write failed');
+    expect((await loadActiveWorkout(database))!.exercises[0].sets[0]).toEqual({
+      id: setId, loadKg: 80, repetitions: 5, confirmedAt: null,
+    });
+  });
 });

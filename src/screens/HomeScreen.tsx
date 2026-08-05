@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect, usePreventRemove, useTheme } from '@react-navigation/native';
-import { useCallback, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, findNodeHandle, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, ActivityIndicator, AppState, findNodeHandle, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { RootStackParamList } from '../AppNavigator';
 import { useDatabase } from '../database/DatabaseContext';
@@ -29,6 +29,9 @@ export function HomeScreen({ navigation, route }: Props) {
     );
     return () => { active = false; };
   }, [database, reload]));
+  useEffect(() => AppState.addEventListener('change', (nextState) => {
+    if (nextState === 'active') setReload((value) => value + 1);
+  }).remove, []);
   usePreventRemove(starting, ({ data }) => {
     if (allowNavigation.current) navigation.dispatch(data.action);
   });
@@ -88,7 +91,9 @@ export function HomeScreen({ navigation, route }: Props) {
             primary
           />
         )}
-        {activeWorkoutId !== null && Object.values(drafts).some((draft) => draft.unsaved) && (
+        {activeWorkoutId !== null && Object.values(drafts).some((draft) =>
+          draft.workoutId === activeWorkoutId && draft.unsaved,
+        ) && (
           <Text accessibilityRole="alert" style={{ color: colors.notification }}>
             Økten har endringer som ikke er lagret
           </Text>

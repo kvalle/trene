@@ -31,6 +31,18 @@ tags:
 - inputText: "80.5"
 - tapOn: "Repetisjoner"
 - inputText: "5"
+
+# Background and resume before confirmation to verify planned values are durable.
+- pressKey: HOME
+- launchApp
+- extendedWaitUntil:
+    visible: "Fortsett økt"
+    timeout: 120000
+- tapOn: "Fortsett økt"
+- assertVisible: "Knebøy"
+- assertVisible: "80,5"
+- assertVisible: "5"
+
 - tapOn: "Bekreft"
 - assertVisible: "Sett 1"
 - assertVisible: "80,5 kg · 5 repetisjoner"
