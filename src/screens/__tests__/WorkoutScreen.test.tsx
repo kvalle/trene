@@ -1,15 +1,18 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { AccessibilityInfo, AppState, type AppStateStatus, Modal } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
 import {
+  addWorkoutSet,
   cancelActiveWorkout,
   confirmWorkoutSet,
   deletePlannedWorkoutSet,
   getActiveWorkoutId,
   loadActiveWorkout,
+  removeExerciseFromWorkout,
   savePlannedWorkoutSet,
   unconfirmWorkoutSet,
 } from '../../database/workouts';
@@ -21,26 +24,35 @@ jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual('react-native/Libraries/ReactNative/RendererProxy'),
   findNodeHandle: jest.fn((node) => node ? 12 : null),
 }));
+jest.mock('expo-haptics', () => ({
+  NotificationFeedbackType: { Error: 'error', Success: 'success' },
+  notificationAsync: jest.fn(),
+  selectionAsync: jest.fn(),
+}));
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
   usePreventRemove: jest.fn(),
 }));
 jest.mock('../../database/workouts', () => ({
+  addWorkoutSet: jest.fn(),
   cancelActiveWorkout: jest.fn(),
   confirmWorkoutSet: jest.fn(),
   deletePlannedWorkoutSet: jest.fn(),
   getActiveWorkoutId: jest.fn(),
   loadActiveWorkout: jest.fn(),
+  removeExerciseFromWorkout: jest.fn(),
   savePlannedWorkoutSet: jest.fn(),
   unconfirmWorkoutSet: jest.fn(),
 }));
 const database = {} as Database;
+const mockedAddSet = jest.mocked(addWorkoutSet);
 const mockedLoad = jest.mocked(loadActiveWorkout);
 const mockedCancel = jest.mocked(cancelActiveWorkout);
 const mockedConfirm = jest.mocked(confirmWorkoutSet);
 const mockedDelete = jest.mocked(deletePlannedWorkoutSet);
 const mockedGetActiveWorkoutIdForSharedDraft = jest.mocked(getActiveWorkoutId);
 const mockedSave = jest.mocked(savePlannedWorkoutSet);
+const mockedRemoveExercise = jest.mocked(removeExerciseFromWorkout);
 const mockedUnconfirm = jest.mocked(unconfirmWorkoutSet);
 
 beforeEach(() => {
@@ -101,6 +113,163 @@ test('shows completed receipts above planned sets with derived numbering', async
   expect(screen.getByText('80 kg · 5 repetisjoner')).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Rediger sett 1' })).toBeOnTheScreen();
   expect(screen.getByText('Planlagt sett')).toBeOnTheScreen();
+});
+
+test('adds a separately confirmable set returned by durable storage', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedAddSet.mockResolvedValue({ id: 8, loadKg: 80, repetitions: 5, confirmedAt: null });
+  renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Legg til sett' }));
+
+  await waitFor(() => expect(mockedAddSet).toHaveBeenCalledWith(database, 3, 4));
+  expect(screen.getAllByText('Planlagt sett')).toHaveLength(2);
+  expect(screen.getAllByLabelText('Belastning for Knebøy')).toHaveLength(2);
+  expect(mockedConfirm).not.toHaveBeenCalled();
+  expect(Haptics.selectionAsync).toHaveBeenCalled();
+});
+
+test('allows only one expanded card and lets it collapse independently', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    exercises: [
+      ...workoutWithSets.exercises,
+      { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
+    ],
+  });
+  renderScreen();
+
+  expect(await screen.findByText('Planlagt sett')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: 'Markløft' }));
+  expect(screen.queryByText('Planlagt sett')).not.toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Markløft' })).toHaveProp('accessibilityState', { expanded: true });
+  expect(screen.getByRole('button', { name: 'Knebøy' })).toHaveProp('accessibilityState', { expanded: false });
+  fireEvent.press(screen.getByRole('button', { name: 'Markløft' }));
+  expect(screen.getByRole('button', { name: 'Markløft' })).toHaveProp('accessibilityState', { expanded: false });
+});
+
+test('removes a planned-only exercise immediately', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  mockedLoad.mockResolvedValue({
+    ...workoutWithSets,
+    exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }],
+  });
+  mockedRemoveExercise.mockResolvedValue();
+  renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra økten' }));
+
+  await waitFor(() => expect(mockedRemoveExercise).toHaveBeenCalledWith(database, 3, 4));
+  expect(screen.queryByRole('header', { name: 'Fjern øvelsen?' })).not.toBeOnTheScreen();
+  expect(screen.getByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
+  expect(focus).toHaveBeenCalled();
+});
+
+test('requires confirmation before removing an exercise with completed sets', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedRemoveExercise.mockResolvedValue();
+  renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra økten' }));
+  expect(screen.getByRole('header', { name: 'Fjern øvelsen?' })).toBeOnTheScreen();
+  expect(mockedRemoveExercise).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av øvelsen' }));
+
+  await waitFor(() => expect(mockedRemoveExercise).toHaveBeenCalledWith(database, 3, 4));
+  expect(screen.getByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
+  expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success);
+});
+
+test('closes the removal modal before unmounting its focus launcher', async () => {
+  const frames: FrameRequestCallback[] = [];
+  jest.spyOn(global, 'requestAnimationFrame').mockImplementation((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedRemoveExercise.mockResolvedValue();
+  renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra økten' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av øvelsen' }));
+
+  await waitFor(() => expect(mockedRemoveExercise).toHaveBeenCalled());
+  await waitFor(() => expect(screen.queryByText('Fjern øvelsen?')).not.toBeOnTheScreen());
+  expect(screen.getByText('Knebøy')).toBeOnTheScreen();
+
+  await act(async () => frames.shift()?.(0));
+  expect(screen.queryByText('Knebøy')).not.toBeOnTheScreen();
+  expect(screen.getByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
+});
+
+test('shows busy removal state and restores focus when removal is cancelled', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  let finishRemove: () => void = () => undefined;
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedRemoveExercise.mockImplementation(() => new Promise<void>((resolve) => { finishRemove = resolve; }));
+  const { UNSAFE_getAllByType } = renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra økten' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Behold øvelsen' }));
+  expect(screen.queryByText('Fjern øvelsen?')).not.toBeOnTheScreen();
+  expect(focus).toHaveBeenCalled();
+
+  fireEvent.press(screen.getByRole('button', { name: 'Fjern Knebøy fra økten' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av øvelsen' }));
+  expect(await screen.findByRole('button', { name: 'Bekreft fjerning av øvelsen' })).toBeDisabled();
+  expect(screen.getByText('Fjerner øvelse')).toBeOnTheScreen();
+  fireEvent(UNSAFE_getAllByType(Modal)[0], 'requestClose');
+  expect(screen.getByText('Fjern øvelsen?')).toBeOnTheScreen();
+  await act(async () => finishRemove());
+});
+
+test('keeps the card and offers retry when adding a set fails', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedAddSet.mockRejectedValueOnce(new Error('write failed')).mockResolvedValueOnce({
+    id: 8, loadKg: 80, repetitions: 5, confirmedAt: null,
+  });
+  renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Legg til sett' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke legge til settet. Prøv igjen.');
+  expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Error);
+  expect(focus).toHaveBeenCalled();
+  expect(screen.getByText('Knebøy')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: 'Prøv igjen' }));
+
+  await waitFor(() => expect(mockedAddSet).toHaveBeenCalledTimes(2));
+  expect(screen.getAllByText('Planlagt sett')).toHaveLength(2);
+});
+
+test('keeps the exercise and offers retry when removal fails', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  mockedLoad.mockResolvedValue({
+    ...workoutWithSets,
+    exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }],
+  });
+  mockedRemoveExercise.mockRejectedValueOnce(new Error('write failed')).mockResolvedValueOnce();
+  renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra økten' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke fjerne øvelsen. Prøv igjen.');
+  expect(focus).toHaveBeenCalled();
+  expect(screen.getByText('Knebøy')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: 'Prøv igjen' }));
+
+  await waitFor(() => expect(mockedRemoveExercise).toHaveBeenCalledTimes(2));
+  expect(screen.getByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
+});
+
+test('keeps core controls at accessible target sizes and vertically stackable at narrow widths', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  renderScreen();
+
+  const card = await screen.findByRole('button', { name: 'Knebøy' });
+  const addSet = screen.getByRole('button', { name: 'Legg til sett' });
+  expect(card).toHaveStyle({ minHeight: 48 });
+  expect(addSet).toHaveStyle({ minHeight: 50 });
+  expect(screen.getByLabelText('Handlinger for planlagt sett for Knebøy')).not.toHaveStyle({ flexDirection: 'row' });
 });
 
 test('validates input and atomically confirms comma decimals', async () => {
