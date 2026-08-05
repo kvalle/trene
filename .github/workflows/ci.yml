@@ -46,6 +46,9 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+          gradle-home-cache-excludes: caches/build-cache-1
       - run: npm ci
 
       - name: Install Android SDK 36
@@ -64,6 +67,15 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - name: Restore Gradle build cache
+        id: gradle-build-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: gradle-build-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app.json', '.nvmrc') }}-${{ github.sha }}
+          restore-keys: |
+            gradle-build-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app.json', '.nvmrc') }}-
+
       - name: Build app and run smoke tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -72,6 +84,13 @@ jobs:
           disk-size: 4096M
           profile: pixel_7
           script: bash scripts/ci-android-smoke.sh
+
+      - name: Save Gradle build cache
+        if: steps.gradle-build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: ${{ steps.gradle-build-cache.outputs.cache-primary-key }}
 
       - name: Upload smoke diagnostics
         if: always()
