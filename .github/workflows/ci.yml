@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  ANDROID_SMOKE_APK: .artifacts/android/app-debug.apk
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -76,7 +79,18 @@ jobs:
           restore-keys: |
             gradle-build-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app.json', '.nvmrc') }}-
 
-      - name: Build app and run smoke tests
+      - name: Restore Android smoke APK
+        id: android-smoke-apk
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.ANDROID_SMOKE_APK }}
+          key: android-smoke-apk-${{ runner.os }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'eas.json', '.nvmrc', 'locales/**', 'assets/**', 'plugins/**', 'android/**', 'scripts/build-android-smoke-apk.sh', '.github/workflows/ci.yml') }}
+
+      - name: Build Android smoke APK
+        if: steps.android-smoke-apk.outputs.cache-hit != 'true'
+        run: bash scripts/build-android-smoke-apk.sh
+
+      - name: Install app and run smoke tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -84,6 +98,13 @@ jobs:
           disk-size: 4096M
           profile: pixel_7
           script: bash scripts/ci-android-smoke.sh
+
+      - name: Save tested Android smoke APK
+        if: steps.android-smoke-apk.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.ANDROID_SMOKE_APK }}
+          key: ${{ steps.android-smoke-apk.outputs.cache-primary-key }}
 
       - name: Save Gradle build cache
         if: steps.gradle-build-cache.outputs.cache-hit != 'true'
