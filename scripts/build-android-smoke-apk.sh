@@ -12,3 +12,7 @@ export __UNSAFE_EXPO_HOME_DIRECTORY="$PWD/.artifacts/expo"
 npx expo prebuild --platform android --no-install
 ./android/gradlew -p android --no-daemon -PreactNativeArchitectures=x86_64 assembleDebug
 cp android/app/build/outputs/apk/debug/app-debug.apk "$apk"
+
+# The emulator allocates its data partition after this step. Keep only the APK;
+# Gradle caches retain reusable compilation state without filling runner disk.
+rm -rf android node_modules/*/android/build node_modules/*/android/.cxx
