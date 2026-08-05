@@ -21,14 +21,6 @@ env:
   GRADLE_USER_HOME: /home/runner/.gradle
   GRADLE_VERSION: 9.3.1
   JAVA_VERSION: '17'
-  NATIVE_BUILD_PATHS: |
-    android/app/.cxx
-    android/app/build/intermediates/cxx
-    node_modules/expo-modules-core/android/.cxx
-    node_modules/expo-modules-core/android/build/intermediates/cxx
-    node_modules/react-native-screens/android/.cxx
-    node_modules/react-native-screens/android/build/intermediates/cxx
-  NATIVE_BUILD_CACHE_VERSION: v1
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -59,8 +51,6 @@ jobs:
       apk-cache-key: ${{ steps.android-smoke-apk.outputs.cache-primary-key }}
       gradle-cache-hit: ${{ steps.gradle-build-cache.outputs.cache-hit }}
       gradle-cache-key: ${{ steps.gradle-build-cache.outputs.cache-primary-key }}
-      native-cache-hit: ${{ steps.native-build-cache.outputs.cache-hit }}
-      native-cache-key: ${{ steps.native-build-cache.outputs.cache-primary-key }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -97,21 +87,9 @@ jobs:
           path: ${{ env.ANDROID_SMOKE_APK }}
           key: android-smoke-apk-${{ env.ANDROID_SMOKE_APK_CACHE_VERSION }}-${{ runner.os }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'eas.json', '.nvmrc', 'locales/**', 'assets/**', 'plugins/**', 'android/**', 'scripts/build-android-smoke-apk.sh', '.github/workflows/ci.yml') }}
 
-      - name: Generate Android project
-        if: steps.android-smoke-apk.outputs.cache-hit != 'true'
-        run: bash scripts/build-android-smoke-apk.sh prebuild
-
-      - name: Restore native Android build state
-        if: steps.android-smoke-apk.outputs.cache-hit != 'true'
-        id: native-build-cache
-        uses: actions/cache/restore@v5
-        with:
-          path: ${{ env.NATIVE_BUILD_PATHS }}
-          key: native-android-${{ env.NATIVE_BUILD_CACHE_VERSION }}-${{ runner.os }}-${{ env.ANDROID_ARCH }}-gradle${{ env.GRADLE_VERSION }}-jdk${{ env.JAVA_VERSION }}-sdk${{ env.ANDROID_COMPILE_SDK }}-tools${{ env.ANDROID_BUILD_TOOLS }}-cmake${{ env.ANDROID_CMAKE }}-ndk${{ env.ANDROID_NDK }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'plugins/**', '.nvmrc', 'scripts/build-android-smoke-apk.sh') }}
-
       - name: Build Android smoke APK
         if: steps.android-smoke-apk.outputs.cache-hit != 'true'
-        run: bash scripts/build-android-smoke-apk.sh assemble
+        run: bash scripts/build-android-smoke-apk.sh
 
       - name: Upload Android smoke APK
         uses: actions/upload-artifact@v6
@@ -119,16 +97,6 @@ jobs:
           name: android-smoke-apk
           path: ${{ env.ANDROID_SMOKE_APK }}
           if-no-files-found: error
-          retention-days: 1
-
-      - name: Upload native Android build state
-        if: steps.android-smoke-apk.outputs.cache-hit != 'true' && steps.native-build-cache.outputs.cache-hit != 'true'
-        uses: actions/upload-artifact@v6
-        with:
-          name: native-android-build-state
-          path: ${{ env.NATIVE_BUILD_PATHS }}
-          if-no-files-found: error
-          include-hidden-files: true
           retention-days: 1
 
       - name: Upload Android build report
@@ -187,13 +155,6 @@ jobs:
           name: android-smoke-apk
           path: .artifacts/android
 
-      - name: Download native Android build state
-        if: needs.android-apk.outputs.apk-cache-hit != 'true' && needs.android-apk.outputs.native-cache-hit != 'true'
-        uses: actions/download-artifact@v7
-        with:
-          name: native-android-build-state
-          path: .
-
       - name: Download Gradle build cache
         if: needs.android-apk.outputs.apk-cache-hit != 'true' && needs.android-apk.outputs.gradle-cache-hit != 'true'
         uses: actions/download-artifact@v7
@@ -210,27 +171,6 @@ jobs:
           profile: pixel_7
           script: bash scripts/ci-android-smoke.sh
 
-      - name: Save Android smoke APK
-        if: needs.android-apk.outputs.apk-cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: ${{ env.ANDROID_SMOKE_APK }}
-          key: ${{ needs.android-apk.outputs.apk-cache-key }}
-
-      - name: Save native Android build state
-        if: needs.android-apk.outputs.apk-cache-hit != 'true' && needs.android-apk.outputs.native-cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: ${{ env.NATIVE_BUILD_PATHS }}
-          key: ${{ needs.android-apk.outputs.native-cache-key }}
-
-      - name: Save Gradle build cache
-        if: needs.android-apk.outputs.apk-cache-hit != 'true' && needs.android-apk.outputs.gradle-cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
-          key: ${{ needs.android-apk.outputs.gradle-cache-key }}
-
       - name: Upload smoke diagnostics
         if: always()
         uses: actions/upload-artifact@v6
@@ -242,3 +182,17 @@ jobs:
             .artifacts/logcat.txt
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Save Android smoke APK
+        if: success() && needs.android-apk.outputs.apk-cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.ANDROID_SMOKE_APK }}
+          key: ${{ needs.android-apk.outputs.apk-cache-key }}
+
+      - name: Save Gradle build cache
+        if: success() && needs.android-apk.outputs.apk-cache-hit != 'true' && needs.android-apk.outputs.gradle-cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
+          key: ${{ needs.android-apk.outputs.gradle-cache-key }}
