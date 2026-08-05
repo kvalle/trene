@@ -155,20 +155,13 @@ jobs:
           name: android-smoke-apk
           path: .artifacts/android
 
-      - name: Download Gradle build cache
-        if: needs.android-apk.outputs.apk-cache-hit != 'true' && needs.android-apk.outputs.gradle-cache-hit != 'true'
-        uses: actions/download-artifact@v7
-        with:
-          name: gradle-build-cache
-          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
-
       - name: Install app and run smoke tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
+          target: aosp_atd
           arch: x86_64
           disk-size: 4096M
-          profile: pixel_7
           script: bash scripts/ci-android-smoke.sh
 
       - name: Upload smoke diagnostics
@@ -180,6 +173,11 @@ jobs:
             .artifacts/maestro/debug/
             .artifacts/metro.log
             .artifacts/logcat.txt
+            .artifacts/activity-processes.txt
+            .artifacts/meminfo.txt
+            .artifacts/window.txt
+            .artifacts/runner-disk.txt
+            .artifacts/runner-memory.txt
           if-no-files-found: ignore
           retention-days: 7
 
@@ -189,6 +187,13 @@ jobs:
         with:
           path: ${{ env.ANDROID_SMOKE_APK }}
           key: ${{ needs.android-apk.outputs.apk-cache-key }}
+
+      - name: Download Gradle build cache
+        if: success() && needs.android-apk.outputs.apk-cache-hit != 'true' && needs.android-apk.outputs.gradle-cache-hit != 'true'
+        uses: actions/download-artifact@v7
+        with:
+          name: gradle-build-cache
+          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
 
       - name: Save Gradle build cache
         if: success() && needs.android-apk.outputs.apk-cache-hit != 'true' && needs.android-apk.outputs.gradle-cache-hit != 'true'
