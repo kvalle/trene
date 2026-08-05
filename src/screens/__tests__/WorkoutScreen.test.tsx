@@ -180,6 +180,28 @@ test('requires confirmation before removing an exercise with completed sets', as
   expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success);
 });
 
+test('closes the removal modal before unmounting its focus launcher', async () => {
+  const frames: FrameRequestCallback[] = [];
+  jest.spyOn(global, 'requestAnimationFrame').mockImplementation((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedRemoveExercise.mockResolvedValue();
+  renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra økten' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av øvelsen' }));
+
+  await waitFor(() => expect(mockedRemoveExercise).toHaveBeenCalled());
+  await waitFor(() => expect(screen.queryByText('Fjern øvelsen?')).not.toBeOnTheScreen());
+  expect(screen.getByText('Knebøy')).toBeOnTheScreen();
+
+  await act(async () => frames.shift()?.(0));
+  expect(screen.queryByText('Knebøy')).not.toBeOnTheScreen();
+  expect(screen.getByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
+});
+
 test('shows busy removal state and restores focus when removal is cancelled', async () => {
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   let finishRemove: () => void = () => undefined;

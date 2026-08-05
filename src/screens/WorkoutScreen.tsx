@@ -403,6 +403,9 @@ export function WorkoutScreen({ navigation, route }: Props) {
     setExerciseFailure(undefined);
     try {
       await removeExerciseFromWorkout(database, workoutId, workoutExerciseId);
+      // Let the modal restore focus while its launcher still exists natively.
+      setRemoveExerciseId(undefined);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       updateWorkoutExercise(workoutExerciseId, () => null);
       setDrafts((current) => {
         const next = { ...current };
@@ -412,7 +415,6 @@ export function WorkoutScreen({ navigation, route }: Props) {
         return next;
       });
       setExpandedId(undefined);
-      setRemoveExerciseId(undefined);
       AccessibilityInfo.announceForAccessibility(`${exerciseName} fjernet fra økten.`);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       requestAnimationFrame(() => focus(addExerciseRef));
