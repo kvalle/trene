@@ -29,21 +29,6 @@ for flow in .maestro/smoke/*.yaml; do
   # Clear data before Maestro launches the app. Combining clearState and launchApp
   # can race Android's delayed task cleanup, which may kill the new app process.
   adb shell pm clear no.kvalle.trene >/dev/null
-  adb shell run-as no.kvalle.trene mkdir -p shared_prefs
-  printf '%s\n' \
-    '<?xml version="1.0" encoding="utf-8" standalone="yes" ?>' \
-    '<map>' \
-    '    <string name="debug_http_host">127.0.0.1:8081</string>' \
-    '</map>' \
-    | adb shell run-as no.kvalle.trene tee \
-      shared_prefs/no.kvalle.trene_preferences.xml >/dev/null
-  if ! adb shell run-as no.kvalle.trene cat \
-    shared_prefs/no.kvalle.trene_preferences.xml \
-    | grep -q '<string name="debug_http_host">127.0.0.1:8081</string>'; then
-    echo 'The Android app is not configured to use the expected Metro server.' >&2
-    exit 1
-  fi
-  echo 'Android app Metro server verified: 127.0.0.1:8081 through adb reverse.'
   sleep 2
   # Separate invocations keep each flow's app lifecycle isolated.
   maestro test $debug_args "$flow"
