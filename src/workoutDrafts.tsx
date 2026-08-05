@@ -1,6 +1,7 @@
 import { createContext, type PropsWithChildren, useContext, useState } from 'react';
 
 export type WorkoutSetDraft = {
+  workoutId: number;
   load: string;
   repetitions: string;
   loadError?: string;

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, AppState, type AppStateStatus } from 'react-native';
 
 import { HomeScreen } from '../HomeScreen';
 import { DatabaseProvider } from '../../database/DatabaseContext';
@@ -75,15 +75,40 @@ test('marks an active workout when a set edit has not been saved', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Økten har endringer som ikke er lagret');
 });
 
+test('refreshes the active workout from SQLite on foreground', async () => {
+  let onAppStateChange: ((state: AppStateStatus) => void) | undefined;
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => {
+    onAppStateChange = listener;
+    return { remove: jest.fn() };
+  });
+  mockedGetActiveWorkoutId.mockResolvedValueOnce(null).mockResolvedValueOnce(7);
+  renderScreen();
+  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+
+  act(() => onAppStateChange?.('active'));
+
+  expect(await screen.findByRole('button', { name: 'Fortsett økt' })).toBeOnTheScreen();
+  expect(mockedGetActiveWorkoutId).toHaveBeenCalledTimes(2);
+});
+
+test('ignores save errors belonging to another workout', async () => {
+  mockedGetActiveWorkoutId.mockResolvedValue(7);
+  renderScreen({}, undefined, true, 8);
+
+  expect(await screen.findByRole('button', { name: 'Fortsett økt' })).toBeOnTheScreen();
+  expect(screen.queryByText('Økten har endringer som ikke er lagret')).not.toBeOnTheScreen();
+});
+
 function renderScreen(
   navigation: Record<string, jest.Mock> = {},
   params?: { focusStartWorkout?: boolean },
   failedDraft = false,
+  draftWorkoutId = 7,
 ) {
   return render(
     <DatabaseProvider database={database}>
       <WorkoutDraftProvider initialDrafts={failedDraft ? {
-        6: { load: '80', repetitions: '5', unsaved: true },
+        6: { workoutId: draftWorkoutId, load: '80', repetitions: '5', unsaved: true },
       } : undefined}>
         <NavigationContainer>
           <HomeScreen navigation={{ navigate: jest.fn(), ...navigation } as never} route={{ params } as never} />

@@ -65,7 +65,8 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const retryCancelRef = useRef<View>(null);
   const allowNavigation = useRef(false);
   const saveQueue = useRef(Promise.resolve());
-  const saveQueueFailed = useRef(Object.values(drafts).some((draft) => draft.unsaved));
+  const lifecycleFlush = useRef(Promise.resolve(true));
+  const saveQueueFailed = useRef(false);
   const pendingSaves = useRef(0);
   const cardRefs = useRef(new Map<number, View>());
   const loadInputRefs = useRef(new Map<number, TextInput>());
@@ -89,6 +90,14 @@ export function WorkoutScreen({ navigation, route }: Props) {
   }, [database, reload]));
 
   useEffect(() => {
+    if (state.status === 'ready') {
+      saveQueueFailed.current = Object.values(drafts).some((draft) =>
+        draft.workoutId === state.workout.id && draft.unsaved,
+      );
+    }
+  }, [drafts, state]);
+
+  useEffect(() => {
     if (state.status !== 'ready') return;
     const target = route.params?.focusExerciseId
       ? cardRefs.current.get(route.params.focusExerciseId)
@@ -99,9 +108,14 @@ export function WorkoutScreen({ navigation, route }: Props) {
   }, [navigation, route.params, state]);
 
   const hasDirtyDraft = state.status === 'ready' && state.workout.exercises.some((exercise) =>
-    exercise.sets.some((set) => set.confirmedAt === null && isDirty(set, drafts[set.id])),
+    exercise.sets.some((set) => set.confirmedAt === null && isDirty(
+      set,
+      drafts[set.id]?.workoutId === state.workout.id ? drafts[set.id] : undefined,
+    )),
   );
-  const hasUnsavedDraft = Object.values(drafts).some((draft) => draft.unsaved);
+  const hasUnsavedDraft = state.status === 'ready' && Object.values(drafts).some((draft) =>
+    draft.workoutId === state.workout.id && draft.unsaved,
+  );
 
   usePreventRemove(cancelling || pendingSetId !== undefined || hasDirtyDraft, ({ data }) => {
     if (allowNavigation.current) navigation.dispatch(data.action);
@@ -118,7 +132,10 @@ export function WorkoutScreen({ navigation, route }: Props) {
   });
 
   useEffect(() => AppState.addEventListener('change', (nextState) => {
-    if (nextState !== 'active') void flushDrafts();
+    if (nextState === 'active') {
+      void lifecycleFlush.current.then(() => setReload((value) => value + 1));
+    }
+    else lifecycleFlush.current = flushDrafts();
   }).remove, [state, drafts]);
 
   useEffect(() => {
@@ -142,17 +159,22 @@ export function WorkoutScreen({ navigation, route }: Props) {
   }
 
   function draftFor(set: WorkoutSet): WorkoutSetDraft {
-    return drafts[set.id] ?? {
+    if (state.status !== 'ready') throw new Error('Workout draft requested before workout loaded');
+    const draft = drafts[set.id];
+    return draft?.workoutId === state.workout.id ? draft : {
+      workoutId: state.workout.id,
       load: set.loadKg === null ? '' : formatLoad(set.loadKg),
       repetitions: set.repetitions?.toString() ?? '',
     };
   }
 
   function updateDraft(set: WorkoutSet, update: Partial<WorkoutSetDraft>) {
+    if (state.status !== 'ready') throw new Error('Workout draft updated before workout loaded');
     setDrafts((current) => ({
       ...current,
       [set.id]: {
-        ...(current[set.id] ?? {
+        ...(current[set.id]?.workoutId === state.workout.id ? current[set.id] : {
+          workoutId: state.workout.id,
           load: set.loadKg === null ? '' : formatLoad(set.loadKg),
           repetitions: set.repetitions?.toString() ?? '',
         }),
@@ -228,7 +250,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
     if (state.status !== 'ready') return true;
     for (const exercise of state.workout.exercises) {
       for (const set of exercise.sets) {
-        const draft = drafts[set.id];
+        const draft = drafts[set.id]?.workoutId === state.workout.id ? drafts[set.id] : undefined;
         if (set.confirmedAt === null && isDirty(set, draft) && !draft?.unsaved) {
           if (!await saveDraft(state.workout.id, set, exercise.name, draft)) return false;
         }
