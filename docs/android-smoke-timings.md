@@ -25,7 +25,9 @@ unit-test gate fell from 13m43s at baseline to 7m08s with APK reuse, a 48%
 improvement. The cold path remains slower because its build and smoke jobs are
 sequential, but it is only used after a native-input change or an APK cache
 miss. No new smoke-test flakiness was observed across the cold and reused-APK
-runs, so the change is retained.
+runs. A later documentation-only run reproduced a pre-existing 60-second
+process-relaunch timeout seen in earlier baseline runs, so relaunch waits were
+raised to 120 seconds before the change was retained.
 
 [baseline]: https://github.com/kvalle/trene/actions/runs/30942455877
 [cold]: https://github.com/kvalle/trene/actions/runs/30984557762

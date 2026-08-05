@@ -41,7 +41,7 @@ tags:
 
 - extendedWaitUntil:
     visible: "Fortsett økt"
-    timeout: 60000
+    timeout: 120000
 - tapOn: "Fortsett økt"
 - assertVisible: "Knebøy"
 - assertVisible: "Sett 1"
