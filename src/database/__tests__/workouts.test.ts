@@ -6,6 +6,7 @@ import { migrateDatabase } from '../migrate';
 import type { Database, DatabaseValue } from '../types';
 import {
   addExerciseToWorkout,
+  addWorkoutSet,
   cancelActiveWorkout,
   createExerciseInWorkout,
   countExercises,
@@ -14,6 +15,7 @@ import {
   getActiveWorkoutId,
   listAvailableExercises,
   loadActiveWorkout,
+  removeExerciseFromWorkout,
   savePlannedWorkoutSet,
   startWorkout,
   unconfirmWorkoutSet,
@@ -232,6 +234,114 @@ describe('active workout persistence', () => {
     await deletePlannedWorkoutSet(database, workoutId, setId);
 
     expect((await loadActiveWorkout(database))!.exercises[0].sets).toEqual([]);
+  });
+
+  test('adds sets from the latest active confirmed set without querying history', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    const history = await database.runAsync(
+      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'before', 'after')",
+    );
+    const historyMembership = await database.runAsync(
+      'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+      history.lastInsertRowId, exerciseId,
+    );
+    await database.runAsync(
+      "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 200, 1, 'after')",
+      historyMembership.lastInsertRowId,
+    );
+    const workoutId = await startWorkout(database);
+    await addExerciseToWorkout(database, workoutId, exerciseId);
+    const exercise = (await loadActiveWorkout(database))!.exercises[0];
+    const suggestedSet = exercise.sets[0];
+    await savePlannedWorkoutSet(database, workoutId, suggestedSet.id, 80, 5);
+    await confirmWorkoutSet(database, workoutId, suggestedSet.id, 80, 5, '2026-01-01T10:00:00Z');
+
+    const copied = await addWorkoutSet(database, workoutId, exercise.id);
+
+    expect(copied).toEqual({ id: expect.any(Number), loadKg: 80, repetitions: 5, confirmedAt: null });
+  });
+
+  test('adds a set from the last fully valid planned set, otherwise empty', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    await addExerciseToWorkout(database, workoutId, exerciseId);
+    const exercise = (await loadActiveWorkout(database))!.exercises[0];
+
+    const emptySet = await addWorkoutSet(database, workoutId, exercise.id);
+    expect(emptySet).toMatchObject({
+      loadKg: null, repetitions: null, confirmedAt: null,
+    });
+    await deletePlannedWorkoutSet(database, workoutId, emptySet.id);
+    await savePlannedWorkoutSet(database, workoutId, exercise.sets[0].id, 80, 5);
+    expect(await addWorkoutSet(database, workoutId, exercise.id)).toMatchObject({
+      loadKg: 80, repetitions: 5, confirmedAt: null,
+    });
+    const latestSet = (await loadActiveWorkout(database))!.exercises[0].sets.at(-1)!;
+    await savePlannedWorkoutSet(database, workoutId, latestSet.id, 90, null);
+    expect(await addWorkoutSet(database, workoutId, exercise.id)).toMatchObject({
+      loadKg: null, repetitions: null, confirmedAt: null,
+    });
+  });
+
+  test('removes only active membership and its sets without renumbering remaining cards', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const kneboyId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    const markloftId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
+    await addExerciseToWorkout(database, workoutId, kneboyId);
+    await addExerciseToWorkout(database, workoutId, markloftId);
+    const [kneboy, markloft] = (await loadActiveWorkout(database))!.exercises;
+    await confirmWorkoutSet(database, workoutId, kneboy.sets[0].id, 80, 5, 'now');
+
+    await removeExerciseFromWorkout(database, workoutId, kneboy.id);
+
+    expect((await loadActiveWorkout(database))!.exercises).toEqual([{ ...markloft, position: 1 }]);
+    expect(await countExercises(database)).toBe(2);
+    expect((await listAvailableExercises(database, workoutId)).map(({ id }) => id)).toEqual([kneboyId]);
+  });
+
+  test('keeps unique insertion order across interleaved set confirmations and later additions', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const firstId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    const secondId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
+    const thirdId = await createExercise(database, 'Benkpress', exerciseNameKey('Benkpress'));
+    await addExerciseToWorkout(database, workoutId, firstId);
+    await addExerciseToWorkout(database, workoutId, secondId);
+    const [first, second] = (await loadActiveWorkout(database))!.exercises;
+    await confirmWorkoutSet(database, workoutId, second.sets[0].id, 100, 3, '2026-01-01T10:00:00Z');
+    await confirmWorkoutSet(database, workoutId, first.sets[0].id, 80, 5, '2026-01-01T10:01:00Z');
+    await removeExerciseFromWorkout(database, workoutId, first.id);
+    await addExerciseToWorkout(database, workoutId, thirdId);
+
+    expect((await loadActiveWorkout(database))!.exercises.map(({ exerciseId, position }) => ({ exerciseId, position })))
+      .toEqual([{ exerciseId: secondId, position: 1 }, { exerciseId: thirdId, position: 2 }]);
+    await expect(addExerciseToWorkout(database, workoutId, secondId)).rejects.toThrow();
+  });
+
+  test('rolls back failed set additions and exercise removals', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    await addExerciseToWorkout(database, workoutId, exerciseId);
+    const exercise = (await loadActiveWorkout(database))!.exercises[0];
+    await database.execAsync(`
+      CREATE TRIGGER reject_set_insert BEFORE INSERT ON workout_sets
+      BEGIN SELECT RAISE(ABORT, 'write failed'); END;
+      CREATE TRIGGER reject_membership_delete BEFORE DELETE ON workout_exercises
+      BEGIN SELECT RAISE(ABORT, 'write failed'); END;
+    `);
+
+    await expect(addWorkoutSet(database, workoutId, exercise.id)).rejects.toThrow('write failed');
+    await expect(removeExerciseFromWorkout(database, workoutId, exercise.id)).rejects.toThrow('write failed');
+    expect(await loadActiveWorkout(database)).toEqual({ id: workoutId, exercises: [exercise] });
   });
 
   test('rolls back a failed confirmation without false success', async () => {

@@ -156,6 +156,56 @@ export async function deletePlannedWorkoutSet(
   });
 }
 
+export async function addWorkoutSet(
+  database: Database,
+  workoutId: number,
+  workoutExerciseId: number,
+): Promise<WorkoutSet> {
+  return transaction(database, async () => {
+    const membership = await database.getFirstAsync<{ id: number }>(`
+      SELECT workout_exercises.id FROM workout_exercises
+      JOIN workouts ON workouts.id = workout_exercises.workout_id
+      WHERE workout_exercises.id = ? AND workouts.id = ? AND workouts.status = 'active'
+    `, workoutExerciseId, workoutId);
+    if (!membership) throw new Error('Active workout exercise not found');
+
+    const source = await database.getFirstAsync<{ load_kg: number; repetitions: number }>(`
+      SELECT load_kg, repetitions FROM workout_sets
+      WHERE workout_exercise_id = ? AND confirmed_at IS NOT NULL
+      ORDER BY confirmed_at DESC, id DESC LIMIT 1
+    `, workoutExerciseId) ?? await database.getFirstAsync<{ load_kg: number | null; repetitions: number | null }>(`
+      SELECT load_kg, repetitions FROM workout_sets
+      WHERE workout_exercise_id = ? AND confirmed_at IS NULL
+      ORDER BY id DESC LIMIT 1
+    `, workoutExerciseId);
+    const validSource = source?.load_kg !== null && source?.repetitions !== null ? source : null;
+    const result = await database.runAsync(
+      'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions) VALUES (?, ?, ?)',
+      workoutExerciseId, validSource?.load_kg ?? null, validSource?.repetitions ?? null,
+    );
+    return {
+      id: result.lastInsertRowId,
+      loadKg: validSource?.load_kg ?? null,
+      repetitions: validSource?.repetitions ?? null,
+      confirmedAt: null,
+    };
+  });
+}
+
+export async function removeExerciseFromWorkout(
+  database: Database,
+  workoutId: number,
+  workoutExerciseId: number,
+): Promise<void> {
+  await transaction(database, async () => {
+    const result = await database.runAsync(`
+      DELETE FROM workout_exercises WHERE id = ? AND workout_id = ?
+        AND EXISTS (SELECT 1 FROM workouts WHERE id = ? AND status = 'active')
+    `, workoutExerciseId, workoutId, workoutId);
+    if (result.changes !== 1) throw new Error('Active workout exercise not found');
+  });
+}
+
 export async function loadActiveWorkout(database: Database): Promise<ActiveWorkout | null> {
   const id = await getActiveWorkoutId(database);
   if (id === null) return null;

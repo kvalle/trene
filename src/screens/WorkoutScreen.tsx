@@ -1,5 +1,6 @@
 import { useFocusEffect, usePreventRemove, useTheme } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
@@ -18,10 +19,12 @@ import {
 import type { RootStackParamList } from '../AppNavigator';
 import { useDatabase } from '../database/DatabaseContext';
 import {
+  addWorkoutSet,
   cancelActiveWorkout,
   confirmWorkoutSet,
   deletePlannedWorkoutSet,
   loadActiveWorkout,
+  removeExerciseFromWorkout,
   savePlannedWorkoutSet,
   unconfirmWorkoutSet,
   type ActiveWorkout,
@@ -54,15 +57,23 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const [reload, setReload] = useState(0);
   const [expandedId, setExpandedId] = useState<number>();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [removeExerciseId, setRemoveExerciseId] = useState<number>();
   const [cancelling, setCancelling] = useState(false);
   const [cancelFailed, setCancelFailed] = useState(false);
   const [pendingSetId, setPendingSetId] = useState<number>();
+  const [pendingExerciseOperation, setPendingExerciseOperation] = useState<'add-set' | 'remove-exercise'>();
   const [setFailure, setSetFailure] = useState<{ setId: number; message: string; retry: () => void }>();
   const [setRetryFocus, setSetRetryFocus] = useState<{ setId: number }>();
+  const [exerciseFailure, setExerciseFailure] = useState<{
+    workoutExerciseId: number; message: string; operation: 'add-set' | 'remove-exercise';
+  }>();
   const addExerciseRef = useRef<View>(null);
   const cancelRef = useRef<View>(null);
   const confirmCancelRef = useRef<View>(null);
   const retryCancelRef = useRef<View>(null);
+  const confirmRemoveRef = useRef<View>(null);
+  const removeExerciseRefs = useRef(new Map<number, View>());
+  const exerciseRetryRefs = useRef(new Map<number, View>());
   const allowNavigation = useRef(false);
   const saveQueue = useRef(Promise.resolve());
   const lifecycleFlush = useRef(Promise.resolve(true));
@@ -117,11 +128,11 @@ export function WorkoutScreen({ navigation, route }: Props) {
     draft.workoutId === state.workout.id && draft.unsaved,
   );
 
-  usePreventRemove(cancelling || pendingSetId !== undefined || hasDirtyDraft, ({ data }) => {
+  usePreventRemove(cancelling || pendingSetId !== undefined || pendingExerciseOperation !== undefined || hasDirtyDraft, ({ data }) => {
     if (allowNavigation.current) navigation.dispatch(data.action);
-    else if (!cancelling && pendingSetId === undefined && hasUnsavedDraft) {
+    else if (!cancelling && pendingSetId === undefined && pendingExerciseOperation === undefined && hasUnsavedDraft) {
       navigation.dispatch(data.action);
-    } else if (!cancelling && pendingSetId === undefined) {
+    } else if (!cancelling && pendingSetId === undefined && pendingExerciseOperation === undefined) {
       void flushDrafts().then((saved) => {
         if (!saved) return;
         allowNavigation.current = true;
@@ -147,6 +158,12 @@ export function WorkoutScreen({ navigation, route }: Props) {
     if (cancelFailed) focus(retryCancelRef);
   }, [cancelFailed]);
 
+  useEffect(() => {
+    if (exerciseFailure) {
+      focus({ current: exerciseRetryRefs.current.get(exerciseFailure.workoutExerciseId) ?? null });
+    }
+  }, [exerciseFailure]);
+
   function focus(ref: React.RefObject<View | null>) {
     const handle = findNodeHandle(ref.current);
     if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
@@ -156,6 +173,15 @@ export function WorkoutScreen({ navigation, route }: Props) {
     if (cancelling) return;
     setCancelDialogOpen(false);
     requestAnimationFrame(() => focus(cancelRef));
+  }
+
+  function closeRemoveDialog() {
+    if (pendingExerciseOperation === 'remove-exercise') return;
+    const workoutExerciseId = removeExerciseId;
+    setRemoveExerciseId(undefined);
+    requestAnimationFrame(() => focus({
+      current: workoutExerciseId ? removeExerciseRefs.current.get(workoutExerciseId) ?? null : null,
+    }));
   }
 
   function draftFor(set: WorkoutSet): WorkoutSetDraft {
@@ -196,6 +222,20 @@ export function WorkoutScreen({ navigation, route }: Props) {
             return next ? [next] : [];
           }).sort(compareWorkoutSets),
         })),
+      },
+    }));
+  }
+
+  function updateWorkoutExercise(workoutExerciseId: number, update: (sets: WorkoutSet[]) => WorkoutSet[] | null) {
+    setState((current) => current.status !== 'ready' ? current : ({
+      status: 'ready',
+      workout: {
+        ...current.workout,
+        exercises: current.workout.exercises.flatMap((exercise) => {
+          if (exercise.id !== workoutExerciseId) return [exercise];
+          const sets = update(exercise.sets);
+          return sets ? [{ ...exercise, sets }] : [];
+        }),
       },
     }));
   }
@@ -283,9 +323,11 @@ export function WorkoutScreen({ navigation, route }: Props) {
         confirmedAt,
       }));
       AccessibilityInfo.announceForAccessibility(`Sett bekreftet for ${exerciseName}.`);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
       updateDraft(set, { confirmationFailed: true });
       AccessibilityInfo.announceForAccessibility('Kunne ikke bekrefte settet. Prøv igjen.');
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setSetRetryFocus({ setId: set.id });
     } finally {
       setPendingSetId(undefined);
@@ -338,6 +380,53 @@ export function WorkoutScreen({ navigation, route }: Props) {
     }
   }
 
+  async function addSet(workoutId: number, workoutExerciseId: number, exerciseName: string) {
+    setPendingExerciseOperation('add-set');
+    setExerciseFailure(undefined);
+    try {
+      const set = await addWorkoutSet(database, workoutId, workoutExerciseId);
+      updateWorkoutExercise(workoutExerciseId, (sets) => [...sets, set].sort(compareWorkoutSets));
+      AccessibilityInfo.announceForAccessibility(`Nytt planlagt sett lagt til for ${exerciseName}.`);
+      void Haptics.selectionAsync();
+    } catch {
+      const message = 'Kunne ikke legge til settet. Prøv igjen.';
+      setExerciseFailure({ workoutExerciseId, message, operation: 'add-set' });
+      AccessibilityInfo.announceForAccessibility(message);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setPendingExerciseOperation(undefined);
+    }
+  }
+
+  async function removeExercise(workoutId: number, workoutExerciseId: number, exerciseName: string) {
+    setPendingExerciseOperation('remove-exercise');
+    setExerciseFailure(undefined);
+    try {
+      await removeExerciseFromWorkout(database, workoutId, workoutExerciseId);
+      updateWorkoutExercise(workoutExerciseId, () => null);
+      setDrafts((current) => {
+        const next = { ...current };
+        if (state.status === 'ready') {
+          state.workout.exercises.find((exercise) => exercise.id === workoutExerciseId)?.sets.forEach((set) => delete next[set.id]);
+        }
+        return next;
+      });
+      setExpandedId(undefined);
+      setRemoveExerciseId(undefined);
+      AccessibilityInfo.announceForAccessibility(`${exerciseName} fjernet fra økten.`);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      requestAnimationFrame(() => focus(addExerciseRef));
+    } catch {
+      const message = 'Kunne ikke fjerne øvelsen. Prøv igjen.';
+      setRemoveExerciseId(undefined);
+      setExerciseFailure({ workoutExerciseId, message, operation: 'remove-exercise' });
+      AccessibilityInfo.announceForAccessibility(message);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setPendingExerciseOperation(undefined);
+    }
+  }
+
   if (state.status === 'loading') return <ActivityIndicator accessibilityLabel="Laster treningsøkt" style={styles.center} />;
   if (state.status === 'failed') return (
     <View style={styles.center}>
@@ -361,6 +450,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
               accessibilityState={{ expanded }}
               onPress={() => setExpandedId(expanded ? undefined : exercise.exerciseId)}
               ref={(node) => { if (node) cardRefs.current.set(exercise.exerciseId, node); }}
+              style={styles.cardHeader}
             >
               <Text style={[styles.cardTitle, { color: colors.text }]}>{exercise.name}</Text>
               {!expanded && <Text style={{ color: colors.text }}>{completed} av {exercise.sets.length} sett gjennomført</Text>}
@@ -377,7 +467,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                 </View>
                 <Button
                   accessibilityLabel={`Rediger sett ${index + 1}`}
-                  disabled={pendingSetId !== undefined}
+                  disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
                   label="Rediger"
                   onPress={() => void mutateSet(
                     set.id,
@@ -450,17 +540,17 @@ export function WorkoutScreen({ navigation, route }: Props) {
                       />
                     </View>
                   )}
-                  <View style={styles.setActions}>
+                  <View accessibilityLabel={`Handlinger for planlagt sett for ${exercise.name}`} style={styles.setActions}>
                     <Button
                       accessibilityLabel={`Bekreft planlagt sett for ${exercise.name}`}
-                      disabled={pendingSetId !== undefined || draft.unsaved || draft.confirmationFailed}
+                      disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || draft.unsaved || draft.confirmationFailed}
                       label={busy ? 'Lagrer' : 'Bekreft'}
                       onPress={() => void confirmSet(state.workout.id, set, exercise.name)}
                       primary
                     />
                     <Button
                       accessibilityLabel={`Slett planlagt sett for ${exercise.name}`}
-                      disabled={pendingSetId !== undefined}
+                      disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
                       label="Slett"
                       onPress={() => void mutateSet(
                         set.id,
@@ -480,13 +570,43 @@ export function WorkoutScreen({ navigation, route }: Props) {
                 </View>
               );
             })())}
-            {expanded && <Button disabled label="Legg til sett" onPress={() => undefined} />}
+            {expanded && (
+              <View style={styles.exerciseActions}>
+                <Button
+                  disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || hasUnsavedDraft}
+                  label={pendingExerciseOperation === 'add-set' ? 'Legger til sett' : 'Legg til sett'}
+                  onPress={() => void flushDrafts().then((saved) => {
+                    if (saved) void addSet(state.workout.id, exercise.id, exercise.name);
+                  })}
+                  primary
+                />
+                <Button
+                  accessibilityLabel={`Fjern ${exercise.name} fra økten`}
+                  disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
+                  label="Fjern øvelse"
+                  onPress={() => {
+                    if (completed > 0) setRemoveExerciseId(exercise.id);
+                    else void removeExercise(state.workout.id, exercise.id, exercise.name);
+                  }}
+                  setButtonRef={(node) => { if (node) removeExerciseRefs.current.set(exercise.id, node); }}
+                />
+              </View>
+            )}
+            {exerciseFailure?.workoutExerciseId === exercise.id && (
+              <View style={styles.failure}>
+                <Text accessibilityRole="alert" style={{ color: colors.notification }}>{exerciseFailure.message}</Text>
+                <Button label="Prøv igjen" onPress={() => {
+                  if (exerciseFailure.operation === 'add-set') void addSet(state.workout.id, exercise.id, exercise.name);
+                  else void removeExercise(state.workout.id, exercise.id, exercise.name);
+                }} setButtonRef={(node) => { if (node) exerciseRetryRefs.current.set(exercise.id, node); }} />
+              </View>
+            )}
           </View>
         );
       })}
       <Button
         buttonRef={addExerciseRef}
-        disabled={pendingSetId !== undefined || hasUnsavedDraft}
+        disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || hasUnsavedDraft}
         label="Legg til øvelse"
         onPress={() => void flushDrafts().then((saved) => { if (saved) {
           navigation.setParams({ focusAddExercise: true });
@@ -494,7 +614,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
         } })}
       />
       <Button disabled label="Ferdig" onPress={() => undefined} primary />
-      <Button buttonRef={cancelRef} disabled={pendingSetId !== undefined} label="Avbryt" onPress={() => {
+      <Button buttonRef={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} label="Avbryt" onPress={() => {
         setCancelFailed(false);
         setCancelDialogOpen(true);
       }} />
@@ -505,6 +625,37 @@ export function WorkoutScreen({ navigation, route }: Props) {
           </Text>
           <Button buttonRef={retryCancelRef} label="Prøv igjen" onPress={() => setCancelDialogOpen(true)} />
         </View>
+      )}
+      {removeExerciseId !== undefined && (
+        <Modal
+          animationType="none"
+          onRequestClose={closeRemoveDialog}
+          onShow={() => focus(confirmRemoveRef)}
+          transparent
+          visible
+        >
+          <View accessibilityViewIsModal style={styles.modalBackdrop}>
+            <View style={[styles.dialog, { backgroundColor: colors.card }]}>
+              <Text accessibilityRole="header" style={[styles.dialogTitle, { color: colors.text }]}>Fjern øvelsen?</Text>
+              <Text style={{ color: colors.text }}>Gjennomførte og planlagte sett for øvelsen fjernes fra denne økten.</Text>
+              <Button
+                disabled={pendingExerciseOperation === 'remove-exercise'}
+                label="Behold øvelsen"
+                onPress={closeRemoveDialog}
+              />
+              <Button
+                accessibilityLabel="Bekreft fjerning av øvelsen"
+                buttonRef={confirmRemoveRef}
+                disabled={pendingExerciseOperation === 'remove-exercise'}
+                label={pendingExerciseOperation === 'remove-exercise' ? 'Fjerner øvelse' : 'Fjern øvelse'}
+                onPress={() => {
+                  const exercise = state.workout.exercises.find((candidate) => candidate.id === removeExerciseId);
+                  if (exercise) void removeExercise(state.workout.id, exercise.id, exercise.name);
+                }}
+              />
+            </View>
+          </View>
+        </Modal>
       )}
       <Modal
         animationType="none"
@@ -562,15 +713,17 @@ const styles = StyleSheet.create({
   heading: { fontSize: 24, fontWeight: '700' },
   empty: { fontSize: 18, paddingVertical: 36, textAlign: 'center' },
   card: { borderRadius: 16, borderWidth: 1, gap: 16, padding: 16 },
+  cardHeader: { justifyContent: 'center', minHeight: 48 },
   cardTitle: { fontSize: 21, fontWeight: '700', marginBottom: 4 },
   set: { gap: 10, paddingVertical: 4 },
   setTitle: { fontSize: 16, fontWeight: '600' },
   fields: { gap: 10 },
   field: { gap: 6 },
   input: { borderRadius: 10, borderWidth: 1, fontSize: 16, minHeight: 48, paddingHorizontal: 12 },
-  receipt: { alignItems: 'center', borderBottomWidth: 1, flexDirection: 'row', gap: 12, justifyContent: 'space-between', paddingBottom: 12 },
+  receipt: { alignItems: 'stretch', borderBottomWidth: 1, gap: 12, paddingBottom: 12 },
   receiptText: { flex: 1, gap: 4 },
-  setActions: { flexDirection: 'row', gap: 10 },
+  setActions: { gap: 10 },
+  exerciseActions: { gap: 10 },
   button: { alignItems: 'center', borderRadius: 13, borderWidth: 1, justifyContent: 'center', minHeight: 50, paddingHorizontal: 18 },
   buttonText: { fontSize: 17, fontWeight: '700' },
   disabled: { opacity: 0.45 },
