@@ -31,12 +31,12 @@ jobs:
       - run: npm run typecheck
       - run: npm test -- --ci
 
-  android-smoke:
-    name: Android smoke tests
+  android-apk:
+    name: Android smoke APK
     needs: test
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -56,19 +56,6 @@ jobs:
 
       - name: Install Android SDK 36
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
-
-      - name: Install Maestro
-        env:
-          MAESTRO_VERSION: 2.8.0
-        run: |
-          curl -Ls https://get.maestro.mobile.dev | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
 
       - name: Restore Gradle build cache
         id: gradle-build-cache
@@ -90,6 +77,65 @@ jobs:
         if: steps.android-smoke-apk.outputs.cache-hit != 'true'
         run: bash scripts/build-android-smoke-apk.sh
 
+      - name: Save Android smoke APK
+        if: steps.android-smoke-apk.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.ANDROID_SMOKE_APK }}
+          key: ${{ steps.android-smoke-apk.outputs.cache-primary-key }}
+
+      - name: Upload Android smoke APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-smoke-apk
+          path: ${{ env.ANDROID_SMOKE_APK }}
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Save Gradle build cache
+        if: steps.gradle-build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: ${{ steps.gradle-build-cache.outputs.cache-primary-key }}
+
+  android-smoke:
+    name: Android smoke tests
+    needs: android-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+
+      - name: Install Maestro
+        env:
+          MAESTRO_VERSION: 2.8.0
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Download Android smoke APK
+        uses: actions/download-artifact@v7
+        with:
+          name: android-smoke-apk
+          path: .artifacts/android
+
       - name: Install app and run smoke tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -98,20 +144,6 @@ jobs:
           disk-size: 4096M
           profile: pixel_7
           script: bash scripts/ci-android-smoke.sh
-
-      - name: Save tested Android smoke APK
-        if: steps.android-smoke-apk.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: ${{ env.ANDROID_SMOKE_APK }}
-          key: ${{ steps.android-smoke-apk.outputs.cache-primary-key }}
-
-      - name: Save Gradle build cache
-        if: steps.gradle-build-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: ~/.gradle/caches/build-cache-1
-          key: ${{ steps.gradle-build-cache.outputs.cache-primary-key }}
 
       - name: Upload smoke diagnostics
         if: always()
