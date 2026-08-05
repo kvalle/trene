@@ -15,6 +15,7 @@ import {
   deletePlannedWorkoutSet,
   getActiveWorkoutId,
   listAvailableExercises,
+  listCompletedWorkouts,
   loadCompletedWorkout,
   loadActiveWorkout,
   removeExerciseFromWorkout,
@@ -214,6 +215,81 @@ describe('active workout persistence', () => {
         ] },
       ],
     });
+  });
+
+  test('lists completed workouts newest-first with stable ties and saved exercise counts', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    const secondExerciseId = await createExercise(database, 'Benkpress', exerciseNameKey('Benkpress'));
+    const oldest = await database.runAsync(
+      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-01-01')",
+    );
+    const firstTie = await database.runAsync(
+      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'b', '2026-02-01')",
+    );
+    const secondTie = await database.runAsync(
+      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'c', '2026-02-01')",
+    );
+    await database.runAsync(
+      'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+      oldest.lastInsertRowId, exerciseId,
+    ).then((membership) => database.runAsync(
+      "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'done')",
+      membership.lastInsertRowId,
+    ));
+    await database.runAsync(
+      'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 1)',
+      firstTie.lastInsertRowId, secondExerciseId,
+    ).then((membership) => database.runAsync(
+      "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 60, 8, 'done')",
+      membership.lastInsertRowId,
+    ));
+    await database.runAsync(
+      'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+      firstTie.lastInsertRowId, exerciseId,
+    ).then(async (membership) => {
+      await database.runAsync(
+        "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'done')",
+        membership.lastInsertRowId,
+      );
+      await database.runAsync(
+        'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions) VALUES (?, 90, 3)',
+        membership.lastInsertRowId,
+      );
+    });
+    const unconfirmedMembership = await database.runAsync(
+      'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+      secondTie.lastInsertRowId, exerciseId,
+    );
+    await database.runAsync(
+      'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions) VALUES (?, 90, 3)',
+      unconfirmedMembership.lastInsertRowId,
+    );
+    await startWorkout(database);
+
+    expect(await listCompletedWorkouts(database)).toEqual([
+      { id: firstTie.lastInsertRowId, completedAt: '2026-02-01', exerciseCount: 2 },
+      { id: secondTie.lastInsertRowId, completedAt: '2026-02-01', exerciseCount: 0 },
+      { id: oldest.lastInsertRowId, completedAt: '2026-01-01', exerciseCount: 1 },
+    ]);
+  });
+
+  test('loads the current exercise name in completed workout detail', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const exerciseId = await createExercise(database, 'Gammelt navn', exerciseNameKey('Gammelt navn'));
+    await addExerciseToWorkout(database, workoutId, exerciseId);
+    const setId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
+    await confirmWorkoutSet(database, workoutId, setId, 80, 5, 'confirmed');
+    await completeWorkout(database, workoutId, 'completed');
+    await database.runAsync(
+      'UPDATE exercises SET name = ?, name_key = ? WHERE id = ?',
+      'Nytt navn', exerciseNameKey('Nytt navn'), exerciseId,
+    );
+
+    expect((await loadCompletedWorkout(database, workoutId))!.exercises[0].name).toBe('Nytt navn');
   });
 
   test('rejects completion without a completed set', async () => {
