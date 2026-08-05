@@ -111,34 +111,66 @@ export function ExercisePickerScreen({ navigation, route }: Props) {
         </View>
       ) : (
         <>
-          {matches.map((exercise) => (
-            <Action
-              busy={savingExerciseId === exercise.id}
-              disabled={saving}
-              key={exercise.id}
-              label={savingExerciseId === exercise.id ? 'Legger til…' : exercise.name}
-              onPress={() => void select(exercise.id)}
-            />
-          ))}
-          <Action disabled={saving} label="Opprett øvelse" onPress={() => create()} />
+          <View style={[styles.exerciseList, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {matches.map((exercise, index) => (
+              <ExerciseRow
+                busy={savingExerciseId === exercise.id}
+                disabled={saving}
+                key={exercise.id}
+                label={savingExerciseId === exercise.id ? 'Legger til…' : exercise.name}
+                last={index === matches.length - 1}
+                onPress={() => void select(exercise.id)}
+              />
+            ))}
+          </View>
+          <Action disabled={saving} label="Opprett øvelse" onPress={() => create()} primary />
         </>
       )}
-      <Action disabled={saving} label="Avbryt" onPress={() => navigation.popTo('Workout', { focusAddExercise: true })} />
+      <Action disabled={saving} label="Avbryt" onPress={() => navigation.popTo('Workout', { focusAddExercise: true })} secondary />
     </ScrollView>
   );
 }
 
-function Action({ busy = false, disabled = false, label, onPress, primary = false }: {
-  busy?: boolean; disabled?: boolean; label: string; onPress: () => void; primary?: boolean;
+function ExerciseRow({ busy, disabled, label, last, onPress }: {
+  busy: boolean; disabled: boolean; label: string; last: boolean; onPress: () => void;
 }) {
   const { colors } = useTheme();
   return (
     <Pressable
+      accessibilityLabel={label}
       accessibilityRole="button"
       accessibilityState={{ busy, disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={[styles.action, { backgroundColor: primary ? colors.primary : colors.card, borderColor: colors.border }]}
+      style={({ pressed }) => [
+        styles.exerciseRow,
+        { borderBottomColor: colors.border },
+        last && styles.lastExerciseRow,
+        pressed && styles.pressed,
+      ]}
+    >
+      <Text style={[styles.exerciseName, { color: colors.text }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function Action({ busy = false, disabled = false, label, onPress, primary = false, secondary = false }: {
+  busy?: boolean; disabled?: boolean; label: string; onPress: () => void; primary?: boolean; secondary?: boolean;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityState={{ busy, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.action,
+        secondary ? styles.secondaryAction : styles.borderedAction,
+        !secondary && { backgroundColor: primary ? colors.primary : colors.card, borderColor: colors.primary },
+        pressed && styles.pressed,
+      ]}
     >
       <Text style={[styles.actionText, { color: primary ? colors.background : colors.text }]}>{label}</Text>
     </Pressable>
@@ -146,10 +178,17 @@ function Action({ busy = false, disabled = false, label, onPress, primary = fals
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, gap: 12, padding: 20 },
+  container: { flexGrow: 1, gap: 16, padding: 20 },
   center: { alignItems: 'center', flex: 1, gap: 20, justifyContent: 'center', padding: 24 },
   heading: { fontSize: 24, fontWeight: '700', textAlign: 'center' },
-  search: { borderRadius: 12, borderWidth: 1, fontSize: 17, marginBottom: 8, minHeight: 50, paddingHorizontal: 16 },
-  action: { alignItems: 'center', borderRadius: 13, borderWidth: 1, justifyContent: 'center', minHeight: 50, paddingHorizontal: 16 },
-  actionText: { fontSize: 17, fontWeight: '600' },
+  search: { borderRadius: 12, borderWidth: 1, fontSize: 17, minHeight: 50, paddingHorizontal: 16 },
+  exerciseList: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  exerciseRow: { borderBottomWidth: StyleSheet.hairlineWidth, justifyContent: 'center', minHeight: 56, paddingHorizontal: 16, paddingVertical: 12 },
+  lastExerciseRow: { borderBottomWidth: 0 },
+  exerciseName: { fontSize: 18, fontWeight: '600' },
+  action: { alignItems: 'center', justifyContent: 'center', minHeight: 52, paddingHorizontal: 20, paddingVertical: 12 },
+  borderedAction: { borderRadius: 14, borderWidth: 1 },
+  secondaryAction: { minHeight: 48 },
+  actionText: { fontSize: 17, fontWeight: '700', textAlign: 'center' },
+  pressed: { opacity: 0.72 },
 });

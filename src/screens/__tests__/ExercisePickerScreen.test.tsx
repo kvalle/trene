@@ -61,6 +61,24 @@ test('distinguishes the all-added state and cancellation changes no membership',
   expect(mockedAdd).not.toHaveBeenCalled();
 });
 
+test('invokes create and cancel actions from the exercise list', async () => {
+  const navigate = jest.fn();
+  const popTo = jest.fn();
+  mockedCount.mockResolvedValue(1);
+  mockedList.mockResolvedValue([{ id: 1, name: 'Knebøy' }]);
+  renderScreen({ navigate, popTo });
+
+  await screen.findByRole('button', { name: 'Knebøy' });
+  fireEvent.press(screen.getByRole('button', { name: 'Opprett øvelse' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Avbryt' }));
+
+  expect(navigate).toHaveBeenCalledWith('CreateExercise', {
+    initialName: undefined, origin: 'workout', workoutId: 9,
+  });
+  expect(popTo).toHaveBeenCalledWith('Workout', { focusAddExercise: true });
+  expect(mockedAdd).not.toHaveBeenCalled();
+});
+
 test('retains picker choices after a failed selection write', async () => {
   mockedCount.mockResolvedValue(1);
   mockedList.mockResolvedValue([{ id: 1, name: 'Knebøy' }]);
