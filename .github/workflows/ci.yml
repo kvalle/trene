@@ -18,6 +18,7 @@ env:
   ANDROID_CMAKE: 3.22.1
   ANDROID_NDK: 27.1.12297006
   ANDROID_SMOKE_APK_CACHE_VERSION: v2
+  GRADLE_USER_HOME: /home/runner/.gradle
   GRADLE_VERSION: 9.3.1
   JAVA_VERSION: '17'
   NATIVE_BUILD_PATHS: |
@@ -84,7 +85,7 @@ jobs:
         id: gradle-build-cache
         uses: actions/cache/restore@v5
         with:
-          path: ~/.gradle/caches/build-cache-1
+          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
           key: gradle-build-v2-${{ runner.os }}-${{ env.ANDROID_ARCH }}-gradle${{ env.GRADLE_VERSION }}-jdk${{ env.JAVA_VERSION }}-sdk${{ env.ANDROID_COMPILE_SDK }}-tools${{ env.ANDROID_BUILD_TOOLS }}-cmake${{ env.ANDROID_CMAKE }}-ndk${{ env.ANDROID_NDK }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'plugins/**', '.nvmrc', 'scripts/build-android-smoke-apk.sh') }}-${{ github.sha }}
           restore-keys: |
             gradle-build-v2-${{ runner.os }}-${{ env.ANDROID_ARCH }}-gradle${{ env.GRADLE_VERSION }}-jdk${{ env.JAVA_VERSION }}-sdk${{ env.ANDROID_COMPILE_SDK }}-tools${{ env.ANDROID_BUILD_TOOLS }}-cmake${{ env.ANDROID_CMAKE }}-ndk${{ env.ANDROID_NDK }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'plugins/**', '.nvmrc', 'scripts/build-android-smoke-apk.sh') }}-
@@ -144,7 +145,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: gradle-build-cache
-          path: ~/.gradle/caches/build-cache-1
+          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 1
@@ -198,7 +199,7 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           name: gradle-build-cache
-          path: ~/.gradle/caches/build-cache-1
+          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
 
       - name: Install app and run smoke tests
         uses: reactivecircus/android-emulator-runner@v2
@@ -227,7 +228,7 @@ jobs:
         if: needs.android-apk.outputs.apk-cache-hit != 'true' && needs.android-apk.outputs.gradle-cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
-          path: ~/.gradle/caches/build-cache-1
+          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
           key: ${{ needs.android-apk.outputs.gradle-cache-key }}
 
       - name: Upload smoke diagnostics
