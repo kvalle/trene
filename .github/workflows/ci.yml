@@ -12,6 +12,15 @@ permissions:
 
 env:
   ANDROID_SMOKE_APK: .artifacts/android/app-debug.apk
+  ANDROID_ARCH: x86_64
+  ANDROID_BUILD_TOOLS: 36.0.0
+  ANDROID_COMPILE_SDK: '36'
+  ANDROID_CMAKE: 3.22.1
+  ANDROID_NDK: 27.1.12297006
+  ANDROID_SMOKE_APK_CACHE_VERSION: v3
+  GRADLE_USER_HOME: /home/runner/.gradle
+  GRADLE_VERSION: 9.3.1
+  JAVA_VERSION: '17'
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -37,6 +46,11 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      apk-cache-hit: ${{ steps.android-smoke-apk.outputs.cache-hit }}
+      apk-cache-key: ${{ steps.android-smoke-apk.outputs.cache-primary-key }}
+      gradle-cache-hit: ${{ steps.gradle-build-cache.outputs.cache-hit }}
+      gradle-cache-key: ${{ steps.gradle-build-cache.outputs.cache-primary-key }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -46,7 +60,7 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: ${{ env.JAVA_VERSION }}
       - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v5
         with:
@@ -55,34 +69,27 @@ jobs:
       - run: npm ci
 
       - name: Install Android SDK 36
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+        run: sdkmanager 'platforms;android-${{ env.ANDROID_COMPILE_SDK }}' 'build-tools;${{ env.ANDROID_BUILD_TOOLS }}' 'cmake;${{ env.ANDROID_CMAKE }}' 'ndk;${{ env.ANDROID_NDK }}'
 
       - name: Restore Gradle build cache
         id: gradle-build-cache
         uses: actions/cache/restore@v5
         with:
-          path: ~/.gradle/caches/build-cache-1
-          key: gradle-build-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app.json', '.nvmrc') }}-${{ github.sha }}
+          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
+          key: gradle-build-v2-${{ runner.os }}-${{ env.ANDROID_ARCH }}-gradle${{ env.GRADLE_VERSION }}-jdk${{ env.JAVA_VERSION }}-sdk${{ env.ANDROID_COMPILE_SDK }}-tools${{ env.ANDROID_BUILD_TOOLS }}-cmake${{ env.ANDROID_CMAKE }}-ndk${{ env.ANDROID_NDK }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'plugins/**', '.nvmrc', 'scripts/build-android-smoke-apk.sh') }}-${{ github.sha }}
           restore-keys: |
-            gradle-build-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app.json', '.nvmrc') }}-
+            gradle-build-v2-${{ runner.os }}-${{ env.ANDROID_ARCH }}-gradle${{ env.GRADLE_VERSION }}-jdk${{ env.JAVA_VERSION }}-sdk${{ env.ANDROID_COMPILE_SDK }}-tools${{ env.ANDROID_BUILD_TOOLS }}-cmake${{ env.ANDROID_CMAKE }}-ndk${{ env.ANDROID_NDK }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'plugins/**', '.nvmrc', 'scripts/build-android-smoke-apk.sh') }}-
 
       - name: Restore Android smoke APK
         id: android-smoke-apk
         uses: actions/cache/restore@v5
         with:
           path: ${{ env.ANDROID_SMOKE_APK }}
-          key: android-smoke-apk-${{ runner.os }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'eas.json', '.nvmrc', 'locales/**', 'assets/**', 'plugins/**', 'android/**', 'scripts/build-android-smoke-apk.sh', '.github/workflows/ci.yml') }}
+          key: android-smoke-apk-${{ env.ANDROID_SMOKE_APK_CACHE_VERSION }}-${{ runner.os }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'eas.json', '.nvmrc', 'locales/**', 'assets/**', 'plugins/**', 'android/**', 'scripts/build-android-smoke-apk.sh', '.github/workflows/ci.yml') }}
 
       - name: Build Android smoke APK
         if: steps.android-smoke-apk.outputs.cache-hit != 'true'
         run: bash scripts/build-android-smoke-apk.sh
-
-      - name: Save Android smoke APK
-        if: steps.android-smoke-apk.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: ${{ env.ANDROID_SMOKE_APK }}
-          key: ${{ steps.android-smoke-apk.outputs.cache-primary-key }}
 
       - name: Upload Android smoke APK
         uses: actions/upload-artifact@v6
@@ -92,12 +99,24 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Save Gradle build cache
-        if: steps.gradle-build-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+      - name: Upload Android build report
+        if: always() && steps.android-smoke-apk.outputs.cache-hit != 'true'
+        uses: actions/upload-artifact@v6
         with:
-          path: ~/.gradle/caches/build-cache-1
-          key: ${{ steps.gradle-build-cache.outputs.cache-primary-key }}
+          name: android-build-report
+          path: .artifacts/android/gradle-build.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Gradle build cache
+        if: steps.android-smoke-apk.outputs.cache-hit != 'true' && steps.gradle-build-cache.outputs.cache-hit != 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: gradle-build-cache
+          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1
 
   android-smoke:
     name: Android smoke tests
@@ -113,7 +132,7 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: ${{ env.JAVA_VERSION }}
       - uses: android-actions/setup-android@v3
       - run: npm ci
 
@@ -142,7 +161,7 @@ jobs:
           api-level: 34
           arch: x86_64
           disk-size: 4096M
-          profile: pixel_7
+          profile: pixel_2
           script: bash scripts/ci-android-smoke.sh
 
       - name: Upload smoke diagnostics
@@ -154,5 +173,31 @@ jobs:
             .artifacts/maestro/debug/
             .artifacts/metro.log
             .artifacts/logcat.txt
+            .artifacts/activity-processes.txt
+            .artifacts/meminfo.txt
+            .artifacts/window.txt
+            .artifacts/runner-disk.txt
+            .artifacts/runner-memory.txt
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Save Android smoke APK
+        if: success() && needs.android-apk.outputs.apk-cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.ANDROID_SMOKE_APK }}
+          key: ${{ needs.android-apk.outputs.apk-cache-key }}
+
+      - name: Download Gradle build cache
+        if: success() && needs.android-apk.outputs.apk-cache-hit != 'true' && needs.android-apk.outputs.gradle-cache-hit != 'true'
+        uses: actions/download-artifact@v7
+        with:
+          name: gradle-build-cache
+          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
+
+      - name: Save Gradle build cache
+        if: success() && needs.android-apk.outputs.apk-cache-hit != 'true' && needs.android-apk.outputs.gradle-cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
+          key: ${{ needs.android-apk.outputs.gradle-cache-key }}
