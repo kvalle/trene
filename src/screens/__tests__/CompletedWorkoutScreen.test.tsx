@@ -1,0 +1,87 @@
+import { NavigationContainer } from '@react-navigation/native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+
+import { DatabaseProvider } from '../../database/DatabaseContext';
+import type { Database } from '../../database/types';
+import { loadCompletedWorkout } from '../../database/workouts';
+import { CompletedWorkoutScreen } from '../CompletedWorkoutScreen';
+
+jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
+  ...jest.requireActual('react-native/Libraries/ReactNative/RendererProxy'),
+  findNodeHandle: jest.fn((node) => node ? 12 : null),
+}));
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  usePreventRemove: jest.fn(),
+}));
+
+jest.mock('../../database/workouts', () => ({ loadCompletedWorkout: jest.fn() }));
+
+const database = {} as Database;
+const mockedLoad = jest.mocked(loadCompletedWorkout);
+
+beforeEach(() => jest.clearAllMocks());
+
+test('shows the exact read-only completed result in saved card order', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    completedAt: '2026-08-05T10:30:00Z',
+    exercises: [
+      { id: 4, exerciseId: 5, name: 'Knebøy', position: 0, sets: [
+        { id: 7, loadKg: 80, repetitions: 5, confirmedAt: '2026-08-05T10:00:00Z' },
+      ] },
+      { id: 8, exerciseId: 9, name: 'Benkpress', position: 1, sets: [
+        { id: 10, loadKg: 60, repetitions: 8, confirmedAt: '2026-08-05T10:05:00Z' },
+      ] },
+    ],
+  });
+  renderScreen();
+
+  expect(await screen.findByRole('header', { name: 'Fullført økt' })).toBeOnTheScreen();
+  expect(screen.getByText(/5. august 2026/)).toBeOnTheScreen();
+  const headers = screen.getAllByRole('header').map((node) => node.props.children);
+  expect(headers).toEqual(['Fullført økt', 'Knebøy', 'Benkpress']);
+  expect(screen.getByLabelText('Sett 1, 5 repetisjoner med 80 kilogram')).toBeOnTheScreen();
+  expect(screen.getByLabelText('Sett 1, 8 repetisjoner med 60 kilogram')).toBeOnTheScreen();
+  expect(screen.queryByRole('button', { name: /Rediger|Slett/ })).not.toBeOnTheScreen();
+});
+
+test('returns Home from post-completion detail', async () => {
+  const popTo = jest.fn();
+  mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
+  renderScreen({ popTo });
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Tilbake til forsiden' }));
+  expect(popTo).toHaveBeenCalledWith('Home', { focusStartWorkout: true });
+});
+
+test('shows retry instead of an empty result when loading fails', async () => {
+  mockedLoad.mockRejectedValueOnce(new Error('read failed')).mockResolvedValueOnce({
+    id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [],
+  });
+  renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Prøv igjen' }));
+  await waitFor(() => expect(mockedLoad).toHaveBeenCalledTimes(2));
+});
+
+test('distinguishes a missing workout from a retryable load failure', async () => {
+  mockedLoad.mockResolvedValue(null);
+  renderScreen();
+
+  expect(await screen.findByRole('header', { name: 'Finnes ikke lenger' })).toBeOnTheScreen();
+  expect(screen.queryByRole('button', { name: 'Prøv igjen' })).not.toBeOnTheScreen();
+});
+
+function renderScreen(navigation: Record<string, jest.Mock> = {}) {
+  return render(
+    <DatabaseProvider database={database}>
+      <NavigationContainer>
+        <CompletedWorkoutScreen
+          navigation={{ dispatch: jest.fn(), popTo: jest.fn(), ...navigation } as never}
+          route={{ params: { workoutId: 3, fromCompletion: true } } as never}
+        />
+      </NavigationContainer>
+    </DatabaseProvider>,
+  );
+}

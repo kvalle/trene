@@ -27,6 +27,10 @@ export interface ActiveWorkout {
   exercises: WorkoutExercise[];
 }
 
+export interface CompletedWorkout extends ActiveWorkout {
+  completedAt: string;
+}
+
 type WorkoutRow = { id: number };
 type ExerciseRow = { id: number; name: string };
 type MembershipRow = { id: number; exercise_id: number; name: string; position: number };
@@ -76,6 +80,39 @@ export async function cancelActiveWorkout(database: Database, workoutId: number)
       workoutId,
     );
     if (result.changes !== 1) throw new Error('Active workout not found');
+  });
+}
+
+export async function completeWorkout(
+  database: Database,
+  workoutId: number,
+  completedAt = new Date().toISOString(),
+): Promise<void> {
+  await transaction(database, async () => {
+    await database.runAsync(`
+      DELETE FROM workout_sets WHERE confirmed_at IS NULL
+        AND workout_exercise_id IN (
+          SELECT id FROM workout_exercises WHERE workout_id = ?
+        )
+    `, workoutId);
+    await database.runAsync(`
+      DELETE FROM workout_exercises WHERE workout_id = ?
+        AND NOT EXISTS (
+          SELECT 1 FROM workout_sets
+          WHERE workout_sets.workout_exercise_id = workout_exercises.id
+        )
+    `, workoutId);
+    const result = await database.runAsync(`
+      UPDATE workouts SET status = 'completed', completed_at = ?
+      WHERE id = ? AND status = 'active'
+        AND EXISTS (
+          SELECT 1 FROM workout_exercises
+          JOIN workout_sets ON workout_sets.workout_exercise_id = workout_exercises.id
+          WHERE workout_exercises.workout_id = workouts.id
+            AND workout_sets.confirmed_at IS NOT NULL
+        )
+    `, completedAt, workoutId);
+    if (result.changes !== 1) throw new Error('Completable workout not found');
   });
 }
 
@@ -228,6 +265,49 @@ export async function loadActiveWorkout(database: Database): Promise<ActiveWorko
   `, id);
   return {
     id,
+    exercises: memberships.map((membership) => ({
+      id: membership.id,
+      exerciseId: membership.exercise_id,
+      name: membership.name,
+      position: membership.position,
+      sets: sets.filter((set) => set.workout_exercise_id === membership.id).map((set) => ({
+        id: set.id,
+        loadKg: set.load_kg,
+        repetitions: set.repetitions,
+        confirmedAt: set.confirmed_at,
+      })),
+    })),
+  };
+}
+
+export async function loadCompletedWorkout(
+  database: Database,
+  workoutId: number,
+): Promise<CompletedWorkout | null> {
+  const workout = await database.getFirstAsync<{ id: number; completed_at: string }>(
+    "SELECT id, completed_at FROM workouts WHERE id = ? AND status = 'completed'",
+    workoutId,
+  );
+  if (!workout) return null;
+  const memberships = await database.getAllAsync<MembershipRow>(`
+    SELECT workout_exercises.id, workout_exercises.exercise_id, exercises.name,
+      workout_exercises.position
+    FROM workout_exercises
+    JOIN exercises ON exercises.id = workout_exercises.exercise_id
+    WHERE workout_exercises.workout_id = ?
+    ORDER BY workout_exercises.position ASC
+  `, workoutId);
+  const sets = await database.getAllAsync<SetRow>(`
+    SELECT workout_sets.id, workout_sets.workout_exercise_id, workout_sets.load_kg,
+      workout_sets.repetitions, workout_sets.confirmed_at
+    FROM workout_sets
+    JOIN workout_exercises ON workout_exercises.id = workout_sets.workout_exercise_id
+    WHERE workout_exercises.workout_id = ? AND workout_sets.confirmed_at IS NOT NULL
+    ORDER BY workout_sets.confirmed_at ASC, workout_sets.id ASC
+  `, workoutId);
+  return {
+    id: workout.id,
+    completedAt: workout.completed_at,
     exercises: memberships.map((membership) => ({
       id: membership.id,
       exerciseId: membership.exercise_id,
