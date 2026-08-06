@@ -1,8 +1,10 @@
 import { useFocusEffect, useTheme } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
+  findNodeHandle,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -21,12 +23,15 @@ type LoadState =
   | { status: 'failed' }
   | { status: 'ready'; exercises: ExerciseListItem[] };
 
-export function ExercisesScreen({ navigation }: Props) {
+export function ExercisesScreen({ navigation, route }: Props) {
   const database = useDatabase();
   const { colors } = useTheme();
   const [query, setQuery] = useState('');
   const [reload, setReload] = useState(0);
   const [state, setState] = useState<LoadState>({ status: 'loading' });
+  const retryRef = useRef<View>(null);
+  const emptyActionRef = useRef<View>(null);
+  const exerciseRefs = useRef(new Map<number, View>());
 
   useFocusEffect(
     useCallback(() => {
@@ -40,6 +45,27 @@ export function ExercisesScreen({ navigation }: Props) {
     }, [database, reload]),
   );
 
+  useEffect(() => {
+    if (state.status !== 'failed') return;
+    AccessibilityInfo.announceForAccessibility('Kunne ikke laste inn. Prøv igjen.');
+    const handle = findNodeHandle(retryRef.current);
+    if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
+  }, [state.status]);
+
+  useEffect(() => {
+    if (state.status !== 'ready') return;
+    const focusExerciseId = route.params?.focusExerciseId;
+    const target = focusExerciseId === undefined ? null : exerciseRefs.current.get(focusExerciseId);
+    if (focusExerciseId !== undefined && !target && query.length > 0) {
+      setQuery('');
+      return;
+    }
+    const handle = findNodeHandle(target ?? (route.params?.focusEmptyAction ? emptyActionRef.current : null));
+    if (!handle) return;
+    AccessibilityInfo.setAccessibilityFocus(handle);
+    navigation.setParams({ focusExerciseId: undefined, focusEmptyAction: undefined });
+  }, [navigation, query, route.params?.focusEmptyAction, route.params?.focusExerciseId, state]);
+
   if (state.status === 'loading') {
     return <ActivityIndicator accessibilityLabel="Laster øvelser" style={styles.center} />;
   }
@@ -48,7 +74,7 @@ export function ExercisesScreen({ navigation }: Props) {
     return (
       <View style={styles.center}>
         <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>Kunne ikke laste inn</Text>
-        <Action label="Prøv igjen" onPress={() => setReload((value) => value + 1)} primary />
+        <Action actionRef={retryRef} label="Prøv igjen" onPress={() => setReload((value) => value + 1)} primary />
       </View>
     );
   }
@@ -72,7 +98,7 @@ export function ExercisesScreen({ navigation }: Props) {
       )}
 
       {isEmpty ? (
-        <Action label="Opprett første øvelse" onPress={() => navigation.navigate('CreateExercise')} primary />
+        <Action actionRef={emptyActionRef} label="Opprett første øvelse" onPress={() => navigation.navigate('CreateExercise')} primary />
       ) : matches.length === 0 ? (
         <View style={styles.emptyState}>
           <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>Ingen øvelser funnet</Text>
@@ -91,6 +117,10 @@ export function ExercisesScreen({ navigation }: Props) {
                 accessibilityRole="button"
                 key={exercise.id}
                 onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: exercise.id })}
+                ref={(node) => {
+                  if (node) exerciseRefs.current.set(exercise.id, node);
+                  else exerciseRefs.current.delete(exercise.id);
+                }}
                 style={({ pressed }) => [
                   styles.row,
                   { backgroundColor: colors.card, borderColor: colors.border },
@@ -111,12 +141,16 @@ export function ExercisesScreen({ navigation }: Props) {
   );
 }
 
-function Action({ label, onPress, primary = false }: { label: string; onPress: () => void; primary?: boolean }) {
+function Action({ actionRef, label, onPress, primary = false }: {
+  actionRef?: React.RefObject<View | null>; label: string; onPress: () => void; primary?: boolean;
+}) {
   const { colors } = useTheme();
   return (
     <Pressable
+      accessibilityLabel={label}
       accessibilityRole="button"
       onPress={onPress}
+      ref={actionRef}
       style={({ pressed }) => [
         styles.action,
         { backgroundColor: primary ? colors.primary : colors.card, borderColor: colors.primary },

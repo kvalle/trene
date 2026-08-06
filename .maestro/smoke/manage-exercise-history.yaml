@@ -1,0 +1,47 @@
+appId: no.kvalle.trene
+name: Manage an exercise without history
+tags:
+  - smoke
+  - android
+---
+- launchApp
+
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Øvelser"
+- assertVisible: "Opprett første øvelse"
+- tapOn: "Opprett første øvelse"
+
+- tapOn:
+    id: "exercise-name-input"
+# inputText does not support Unicode on Android; clipboard paste does.
+- setClipboard: "Markløft 79"
+- pasteText
+- tapOn:
+    id: "create-exercise-submit"
+
+- assertVisible: "Markløft 79"
+- assertVisible: "Historikk"
+- assertVisible: "Ingen fullførte økter med denne øvelsen ennå"
+- assertVisible: "Slett øvelse"
+
+- tapOn: "Navn"
+- eraseText
+- setClipboard: "Rumensk markløft 79"
+- pasteText
+- tapOn: "Lagre navn"
+- assertVisible: "Rumensk markløft 79"
+
+- back
+- assertVisible: "Rumensk markløft 79"
+- tapOn: "Rumensk markløft 79"
+
+- assertVisible: "Ingen fullførte økter med denne øvelsen ennå"
+- tapOn: "Slett øvelse"
+- assertVisible: "Slett Rumensk markløft 79?"
+- assertVisible: "Øvelsen slettes permanent. Dette kan ikke angres."
+- tapOn: "Slett"
+
+- assertVisible: "Opprett første øvelse"
+- assertNotVisible: "Rumensk markløft 79"

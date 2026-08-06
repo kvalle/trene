@@ -121,7 +121,7 @@ test('keeps detail, closes confirmation, and offers focused retry after deletion
   expect(screen.queryByRole('header', { name: 'Slett fullført økt?' })).not.toBeOnTheScreen();
   expect(screen.getByRole('header', { name: 'Fullført økt' })).toBeOnTheScreen();
   expect(announce).toHaveBeenCalledWith('Kunne ikke slette økten. Prøv igjen.');
-  expect(focus).toHaveBeenCalled();
+  await waitFor(() => expect(focus).toHaveBeenCalled());
   expect(popTo).not.toHaveBeenCalled();
 });
 
