@@ -1,4 +1,4 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, usePreventRemove } from '@react-navigation/native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { AccessibilityInfo } from 'react-native';
 
@@ -40,8 +40,9 @@ test('shows accessible whole rows with completion time and saved exercise count'
   ]);
   renderScreen({ navigate });
 
+  await screen.findByText(/5. august 2026/);
   const rows = [
-    await screen.findByLabelText(/5. august 2026.*1 øvelse/),
+    screen.getByLabelText(/5. august 2026.*1 øvelse/),
     screen.getByLabelText(/4. august 2026.*2 øvelser/),
   ];
   expect(rows).toHaveLength(2);
@@ -81,6 +82,32 @@ test('persists a new workout before leaving the empty state', async () => {
   expect(navigate).not.toHaveBeenCalled();
   await act(async () => finishStart(8));
   expect(navigate).toHaveBeenCalledWith('Workout');
+});
+
+test('blocks navigation again for each new workout start', async () => {
+  let preventRemove: ((event: { data: { action: object } }) => void) | undefined;
+  jest.mocked(usePreventRemove).mockImplementation((_, callback) => { preventRemove = callback as typeof preventRemove; });
+  const dispatch = jest.fn();
+  const navigate = jest.fn();
+  mockedList.mockResolvedValue([]);
+  mockedStart.mockResolvedValueOnce(8).mockImplementationOnce(() => new Promise(() => undefined));
+  const view = renderScreen({ dispatch, navigate });
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Start økt' }));
+  await waitFor(() => expect(navigate).toHaveBeenCalledWith('Workout'));
+  view.rerender(
+    <DatabaseProvider database={database}>
+      <NavigationContainer>
+        <HistoryScreen
+          navigation={{ dispatch, navigate } as never}
+          route={{} as never}
+        />
+      </NavigationContainer>
+    </DatabaseProvider>,
+  );
+  fireEvent.press(screen.getByRole('button', { name: 'Start økt' }));
+  act(() => preventRemove?.({ data: { action: {} } }));
+  expect(dispatch).not.toHaveBeenCalled();
 });
 
 test('retries read failures without presenting an empty history', async () => {

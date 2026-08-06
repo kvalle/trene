@@ -56,6 +56,7 @@ export function HistoryScreen({ navigation }: Props) {
       navigation.navigate('Workout');
       return;
     }
+    allowNavigation.current = false;
     setStarting(true);
     setStartFailed(false);
     try {
