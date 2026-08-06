@@ -52,6 +52,7 @@ export function ExerciseDetailScreen({ navigation, route }: Props) {
   const retryRef = useRef<View>(null);
   const deleteRef = useRef<View>(null);
   const confirmDeleteRef = useRef<View>(null);
+  const operationInProgress = useRef(false);
 
   usePreventRemove(saving || deleting, ({ data }) => {
     if (allowNavigation.current) navigation.dispatch(data.action);
@@ -92,11 +93,13 @@ export function ExerciseDetailScreen({ navigation, route }: Props) {
   }
 
   async function saveName(exercise: ExerciseDetail) {
+    if (operationInProgress.current) return;
     const validation = validateExerciseName(draft);
     if ('error' in validation) {
       showRenameError(validation.error);
       return;
     }
+    operationInProgress.current = true;
     setSaving(true);
     try {
       await renameExercise(database, exercise.id, validation.name, validation.key);
@@ -109,6 +112,7 @@ export function ExerciseDetailScreen({ navigation, route }: Props) {
         ? DUPLICATE_EXERCISE_NAME
         : 'Kunne ikke endre navnet. Prøv igjen.');
     } finally {
+      operationInProgress.current = false;
       setSaving(false);
     }
   }
@@ -120,6 +124,8 @@ export function ExerciseDetailScreen({ navigation, route }: Props) {
   }
 
   async function confirmDeletion(exercise: ExerciseDetail) {
+    if (operationInProgress.current) return;
+    operationInProgress.current = true;
     setDeleting(true);
     setDeleteFailed(false);
     try {
@@ -139,6 +145,7 @@ export function ExerciseDetailScreen({ navigation, route }: Props) {
         requestAnimationFrame(() => focus(retryRef));
       }
     } finally {
+      operationInProgress.current = false;
       setDeleting(false);
     }
   }
@@ -219,6 +226,10 @@ export function ExerciseDetailScreen({ navigation, route }: Props) {
           <Action actionRef={retryRef} label="Prøv igjen" onPress={() => {
             setDeleteFailed(false);
             setReload((value) => value + 1);
+          }} />
+          <Action label="Lukk" onPress={() => {
+            setDeleteFailed(false);
+            requestAnimationFrame(() => focus(deleteRef));
           }} />
         </View>
       )}

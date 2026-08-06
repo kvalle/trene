@@ -139,6 +139,18 @@ test.each([
   expect(focus).toHaveBeenCalled();
 });
 
+test('ignores repeated rename submissions before disabled state renders', async () => {
+  mockedRename.mockImplementation(() => new Promise(() => undefined));
+  renderScreen();
+
+  fireEvent.changeText(await screen.findByLabelText('Navn'), 'Ny knebøy');
+  const save = screen.getByRole('button', { name: 'Lagre navn' });
+  fireEvent.press(save);
+  fireEvent.press(save);
+
+  expect(mockedRename).toHaveBeenCalledTimes(1);
+});
+
 test('hides deletion when the exercise has active or completed references', async () => {
   mockedLoad.mockResolvedValue({ ...exercise, canDelete: false });
   renderScreen();
@@ -207,7 +219,22 @@ test('keeps detail, closes confirmation, and offers focused retry after deletion
   expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke slette øvelsen');
   expect(screen.queryByRole('header', { name: 'Slett Knebøy?' })).not.toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Lukk' })).toBeOnTheScreen();
   expect(announce).toHaveBeenCalledWith('Kunne ikke slette øvelsen. Prøv igjen.');
+  await waitFor(() => expect(focus).toHaveBeenCalled());
+});
+
+test('dismisses deletion failure and returns focus to delete', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  mockedDelete.mockRejectedValue(new Error('write failed'));
+  renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Slett øvelse' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Slett' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Lukk' }));
+
+  expect(screen.queryByRole('alert')).not.toBeOnTheScreen();
+  expect(screen.getByRole('header', { name: 'Knebøy' })).toBeOnTheScreen();
   await waitFor(() => expect(focus).toHaveBeenCalled());
 });
 
