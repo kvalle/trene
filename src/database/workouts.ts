@@ -37,6 +37,10 @@ export interface CompletedWorkoutListItem {
   exerciseCount: number;
 }
 
+export interface CompletedWorkoutDeletion {
+  focusWorkoutId: number | null;
+}
+
 type WorkoutRow = { id: number };
 type ExerciseRow = { id: number; name: string };
 type MembershipRow = { id: number; exercise_id: number; name: string; position: number };
@@ -86,6 +90,27 @@ export async function cancelActiveWorkout(database: Database, workoutId: number)
       workoutId,
     );
     if (result.changes !== 1) throw new Error('Active workout not found');
+  });
+}
+
+export async function deleteCompletedWorkout(
+  database: Database,
+  workoutId: number,
+): Promise<CompletedWorkoutDeletion> {
+  return transaction(database, async () => {
+    const workouts = await database.getAllAsync<WorkoutRow>(`
+      SELECT id FROM workouts WHERE status = 'completed'
+      ORDER BY completed_at DESC, id ASC
+    `);
+    const index = workouts.findIndex((workout) => workout.id === workoutId);
+    if (index === -1) throw new Error('Completed workout not found');
+
+    const result = await database.runAsync(
+      "DELETE FROM workouts WHERE id = ? AND status = 'completed'",
+      workoutId,
+    );
+    if (result.changes !== 1) throw new Error('Completed workout not found');
+    return { focusWorkoutId: workouts[index - 1]?.id ?? workouts[index + 1]?.id ?? null };
   });
 }
 

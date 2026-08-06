@@ -15,6 +15,7 @@ import {
   createExerciseInWorkout,
   countExercises,
   confirmWorkoutSet,
+  deleteCompletedWorkout,
   deletePlannedWorkoutSet,
   getActiveWorkoutId,
   listAvailableExercises,
@@ -194,7 +195,7 @@ describe('active workout persistence', () => {
         "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 100, 3, 'new')",
         deletedMembership.lastInsertRowId,
       );
-      await database.runAsync('DELETE FROM workouts WHERE id = ?', deletedWorkout.lastInsertRowId);
+      await deleteCompletedWorkout(database, deletedWorkout.lastInsertRowId);
 
       const activeId = await startWorkout(database);
       await addExerciseToWorkout(database, activeId, exerciseId);
@@ -309,6 +310,77 @@ describe('active workout persistence', () => {
     await expect(cancelActiveWorkout(database, activeId)).rejects.toThrow('write failed');
     expect(await getActiveWorkoutId(database)).toBe(activeId);
     expect(await loadActiveWorkout(database)).toEqual(workoutBefore);
+  });
+
+  test('deletes only the selected completed workout and returns the next focus target', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    const workouts = [];
+    for (const completedAt of ['2026-03-01', '2026-02-01', '2026-01-01']) {
+      const workout = await database.runAsync(
+        "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'start', ?)",
+        completedAt,
+      );
+      const membership = await database.runAsync(
+        'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+        workout.lastInsertRowId, exerciseId,
+      );
+      await database.runAsync(
+        "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'done')",
+        membership.lastInsertRowId,
+      );
+      workouts.push({ workoutId: workout.lastInsertRowId, membershipId: membership.lastInsertRowId });
+    }
+    const activeId = await startWorkout(database);
+
+    await expect(deleteCompletedWorkout(database, workouts[1].workoutId)).resolves.toEqual({
+      focusWorkoutId: workouts[0].workoutId,
+    });
+
+    expect(await database.getFirstAsync('SELECT id FROM workouts WHERE id = ?', workouts[1].workoutId)).toBeNull();
+    expect(await database.getFirstAsync('SELECT id FROM workout_exercises WHERE id = ?', workouts[1].membershipId)).toBeNull();
+    expect(await database.getFirstAsync('SELECT id FROM workout_sets WHERE workout_exercise_id = ?', workouts[1].membershipId)).toBeNull();
+    expect((await listCompletedWorkouts(database)).map(({ id }) => id)).toEqual([
+      workouts[0].workoutId, workouts[2].workoutId,
+    ]);
+    expect(await getActiveWorkoutId(database)).toBe(activeId);
+    expect(await countExercises(database)).toBe(1);
+    await expect(deleteCompletedWorkout(database, activeId)).rejects.toThrow('Completed workout not found');
+  });
+
+  test('chooses an older focus target and rolls back a failed completed-workout deletion', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    const older = await database.runAsync(
+      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-01-01')",
+    );
+    const newest = await database.runAsync(
+      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'b', '2026-02-01')",
+    );
+    const membership = await database.runAsync(
+      'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+      newest.lastInsertRowId, exerciseId,
+    );
+    await database.runAsync(
+      "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'done')",
+      membership.lastInsertRowId,
+    );
+    await database.execAsync(`
+      CREATE TRIGGER reject_membership_delete AFTER DELETE ON workout_exercises
+      WHEN OLD.id = ${membership.lastInsertRowId}
+      BEGIN SELECT RAISE(ABORT, 'write failed'); END;
+    `);
+
+    await expect(deleteCompletedWorkout(database, newest.lastInsertRowId)).rejects.toThrow('write failed');
+    expect(await loadCompletedWorkout(database, newest.lastInsertRowId)).not.toBeNull();
+    expect(await database.getFirstAsync('SELECT id FROM workout_sets WHERE workout_exercise_id = ?', membership.lastInsertRowId)).not.toBeNull();
+    await database.execAsync('DROP TRIGGER reject_membership_delete;');
+    await expect(deleteCompletedWorkout(database, newest.lastInsertRowId)).resolves.toEqual({
+      focusWorkoutId: older.lastInsertRowId,
+    });
+    await expect(deleteCompletedWorkout(database, older.lastInsertRowId)).resolves.toEqual({ focusWorkoutId: null });
   });
 
   test('atomically completes and prunes a workout while preserving card and set order', async () => {
