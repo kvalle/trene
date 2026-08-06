@@ -11,7 +11,7 @@ signed off here before an MVP release is declared accepted.
 | TypeScript, Jest/RNTL, and SQLite integration | Node 22 in GitHub Actions | `Typecheck and unit tests` job |
 | Standalone Android APK | Universal Android release build, API 36 toolchain | `trene-android-apk` artifact with SHA-256 |
 | Offline lifecycle | Pixel 2 emulator, Android API 34, networking disabled | `Android offline qualification` job |
-| iOS buildability | iOS release configuration, simulator SDK | `iOS release build` job |
+| iOS buildability | iOS release configuration, simulator SDK, Swift 6.2 | `iOS release build` job |
 
 The Android qualification starts from cleared app data and covers create,
 record, force-stop, resume, complete, workout history, and exercise history. It
