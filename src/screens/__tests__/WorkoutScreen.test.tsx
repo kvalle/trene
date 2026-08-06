@@ -108,6 +108,27 @@ test('opens the selected exercise with an editable planned set', async () => {
   expect(screen.getByRole('button', { name: 'Legg til sett' })).toBeOnTheScreen();
 });
 
+test('exposes every suggested set as editable labeled fields in suggestion order', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    exercises: [{
+      id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
+      sets: [
+        { id: 6, loadKg: 80, repetitions: 5, confirmedAt: null },
+        { id: 8, loadKg: 90, repetitions: 3, confirmedAt: null },
+      ],
+    }],
+  });
+  renderScreen();
+
+  const loads = await screen.findAllByLabelText('Belastning for Knebøy');
+  const repetitions = screen.getAllByLabelText('Repetisjoner for Knebøy');
+  expect(loads.map((input) => input.props.value)).toEqual(['80', '90']);
+  expect(repetitions.map((input) => input.props.value)).toEqual(['5', '3']);
+  expect(screen.getAllByText('Planlagt sett')).toHaveLength(2);
+  expect(screen.queryByText('Sett 1')).not.toBeOnTheScreen();
+});
+
 test('shows completed receipts above planned sets with derived numbering', async () => {
   mockedLoad.mockResolvedValue(workoutWithSets);
   renderScreen();

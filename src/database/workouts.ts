@@ -392,20 +392,16 @@ async function addMembership(database: Database, workoutId: number, exerciseId: 
   const historySets = await database.getAllAsync<{ load_kg: number; repetitions: number }>(`
     SELECT workout_sets.load_kg, workout_sets.repetitions
     FROM workout_sets
-    JOIN workout_exercises ON workout_exercises.id = workout_sets.workout_exercise_id
-    JOIN workouts ON workouts.id = workout_exercises.workout_id
-    WHERE workout_exercises.exercise_id = ?
-      AND workouts.id = (
-        SELECT history.id FROM workouts AS history
-        JOIN workout_exercises AS history_exercise ON history_exercise.workout_id = history.id
-        JOIN workout_sets AS history_set ON history_set.workout_exercise_id = history_exercise.id
-        WHERE history.status = 'completed' AND history_exercise.exercise_id = ?
-          AND history_set.confirmed_at IS NOT NULL
-        ORDER BY history.completed_at DESC, history.id ASC LIMIT 1
-      )
-      AND workout_sets.confirmed_at IS NOT NULL
+    WHERE workout_sets.workout_exercise_id = (
+      SELECT history_exercise.id FROM workouts AS history
+      JOIN workout_exercises AS history_exercise ON history_exercise.workout_id = history.id
+      JOIN workout_sets AS history_set ON history_set.workout_exercise_id = history_exercise.id
+      WHERE history.status = 'completed' AND history_exercise.exercise_id = ?
+        AND history_set.confirmed_at IS NOT NULL
+      ORDER BY history.completed_at DESC, history.id ASC LIMIT 1
+    ) AND workout_sets.confirmed_at IS NOT NULL
     ORDER BY workout_sets.confirmed_at ASC, workout_sets.id ASC
-  `, exerciseId, exerciseId);
+  `, exerciseId);
   if (historySets.length === 0) {
     await database.runAsync('INSERT INTO workout_sets (workout_exercise_id) VALUES (?)', membershipId);
   } else {
