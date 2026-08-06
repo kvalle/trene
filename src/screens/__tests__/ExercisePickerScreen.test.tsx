@@ -80,15 +80,17 @@ test('invokes create and cancel actions from the exercise list', async () => {
 });
 
 test('retains picker choices after a failed selection write', async () => {
+  const popTo = jest.fn();
   mockedCount.mockResolvedValue(1);
   mockedList.mockResolvedValue([{ id: 1, name: 'Knebøy' }]);
   mockedAdd.mockRejectedValue(new Error('write failed'));
-  renderScreen();
+  renderScreen({ popTo });
 
   fireEvent.press(await screen.findByRole('button', { name: 'Knebøy' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke legge til øvelsen. Prøv igjen.');
   expect(screen.getByRole('button', { name: 'Knebøy' })).toBeOnTheScreen();
+  expect(popTo).not.toHaveBeenCalled();
 });
 
 test('shows progress on the selected exercise while storage is pending', async () => {

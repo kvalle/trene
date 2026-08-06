@@ -1,4 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { exerciseNameKey } from '../../domain/exerciseName';
 import { createExercise } from '../exercises';
@@ -25,7 +28,11 @@ import {
 } from '../workouts';
 
 class TestDatabase implements Database {
-  constructor(private readonly database = new DatabaseSync(':memory:')) {}
+  private readonly database: DatabaseSync;
+
+  constructor(path = ':memory:') {
+    this.database = new DatabaseSync(path);
+  }
   async execAsync(source: string) { this.database.exec(source); }
   async getFirstAsync<T>(source: string, ...params: DatabaseValue[]): Promise<T | null> {
     return (this.database.prepare(source).get(...params) as T | undefined) ?? null;
@@ -115,6 +122,130 @@ describe('active workout persistence', () => {
     expect((await loadActiveWorkout(database))?.exercises[0].sets).toEqual([
       { id: expect.any(Number), loadKg: 90, repetitions: 4, confirmedAt: null },
       { id: expect.any(Number), loadKg: 100, repetitions: 3, confirmedAt: null },
+    ]);
+    const [firstId, secondId] = (await loadActiveWorkout(database))!.exercises[0].sets.map(({ id }) => id);
+    expect(firstId).toBeLessThan(secondId);
+  });
+
+  test('uses stable workout and set IDs to break equal completion-time ties', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
+    const firstWorkout = await database.runAsync(
+      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-02-01')",
+    );
+    const secondWorkout = await database.runAsync(
+      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'b', '2026-02-01')",
+    );
+    const firstMembership = await database.runAsync(
+      'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+      firstWorkout.lastInsertRowId, exerciseId,
+    );
+    const secondMembership = await database.runAsync(
+      'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+      secondWorkout.lastInsertRowId, exerciseId,
+    );
+    await database.runAsync(
+      "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'same')",
+      firstMembership.lastInsertRowId,
+    );
+    await database.runAsync(
+      "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 90, 3, 'same')",
+      firstMembership.lastInsertRowId,
+    );
+    await database.runAsync(
+      "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 100, 1, 'later')",
+      secondMembership.lastInsertRowId,
+    );
+
+    const activeId = await startWorkout(database);
+    await addExerciseToWorkout(database, activeId, exerciseId);
+
+    expect((await loadActiveWorkout(database))?.exercises[0].sets.map(({ loadKg }) => loadKg))
+      .toEqual([80, 90]);
+  });
+
+  test('falls back to the newest remaining workout and survives reload', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'trene-suggestions-'));
+    const path = join(directory, 'trene.db');
+    let database = new TestDatabase(path);
+    try {
+      await migrateDatabase(database);
+      const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
+      const oldWorkout = await database.runAsync(
+        "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-01-01')",
+      );
+      const oldMembership = await database.runAsync(
+        'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+        oldWorkout.lastInsertRowId, exerciseId,
+      );
+      await database.runAsync(
+        "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'old')",
+        oldMembership.lastInsertRowId,
+      );
+      const deletedWorkout = await database.runAsync(
+        "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'b', '2026-02-01')",
+      );
+      const deletedMembership = await database.runAsync(
+        'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+        deletedWorkout.lastInsertRowId, exerciseId,
+      );
+      await database.runAsync(
+        "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 100, 3, 'new')",
+        deletedMembership.lastInsertRowId,
+      );
+      await database.runAsync('DELETE FROM workouts WHERE id = ?', deletedWorkout.lastInsertRowId);
+
+      const activeId = await startWorkout(database);
+      await addExerciseToWorkout(database, activeId, exerciseId);
+      const beforeRestart = await loadActiveWorkout(database);
+      await database.closeAsync();
+      database = new TestDatabase(path);
+      await migrateDatabase(database);
+
+      expect(beforeRestart?.exercises[0].sets).toEqual([
+        { id: expect.any(Number), loadKg: 80, repetitions: 5, confirmedAt: null },
+      ]);
+      expect(await loadActiveWorkout(database)).toEqual(beforeRestart);
+      expect(await listCompletedWorkouts(database)).toEqual([
+        { id: oldWorkout.lastInsertRowId, completedAt: '2026-01-01', exerciseCount: 1 },
+      ]);
+    } finally {
+      await database.closeAsync();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test('rolls back membership and every suggestion when suggestion insertion fails', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
+    const history = await database.runAsync(
+      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-01-01')",
+    );
+    const historyMembership = await database.runAsync(
+      'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+      history.lastInsertRowId, exerciseId,
+    );
+    await database.runAsync(
+      "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'first')",
+      historyMembership.lastInsertRowId,
+    );
+    await database.runAsync(
+      "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 90, 3, 'second')",
+      historyMembership.lastInsertRowId,
+    );
+    const activeId = await startWorkout(database);
+    await database.execAsync(`
+      CREATE TRIGGER reject_second_suggestion BEFORE INSERT ON workout_sets
+      WHEN NEW.confirmed_at IS NULL AND NEW.load_kg = 90
+      BEGIN SELECT RAISE(ABORT, 'write failed'); END;
+    `);
+
+    await expect(addExerciseToWorkout(database, activeId, exerciseId)).rejects.toThrow('write failed');
+    expect(await loadActiveWorkout(database)).toEqual({ id: activeId, exercises: [] });
+    expect(await listAvailableExercises(database, activeId)).toEqual([
+      { id: exerciseId, name: 'Markløft' },
     ]);
   });
 
@@ -406,6 +537,30 @@ describe('active workout persistence', () => {
     const copied = await addWorkoutSet(database, workoutId, exercise.id);
 
     expect(copied).toEqual({ id: expect.any(Number), loadKg: 80, repetitions: 5, confirmedAt: null });
+  });
+
+  test('does not query history added after exercise membership when adding a set', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    const workoutId = await startWorkout(database);
+    await addExerciseToWorkout(database, workoutId, exerciseId);
+    const activeExercise = (await loadActiveWorkout(database))!.exercises[0];
+    const history = await database.runAsync(
+      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'before', 'after')",
+    );
+    const historyMembership = await database.runAsync(
+      'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+      history.lastInsertRowId, exerciseId,
+    );
+    await database.runAsync(
+      "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 200, 1, 'after')",
+      historyMembership.lastInsertRowId,
+    );
+
+    expect(await addWorkoutSet(database, workoutId, activeExercise.id)).toMatchObject({
+      loadKg: null, repetitions: null, confirmedAt: null,
+    });
   });
 
   test('adds a set from the last fully valid planned set, otherwise empty', async () => {
