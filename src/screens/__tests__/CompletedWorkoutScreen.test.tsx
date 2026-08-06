@@ -80,11 +80,24 @@ test('blocks confirmation actions while deletion is pending', async () => {
   expect(screen.getByRole('button', { name: 'Avbryt' })).toBeDisabled();
 });
 
-test('deletes before opening history with the returned focus target', async () => {
+test('deletes a post-completion workout before replacing detail with focused history', async () => {
+  const replace = jest.fn();
+  mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
+  mockedDelete.mockResolvedValue({ focusWorkoutId: 2 });
+  renderScreen({ replace });
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Slett økt' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Slett' }));
+
+  await waitFor(() => expect(replace).toHaveBeenCalledWith('History', { focusWorkoutId: 2 }));
+  expect(mockedDelete).toHaveBeenCalledWith(database, 3);
+});
+
+test('deletes a history workout before popping to focused history', async () => {
   const popTo = jest.fn();
   mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
   mockedDelete.mockResolvedValue({ focusWorkoutId: 2 });
-  renderScreen({ popTo });
+  renderScreen({ popTo }, false);
 
   fireEvent.press(await screen.findByRole('button', { name: 'Slett økt' }));
   fireEvent.press(screen.getByRole('button', { name: 'Slett' }));
@@ -162,7 +175,7 @@ function renderScreen(navigation: Record<string, jest.Mock> = {}, fromCompletion
     <DatabaseProvider database={database}>
       <NavigationContainer>
         <CompletedWorkoutScreen
-          navigation={{ dispatch: jest.fn(), popTo: jest.fn(), ...navigation } as never}
+          navigation={{ dispatch: jest.fn(), popTo: jest.fn(), replace: jest.fn(), ...navigation } as never}
           route={{ params: { workoutId: 3, fromCompletion } } as never}
         />
       </NavigationContainer>

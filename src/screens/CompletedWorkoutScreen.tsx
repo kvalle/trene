@@ -69,9 +69,11 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
     try {
       const result = await deleteCompletedWorkout(database, workoutId);
       allowNavigation.current = true;
-      navigation.popTo('History', result.focusWorkoutId === null
+      const params = result.focusWorkoutId === null
         ? { focusEmptyAction: true }
-        : { focusWorkoutId: result.focusWorkoutId });
+        : { focusWorkoutId: result.focusWorkoutId };
+      if (route.params.fromCompletion) navigation.replace('History', params);
+      else navigation.popTo('History', params);
     } catch {
       setDeleteDialogOpen(false);
       setDeleteFailed(true);
