@@ -17,7 +17,7 @@ export type RootStackParamList = {
   Home: { focusStartWorkout?: boolean } | undefined;
   Workout: { focusExerciseId?: number; focusAddExercise?: boolean } | undefined;
   CompletedWorkout: { workoutId: number; fromCompletion?: boolean };
-  History: undefined;
+  History: { focusWorkoutId?: number; focusEmptyAction?: boolean } | undefined;
   Exercises: undefined;
   ExercisePicker: { workoutId: number };
   CreateExercise: {

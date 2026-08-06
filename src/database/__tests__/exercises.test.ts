@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { exerciseNameKey } from '../../domain/exerciseName';
 import { migrateDatabase } from '../migrate';
 import type { Database, DatabaseValue } from '../types';
+import { deleteCompletedWorkout } from '../workouts';
 import {
   createExercise,
   DuplicateExerciseNameError,
@@ -111,5 +112,9 @@ describe('exercise persistence', () => {
       'confirmed',
     );
     expect((await listExercises(database))[0].workoutCount).toBe(1);
+
+    await deleteCompletedWorkout(database, workout.lastInsertRowId);
+    expect((await listExercises(database))[0].workoutCount).toBe(0);
+    await expect(database.runAsync('DELETE FROM exercises WHERE id = ?', exerciseId)).resolves.toMatchObject({ changes: 1 });
   });
 });

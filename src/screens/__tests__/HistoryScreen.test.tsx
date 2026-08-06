@@ -133,13 +133,35 @@ test('keeps the empty state available when starting a workout fails', async () =
   expect(screen.getByRole('button', { name: 'Start økt' })).toBeEnabled();
 });
 
-function renderScreen(navigation: Record<string, jest.Mock> = {}) {
+test('focuses the requested remaining workout after reloading history', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  const setParams = jest.fn();
+  mockedList.mockResolvedValue([
+    { id: 4, completedAt: '2026-08-04T10:30:00Z', exerciseCount: 2 },
+  ]);
+  renderScreen({ setParams }, { focusWorkoutId: 4 });
+
+  await waitFor(() => expect(focus).toHaveBeenCalled());
+  expect(setParams).toHaveBeenCalledWith({ focusWorkoutId: undefined, focusEmptyAction: undefined });
+});
+
+test.each([null, 7] as const)('focuses the empty action after deleting the last workout with active workout %s', async (activeWorkoutId) => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  mockedList.mockResolvedValue([]);
+  mockedActiveWorkout.mockResolvedValue(activeWorkoutId);
+  renderScreen({}, { focusEmptyAction: true });
+
+  await screen.findByRole('button', { name: activeWorkoutId === null ? 'Start økt' : 'Fortsett økt' });
+  expect(focus).toHaveBeenCalled();
+});
+
+function renderScreen(navigation: Record<string, jest.Mock> = {}, params?: { focusWorkoutId?: number; focusEmptyAction?: boolean }) {
   return render(
     <DatabaseProvider database={database}>
       <NavigationContainer>
         <HistoryScreen
-          navigation={{ dispatch: jest.fn(), navigate: jest.fn(), ...navigation } as never}
-          route={{} as never}
+          navigation={{ dispatch: jest.fn(), navigate: jest.fn(), setParams: jest.fn(), ...navigation } as never}
+          route={{ params } as never}
         />
       </NavigationContainer>
     </DatabaseProvider>,

@@ -19,7 +19,7 @@ type State =
   | { status: 'failed' }
   | { status: 'ready'; activeWorkoutId: number | null; workouts: CompletedWorkoutListItem[] };
 
-export function HistoryScreen({ navigation }: Props) {
+export function HistoryScreen({ navigation, route }: Props) {
   const database = useDatabase();
   const { colors } = useTheme();
   const [state, setState] = useState<State>({ status: 'loading' });
@@ -28,9 +28,12 @@ export function HistoryScreen({ navigation }: Props) {
   const [startFailed, setStartFailed] = useState(false);
   const allowNavigation = useRef(false);
   const retryRef = useRef<View>(null);
+  const emptyActionRef = useRef<View>(null);
+  const workoutRefs = useRef(new Map<number, View>());
 
   useFocusEffect(useCallback(() => {
     let active = true;
+    setState({ status: 'loading' });
     listCompletedWorkouts(database).then(async (workouts) => {
       const activeWorkoutId = workouts.length === 0 ? await getActiveWorkoutId(database) : null;
       if (active) setState({ status: 'ready', workouts, activeWorkoutId });
@@ -50,6 +53,16 @@ export function HistoryScreen({ navigation }: Props) {
     const handle = findNodeHandle(retryRef.current);
     if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
   }, [state.status]);
+
+  useEffect(() => {
+    if (state.status !== 'ready') return;
+    const focusWorkoutId = route.params?.focusWorkoutId;
+    const target = focusWorkoutId === undefined ? null : workoutRefs.current.get(focusWorkoutId);
+    const handle = findNodeHandle(target ?? (route.params?.focusEmptyAction ? emptyActionRef.current : null));
+    if (!handle) return;
+    AccessibilityInfo.setAccessibilityFocus(handle);
+    navigation.setParams({ focusWorkoutId: undefined, focusEmptyAction: undefined });
+  }, [navigation, route.params?.focusEmptyAction, route.params?.focusWorkoutId, state]);
 
   async function openWorkout(activeWorkoutId: number | null) {
     if (activeWorkoutId !== null) {
@@ -89,6 +102,7 @@ export function HistoryScreen({ navigation }: Props) {
       <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>Ingen fullførte økter ennå</Text>
       <Text style={[styles.explanation, { color: colors.text }]}>Fullførte økter vil vises her.</Text>
       <Action
+        actionRef={emptyActionRef}
         disabled={starting}
         label={starting ? 'Starter økt' : state.activeWorkoutId === null ? 'Start økt' : 'Fortsett økt'}
         onPress={() => void openWorkout(state.activeWorkoutId)}
@@ -111,6 +125,10 @@ export function HistoryScreen({ navigation }: Props) {
               accessibilityRole="button"
               key={workout.id}
               onPress={() => navigation.navigate('CompletedWorkout', { workoutId: workout.id })}
+              ref={(node) => {
+                if (node) workoutRefs.current.set(workout.id, node);
+                else workoutRefs.current.delete(workout.id);
+              }}
               style={({ pressed }) => [
                 styles.row,
                 { backgroundColor: colors.card, borderColor: colors.border },

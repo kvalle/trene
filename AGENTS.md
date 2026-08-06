@@ -51,7 +51,12 @@ through an implementation skill, deliver the work through a pull request:
 4. Decide whether the ticket causes user-visible changes. For visible changes,
    capture before and after screenshots of every relevant screen, commit them
    under `docs/pr-screenshots/<issue-number>/`, and include them in the pull
-   request description. See `docs/pr-screenshots/README.md`.
+   request description. Commit the implementation before capturing screenshots,
+   then use this workspace for both versions: switch to detached `origin/main`
+   for the before screenshots, switch back to the feature branch for the after
+   screenshots, and commit the screenshots separately. Do not depend on another
+   worktree where `main` may already be checked out. See
+   `docs/pr-screenshots/README.md`.
 5. Commit only the intended changes, push the branch, and create a pull request
    against `main`. Write a concise description of what changed and why so the
    result is easy to review. Include `Closes #<number>` in the pull request body.

@@ -1,11 +1,11 @@
 import { usePreventRemove, useTheme } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, findNodeHandle, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, findNodeHandle, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { RootStackParamList } from '../AppNavigator';
 import { useDatabase } from '../database/DatabaseContext';
-import { loadCompletedWorkout, type CompletedWorkout } from '../database/workouts';
+import { deleteCompletedWorkout, loadCompletedWorkout, type CompletedWorkout } from '../database/workouts';
 import { formatDateTime, formatLoad } from '../locale';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CompletedWorkout'>;
@@ -17,10 +17,16 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
   const [state, setState] = useState<State>({ status: 'loading' });
   const [reload, setReload] = useState(0);
   const retryRef = useRef<View>(null);
+  const deleteRef = useRef<View>(null);
+  const confirmDeleteRef = useRef<View>(null);
   const allowNavigation = useRef(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteFailed, setDeleteFailed] = useState(false);
 
-  usePreventRemove(Boolean(route.params.fromCompletion), ({ data }) => {
+  usePreventRemove(Boolean(route.params.fromCompletion) || deleting, ({ data }) => {
     if (allowNavigation.current) navigation.dispatch(data.action);
+    else if (deleting) return;
     else {
       allowNavigation.current = true;
       navigation.popTo('Home', { focusStartWorkout: true });
@@ -45,6 +51,38 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
     const handle = findNodeHandle(retryRef.current);
     if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
   }, [state.status]);
+
+  function focus(target: React.RefObject<View | null>) {
+    const handle = findNodeHandle(target.current);
+    if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
+  }
+
+  function closeDeleteDialog() {
+    if (deleting) return;
+    setDeleteDialogOpen(false);
+    requestAnimationFrame(() => focus(deleteRef));
+  }
+
+  async function confirmDeletion(workoutId: number) {
+    setDeleting(true);
+    setDeleteFailed(false);
+    try {
+      const result = await deleteCompletedWorkout(database, workoutId);
+      allowNavigation.current = true;
+      const params = result.focusWorkoutId === null
+        ? { focusEmptyAction: true }
+        : { focusWorkoutId: result.focusWorkoutId };
+      if (route.params.fromCompletion) navigation.replace('History', params);
+      else navigation.popTo('History', params);
+    } catch {
+      setDeleteDialogOpen(false);
+      setDeleteFailed(true);
+      AccessibilityInfo.announceForAccessibility('Kunne ikke slette økten. Prøv igjen.');
+      requestAnimationFrame(() => focus(retryRef));
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   if (state.status === 'loading') {
     return <ActivityIndicator accessibilityLabel="Laster fullført økt" style={styles.center} />;
@@ -89,20 +127,61 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
           ))}
         </View>
       ))}
+      <Action actionRef={deleteRef} destructive label="Slett økt" onPress={() => {
+        setDeleteFailed(false);
+        setDeleteDialogOpen(true);
+      }} />
+      {deleteFailed && (
+        <View style={styles.failure}>
+          <Text accessibilityRole="alert" style={{ color: colors.notification }}>Kunne ikke slette økten</Text>
+          <Action actionRef={retryRef} label="Prøv igjen" onPress={() => setDeleteDialogOpen(true)} />
+        </View>
+      )}
       {route.params.fromCompletion && (
         <Action label="Tilbake til forsiden" onPress={() => {
           allowNavigation.current = true;
           navigation.popTo('Home', { focusStartWorkout: true });
         }} />
       )}
+      <Modal
+        animationType="none"
+        onRequestClose={closeDeleteDialog}
+        onShow={() => focus(confirmDeleteRef)}
+        transparent
+        visible={deleteDialogOpen}
+      >
+        <View accessibilityViewIsModal style={styles.modalBackdrop}>
+          <View style={[styles.dialog, { backgroundColor: colors.card }]}>
+            <Text accessibilityRole="header" style={[styles.dialogTitle, { color: colors.text }]}>Slett fullført økt?</Text>
+            <Text style={{ color: colors.text }}>Den fullførte økten slettes permanent. Dette kan ikke angres.</Text>
+            <Action disabled={deleting} label="Avbryt" onPress={closeDeleteDialog} />
+            <Action
+              actionRef={confirmDeleteRef}
+              destructive
+              disabled={deleting}
+              label={deleting ? 'Sletter økt' : 'Slett'}
+              onPress={() => void confirmDeletion(state.workout.id)}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
 
-function Action({ actionRef, label, onPress }: { actionRef?: React.RefObject<View | null>; label: string; onPress: () => void }) {
+function Action({ actionRef, destructive = false, disabled = false, label, onPress }: {
+  actionRef?: React.RefObject<View | null>; destructive?: boolean; disabled?: boolean; label: string; onPress: () => void;
+}) {
   const { colors } = useTheme();
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} ref={actionRef} style={[styles.button, { backgroundColor: colors.primary }]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      ref={actionRef}
+      style={[styles.button, { backgroundColor: destructive ? colors.notification : colors.primary }, disabled && styles.disabled]}
+    >
       <Text style={[styles.buttonText, { color: colors.background }]}>{label}</Text>
     </Pressable>
   );
@@ -119,4 +198,9 @@ const styles = StyleSheet.create({
   setTitle: { fontSize: 16, fontWeight: '600' },
   button: { alignItems: 'center', borderRadius: 13, justifyContent: 'center', minHeight: 50, paddingHorizontal: 18 },
   buttonText: { fontSize: 17, fontWeight: '700' },
+  disabled: { opacity: 0.45 },
+  failure: { gap: 10 },
+  modalBackdrop: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.55)', flex: 1, justifyContent: 'center', padding: 24 },
+  dialog: { borderRadius: 16, gap: 16, maxWidth: 440, padding: 24, width: '100%' },
+  dialogTitle: { fontSize: 24, fontWeight: '700' },
 });
