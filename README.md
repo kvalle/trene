@@ -19,8 +19,10 @@ For Android-emulator brukes `npm run start:android`. Den setter opp ADB-tunnelen
 starter Metro med IPv4-støtte og annonserer `127.0.0.1`, slik at emulatoren ikke
 er avhengig av å nå maskinens LAN-adresse.
 
-Kjør `npm run android` eller `npm run ios` for en lokal native-bygg. En direkte
-installerbar Android APK kan bygges med `eas build --platform android --profile preview`.
+Run `npm run android` or `npm run ios` for a local native build. CI builds a
+standalone, directly installable universal release APK as the
+`trene-android-apk` artifact. It requires neither Metro nor networking. Build
+the same APK locally with `bash scripts/build-android-smoke-apk.sh`.
 
 ## Verifisering
 
@@ -29,6 +31,9 @@ npm run typecheck
 npm test
 npx expo-doctor
 ```
+
+`npm run verify` runs all three checks. CI also compiles an iOS release build for
+the simulator and runs the Android qualification described below.
 
 ### Android smoke-test med Maestro
 
@@ -63,3 +68,18 @@ fungerer både lokalt og gjennom cplt-sandkassen.
 Runneren sletter eksisterende appdata på emulatoren før hver smoke-flyt. Maestro
 Studio kan også åpne samme YAML-fil for visuell steg-for-steg-kjøring og
 inspeksjon, men nullstiller ikke appdata automatisk.
+
+### Standalone offline qualification
+
+CI runs every flow in `.maestro/smoke/` and the combined
+`.maestro/qualification/offline-mvp.yaml` against clean app data. The latter
+verifies recording, force-stop, resume, completion, and both history views. CI
+disables and verifies the absence of networking before installing the app, and
+runs without Metro. With a release APK installed locally, run the flows with:
+
+```sh
+npm run qualify:android
+```
+
+The manual device matrix and traceability for all 16 scenarios are documented in
+[`docs/mvp-qualification.md`](docs/mvp-qualification.md).

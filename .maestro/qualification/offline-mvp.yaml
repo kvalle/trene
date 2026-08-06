@@ -1,0 +1,57 @@
+appId: no.kvalle.trene
+name: Qualify the standalone offline MVP lifecycle
+tags:
+  - qualification
+  - android
+  - offline
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Start økt"
+- tapOn: "Legg til øvelse"
+- tapOn: "Opprett første øvelse"
+- tapOn:
+    id: "exercise-name-input"
+- setClipboard: "Knebøy"
+- pasteText
+- tapOn:
+    id: "create-exercise-submit"
+- tapOn: "Belastning"
+- inputText: "80.5"
+- tapOn: "Repetisjoner"
+- inputText: "5"
+
+# Force-stop before confirmation to prove that accepted field values survive.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Fortsett økt"
+    timeout: 120000
+- tapOn: "Fortsett økt"
+- assertVisible: "80,5"
+- assertVisible: "5"
+- tapOn: "Bekreft"
+- assertVisible: "80,5 kg · 5 repetisjoner"
+
+# Force-stop after confirmation, then finish and inspect both history views.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Fortsett økt"
+    timeout: 120000
+- tapOn: "Fortsett økt"
+- assertVisible: "80,5 kg · 5 repetisjoner"
+- tapOn: "Ferdig"
+- tapOn: "Fullfør økt"
+- assertVisible: "Fullført økt"
+- assertVisible: "80,5 kg · 5 repetisjoner"
+- tapOn: "Tilbake til forsiden"
+- tapOn: "Tidligere økter"
+- assertVisible: "1 øvelse"
+- back
+- tapOn: "Øvelser"
+- assertVisible: "Brukt i 1 økt"
+- tapOn: "Knebøy"
+- assertVisible: "80,5 kg · 5 repetisjoner"

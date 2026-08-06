@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-apk="${ANDROID_SMOKE_APK:-.artifacts/android/app-debug.apk}"
+apk="${ANDROID_SMOKE_APK:-.artifacts/android/trene.apk}"
 phase="${1:-all}"
 
 mkdir -p "$(dirname "$apk")" "$PWD/.artifacts/expo"
@@ -19,9 +19,8 @@ if [[ "$phase" == "assemble" || "$phase" == "all" ]]; then
     --build-cache \
     --no-daemon \
     --console=plain \
-    -PreactNativeArchitectures=x86_64 \
-    assembleDebug 2>&1 | tee "$PWD/.artifacts/android/gradle-build.log"
-  cp android/app/build/outputs/apk/debug/app-debug.apk "$apk"
+    assembleRelease 2>&1 | tee "$PWD/.artifacts/android/gradle-build.log"
+  cp android/app/build/outputs/apk/release/app-release.apk "$apk"
 fi
 
 if [[ "$phase" != "prebuild" && "$phase" != "assemble" && "$phase" != "all" ]]; then
