@@ -1,0 +1,51 @@
+appId: no.kvalle.trene
+name: Browse a completed workout
+tags:
+  - smoke
+  - android
+---
+- launchApp
+
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Tidligere økter"
+- assertVisible: "Ingen fullførte økter ennå"
+- assertVisible: "Start økt"
+- tapOn: "Start økt"
+- tapOn: "Legg til øvelse"
+- tapOn: "Opprett første øvelse"
+
+- tapOn:
+    id: "exercise-name-input"
+- setClipboard: "Knebøy"
+- pasteText
+- tapOn:
+    id: "create-exercise-submit"
+
+- tapOn: "Belastning"
+- inputText: "80"
+- tapOn: "Repetisjoner"
+- inputText: "5"
+- tapOn: "Bekreft"
+- tapOn: "Ferdig"
+- assertVisible: "Fullfør økten?"
+- tapOn: "Fullfør økt"
+- assertVisible: "Fullført økt"
+- assertVisible: "Knebøy"
+- tapOn: "Tilbake til forsiden"
+
+- tapOn: "Tidligere økter"
+- assertVisible: "1 øvelse"
+- tapOn: "1 øvelse"
+- assertVisible: "Fullført økt"
+- assertVisible: "80 kg · 5 repetisjoner"
+
+# Restart and verify that completed history remains browsable.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Tidligere økter"
+- assertVisible: "1 øvelse"

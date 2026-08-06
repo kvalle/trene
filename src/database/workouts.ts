@@ -31,6 +31,12 @@ export interface CompletedWorkout extends ActiveWorkout {
   completedAt: string;
 }
 
+export interface CompletedWorkoutListItem {
+  id: number;
+  completedAt: string;
+  exerciseCount: number;
+}
+
 type WorkoutRow = { id: number };
 type ExerciseRow = { id: number; name: string };
 type MembershipRow = { id: number; exercise_id: number; name: string; position: number };
@@ -321,6 +327,32 @@ export async function loadCompletedWorkout(
       })),
     })),
   };
+}
+
+export async function listCompletedWorkouts(database: Database): Promise<CompletedWorkoutListItem[]> {
+  const rows = await database.getAllAsync<{
+    id: number;
+    completed_at: string;
+    exercise_count: number;
+  }>(`
+    SELECT workouts.id, workouts.completed_at,
+      COUNT(workout_exercises.id) AS exercise_count
+    FROM workouts
+    LEFT JOIN workout_exercises ON workout_exercises.workout_id = workouts.id
+      AND EXISTS (
+        SELECT 1 FROM workout_sets
+        WHERE workout_sets.workout_exercise_id = workout_exercises.id
+          AND workout_sets.confirmed_at IS NOT NULL
+      )
+    WHERE workouts.status = 'completed'
+    GROUP BY workouts.id
+    ORDER BY workouts.completed_at DESC, workouts.id ASC
+  `);
+  return rows.map((row) => ({
+    id: row.id,
+    completedAt: row.completed_at,
+    exerciseCount: row.exercise_count,
+  }));
 }
 
 export async function listAvailableExercises(

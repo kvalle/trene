@@ -1,4 +1,4 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, usePreventRemove } from '@react-navigation/native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { DatabaseProvider } from '../../database/DatabaseContext';
@@ -73,13 +73,31 @@ test('distinguishes a missing workout from a retryable load failure', async () =
   expect(screen.queryByRole('button', { name: 'Prøv igjen' })).not.toBeOnTheScreen();
 });
 
-function renderScreen(navigation: Record<string, jest.Mock> = {}) {
+test('returns to fresh history when a history workout no longer exists', async () => {
+  const popTo = jest.fn();
+  mockedLoad.mockResolvedValue(null);
+  renderScreen({ popTo }, false);
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Tilbake til tidligere økter' }));
+  expect(popTo).toHaveBeenCalledWith('History');
+});
+
+test('uses ordinary stack Back when opened from history', async () => {
+  mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
+  renderScreen({}, false);
+
+  await screen.findByRole('header', { name: 'Fullført økt' });
+  expect(usePreventRemove).toHaveBeenCalledWith(false, expect.any(Function));
+  expect(screen.queryByRole('button', { name: 'Tilbake til forsiden' })).not.toBeOnTheScreen();
+});
+
+function renderScreen(navigation: Record<string, jest.Mock> = {}, fromCompletion = true) {
   return render(
     <DatabaseProvider database={database}>
       <NavigationContainer>
         <CompletedWorkoutScreen
           navigation={{ dispatch: jest.fn(), popTo: jest.fn(), ...navigation } as never}
-          route={{ params: { workoutId: 3, fromCompletion: true } } as never}
+          route={{ params: { workoutId: 3, fromCompletion } } as never}
         />
       </NavigationContainer>
     </DatabaseProvider>,
