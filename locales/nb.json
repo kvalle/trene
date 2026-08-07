@@ -1,4 +1,9 @@
 {
-  "CFBundleDisplayName": "Trene",
-  "NSHumanReadableCopyright": ""
+  "ios": {
+    "CFBundleDisplayName": "Trene",
+    "NSHumanReadableCopyright": ""
+  },
+  "android": {
+    "app_name": "Trene"
+  }
 }

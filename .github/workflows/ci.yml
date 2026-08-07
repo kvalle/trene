@@ -11,13 +11,13 @@ permissions:
   contents: read
 
 env:
-  ANDROID_SMOKE_APK: .artifacts/android/app-debug.apk
-  ANDROID_ARCH: x86_64
+  ANDROID_SMOKE_APK: .artifacts/android/trene.apk
+  ANDROID_ARCH: universal
   ANDROID_BUILD_TOOLS: 36.0.0
   ANDROID_COMPILE_SDK: '36'
   ANDROID_CMAKE: 3.22.1
   ANDROID_NDK: 27.1.12297006
-  ANDROID_SMOKE_APK_CACHE_VERSION: v3
+  ANDROID_SMOKE_APK_CACHE_VERSION: v4
   GRADLE_USER_HOME: /home/runner/.gradle
   GRADLE_VERSION: 9.3.1
   JAVA_VERSION: '17'
@@ -41,11 +41,11 @@ jobs:
       - run: npm test -- --ci
 
   android-apk:
-    name: Android smoke APK
+    name: Standalone Android APK
     needs: test
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     outputs:
       apk-cache-hit: ${{ steps.android-smoke-apk.outputs.cache-hit }}
       apk-cache-key: ${{ steps.android-smoke-apk.outputs.cache-primary-key }}
@@ -85,19 +85,24 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ${{ env.ANDROID_SMOKE_APK }}
-          key: android-smoke-apk-${{ env.ANDROID_SMOKE_APK_CACHE_VERSION }}-${{ runner.os }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'eas.json', '.nvmrc', 'locales/**', 'assets/**', 'plugins/**', 'android/**', 'scripts/build-android-smoke-apk.sh', '.github/workflows/ci.yml') }}
+          key: android-smoke-apk-${{ env.ANDROID_SMOKE_APK_CACHE_VERSION }}-${{ runner.os }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'eas.json', '.nvmrc', 'index.ts', 'src/**', 'locales/**', 'assets/**', 'plugins/**', 'android/**', 'scripts/build-android-smoke-apk.sh', '.github/workflows/ci.yml') }}
 
       - name: Build Android smoke APK
         if: steps.android-smoke-apk.outputs.cache-hit != 'true'
         run: bash scripts/build-android-smoke-apk.sh
 
-      - name: Upload Android smoke APK
+      - name: Record APK checksum
+        run: shasum -a 256 "${{ env.ANDROID_SMOKE_APK }}" > .artifacts/android/trene.apk.sha256
+
+      - name: Upload standalone Android APK
         uses: actions/upload-artifact@v6
         with:
-          name: android-smoke-apk
-          path: ${{ env.ANDROID_SMOKE_APK }}
+          name: trene-android-apk
+          path: |
+            ${{ env.ANDROID_SMOKE_APK }}
+            .artifacts/android/trene.apk.sha256
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 30
 
       - name: Upload Android build report
         if: always() && steps.android-smoke-apk.outputs.cache-hit != 'true'
@@ -119,7 +124,7 @@ jobs:
           retention-days: 1
 
   android-smoke:
-    name: Android smoke tests
+    name: Android offline qualification
     needs: android-apk
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -152,17 +157,17 @@ jobs:
       - name: Download Android smoke APK
         uses: actions/download-artifact@v7
         with:
-          name: android-smoke-apk
+          name: trene-android-apk
           path: .artifacts/android
 
-      - name: Install app and run smoke tests
+      - name: Install app offline and run qualification
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
           arch: x86_64
           disk-size: 4096M
           profile: pixel_2
-          script: bash scripts/ci-android-smoke.sh
+          script: bash scripts/ci-android-offline.sh
 
       - name: Upload smoke diagnostics
         if: always()
@@ -171,7 +176,6 @@ jobs:
           name: android-smoke-diagnostics
           path: |
             .artifacts/maestro/debug/
-            .artifacts/metro.log
             .artifacts/logcat.txt
             .artifacts/activity-processes.txt
             .artifacts/meminfo.txt
@@ -201,3 +205,22 @@ jobs:
         with:
           path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
           key: ${{ needs.android-apk.outputs.gradle-cache-key }}
+
+  ios-build:
+    name: iOS release build
+    needs: test
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Generate the iOS project
+        run: npx expo prebuild --platform ios --no-install
+      - name: Install CocoaPods dependencies
+        run: pod install --project-directory=ios
+      - name: Compile the release app for the simulator
+        run: xcodebuild -workspace ios/Trene.xcworkspace -scheme Trene -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
