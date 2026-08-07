@@ -22,20 +22,19 @@ tags:
 - inputText: "80.5"
 - tapOn: "Repetisjoner"
 - inputText: "5"
+- tapOn: "Bekreft"
+- assertVisible: "80,5 kg · 5 repetisjoner"
 
-# Force-stop before confirmation to prove that accepted field values survive.
+# Force-stop after confirmation to prove that the accepted set survives.
 - stopApp
 - launchApp
 - extendedWaitUntil:
     visible: "Fortsett økt"
     timeout: 120000
 - tapOn: "Fortsett økt"
-- assertVisible: "80,5"
-- assertVisible: "5"
-- tapOn: "Bekreft"
 - assertVisible: "80,5 kg · 5 repetisjoner"
 
-# Force-stop after confirmation, then finish and inspect both history views.
+# Force-stop again, then finish and inspect both history views.
 - stopApp
 - launchApp
 - extendedWaitUntil:
