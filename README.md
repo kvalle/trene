@@ -82,4 +82,4 @@ npm run qualify:android
 ```
 
 The manual device matrix and traceability for all 16 scenarios are documented in
-[`docs/mvp-qualification.md`](docs/mvp-qualification.md).
+[`docs/specs/mvp-qualification.md`](docs/specs/mvp-qualification.md).
