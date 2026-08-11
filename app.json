@@ -3,6 +3,7 @@
     "name": "Trene",
     "slug": "trene",
     "version": "0.1.0",
+    "icon": "./assets/app-icon.png",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "locales": {
@@ -14,7 +15,12 @@
       "supportsTablet": false
     },
     "android": {
-      "package": "no.kvalle.trene"
+      "package": "no.kvalle.trene",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon-foreground.png",
+        "backgroundColor": "#155e4b",
+        "monochromeImage": "./assets/adaptive-icon-foreground.png"
+      }
     },
     "plugins": [
       "expo-sqlite",
