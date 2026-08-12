@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
   pull_request:
   workflow_dispatch:
 
@@ -43,7 +46,7 @@ jobs:
   android-apk:
     name: Standalone Android APK
     needs: test
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 40
     outputs:
@@ -102,7 +105,7 @@ jobs:
             ${{ env.ANDROID_SMOKE_APK }}
             .artifacts/android/trene.apk.sha256
           if-no-files-found: error
-          retention-days: 3
+          retention-days: 1
 
       - name: Upload Android build report
         if: always() && steps.android-smoke-apk.outputs.cache-hit != 'true'
@@ -209,6 +212,7 @@ jobs:
   ios-build:
     name: iOS release build
     needs: test
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: macos-26
     timeout-minutes: 30
     steps:
