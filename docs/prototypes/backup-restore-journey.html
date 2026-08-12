@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PROTOTYPE - Backup og gjenoppretting</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; --green: #155e4b; --amber: #9a6700; --red: #b42318; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: light-dark(#f7f5ef, #101614); color: light-dark(#17201d, #edf2ef); }
+    main { width: min(1000px, 100%); margin: auto; padding: 32px 20px 80px; }
+    h1 { margin: 6px 0; font-size: clamp(28px, 5vw, 42px); }
+    h2, h3 { margin-top: 0; }
+    p { line-height: 1.55; }
+    button { min-height: 46px; border: 1px solid light-dark(#66736e, #87948f); border-radius: 12px; background: transparent; color: inherit; padding: 10px 14px; font: inherit; font-weight: 650; cursor: pointer; }
+    button:hover { background: light-dark(#eef3f0, #24302b); }
+    button.primary { border-color: var(--green); background: light-dark(var(--green), #78d6b7); color: light-dark(#fff, #101614); }
+    button.danger { border-color: var(--red); color: light-dark(var(--red), #ffb4ab); }
+    .eyebrow, .surface-label { color: light-dark(#52605b, #a8b5b0); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .intro { max-width: 750px; margin-bottom: 26px; }
+    .flows { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 28px; }
+    .flow { text-align: left; }
+    .flow[aria-selected="true"] { border: 2px solid light-dark(var(--green), #78d6b7); background: light-dark(#e8f2ee, #20352d); }
+    .flow strong, .flow small { display: block; }
+    .flow small { margin-top: 4px; font-weight: 400; }
+    .workspace { display: grid; grid-template-columns: minmax(300px, .9fr) minmax(340px, 1.1fr); gap: 24px; align-items: start; }
+    .phone { min-height: 580px; border: 2px solid light-dark(#26332e, #87948f); border-radius: 30px; background: light-dark(#fff, #19211e); padding: 18px; box-shadow: 0 14px 40px #0002; }
+    .phone.system { border-color: light-dark(#766000, #d7b84b); background: light-dark(#fffaf0, #292616); }
+    .surface-label { display: inline-block; border-radius: 99px; background: light-dark(#eef3f0, #24302b); padding: 6px 9px; margin-bottom: 14px; }
+    .system .surface-label { color: light-dark(#604b00, #f2d675); background: light-dark(#fff0bd, #453d18); }
+    .phone-header { border-bottom: 1px solid light-dark(#e2e5e3, #303a36); padding-bottom: 14px; }
+    .screen { min-height: 320px; padding: 24px 2px; }
+    .screen h2 { font-size: 27px; }
+    .screen-actions { display: grid; gap: 10px; }
+    .screen-actions button { width: 100%; }
+    .summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
+    .summary div { border-radius: 12px; background: light-dark(#eef3f0, #24302b); padding: 12px; }
+    .summary strong { display: block; font-size: 21px; }
+    .warning { border-left: 4px solid #c27b00; padding-left: 12px; }
+    .error { color: light-dark(var(--red), #ffb4ab); }
+    .working { display: flex; align-items: center; gap: 12px; font-size: 18px; }
+    .spinner { width: 22px; height: 22px; border: 3px solid light-dark(#cbd1ce, #52605b); border-top-color: light-dark(var(--green), #78d6b7); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spinner { animation: none; border-top-color: light-dark(#cbd1ce, #52605b); } }
+    .panel { border: 1px solid light-dark(#cbd1ce, #3b4742); border-radius: 18px; background: light-dark(#fff, #19211e); padding: 20px; }
+    .panel + .panel { margin-top: 16px; }
+    .prototype-control { border: 2px dashed light-dark(var(--amber), #d7b84b); background: light-dark(#fffaf0, #292616); }
+    .prototype-control h2 { color: light-dark(#604b00, #f2d675); }
+    .prototype-control button { width: 100%; border-color: light-dark(var(--amber), #d7b84b); background: light-dark(#fff0bd, #453d18); }
+    .prototype-control .idle { color: light-dark(#52605b, #a8b5b0); }
+    .legend { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+    .legend strong { display: inline-block; min-width: 116px; }
+    .progress { margin: 0; padding: 0; list-style: none; }
+    .progress li { display: flex; gap: 10px; padding: 8px 0; color: light-dark(#52605b, #a8b5b0); }
+    .progress li::before { content: '○'; }
+    .progress li.done { color: inherit; }
+    .progress li.done::before { content: '✓'; color: light-dark(var(--green), #78d6b7); font-weight: 800; }
+    .progress li.current { color: inherit; font-weight: 700; }
+    .progress li.current::before { content: '→'; }
+    .reset { margin-top: 14px; width: 100%; }
+    @media (max-width: 760px) { .flows { grid-template-columns: 1fr 1fr; } .workspace { grid-template-columns: 1fr; } .phone { min-height: 520px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Throwaway-prototype</div>
+    <h1>Backup og gjenoppretting</h1>
+    <p class="intro">Velg én flyt og gå gjennom den fra start til slutt. Alt inne i telefonrammen er foreslått brukerflate. Den gule prototypekontrollen utenfor telefonen simulerer venting, tekniske resultater og retur fra operativsystemet.</p>
+
+    <nav class="flows" id="flows" aria-label="Velg flyt"></nav>
+
+    <div class="workspace">
+      <section class="phone" id="phone" aria-label="Foreslått brukerflate">
+        <div class="surface-label" id="surface-label">I Trene-appen</div>
+        <div class="phone-header"><strong id="nav-title"></strong></div>
+        <div class="screen" id="screen"></div>
+        <div class="screen-actions" id="screen-actions"></div>
+      </section>
+
+      <aside>
+        <section class="panel prototype-control">
+          <div class="eyebrow">Ikke del av appen</div>
+          <h2>Prototypekontroll</h2>
+          <p id="control-explanation"></p>
+          <div id="control-action"></div>
+        </section>
+        <section class="panel">
+          <h2 id="flow-title"></h2>
+          <p id="flow-copy"></p>
+          <ol class="progress" id="progress"></ol>
+          <button class="reset" id="reset">Start denne flyten på nytt</button>
+        </section>
+        <section class="panel">
+          <h2>Slik leses prototypen</h2>
+          <ul class="legend">
+            <li><strong>Telefonrammen</strong> Dette kan bli innhold i appen.</li>
+            <li><strong>Gul systemflate</strong> Dette representerer Android eller iOS.</li>
+            <li><strong>Gul kontroll</strong> Dette er bare en snarvei i prototypen.</li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const initialState = Object.freeze({ screen: 'settings', operation: 'none', selectedBackup: null, outcome: 'none' });
+
+    function transition(state, action) {
+      switch (action) {
+        case 'RESET': return { ...initialState };
+        case 'START_BACKUP': return { ...state, screen: 'backup', operation: 'preparing-backup' };
+        case 'BACKUP_READY': return { ...state, screen: 'share-dialog', operation: 'sharing-backup' };
+        case 'SHARE_RETURNED': return { ...state, screen: 'settings', operation: 'none', outcome: 'backup-offered' };
+        case 'START_RESTORE': return { ...state, screen: 'file-dialog', operation: 'selecting-file' };
+        case 'FILE_SELECTED': return { ...state, screen: 'validating', operation: 'validating' };
+        case 'VALID_FILE': return { ...state, screen: 'preview', operation: 'reviewing', selectedBackup: { created: '8. august 2026, 21:14', workouts: 9, exercises: 16 } };
+        case 'INVALID_FILE': return { ...state, screen: 'restore-error', operation: 'none', outcome: 'invalid' };
+        case 'CONTINUE_RESTORE': return { ...state, screen: 'confirm', operation: 'confirming' };
+        case 'CONFIRM_RESTORE': return { ...state, screen: 'restoring', operation: 'restoring' };
+        case 'RESTORE_SUCCEEDED': return { ...state, screen: 'success', operation: 'none', outcome: 'restored' };
+        case 'RESTORE_FAILED': return { ...state, screen: 'restore-error', operation: 'none', outcome: 'rolled-back' };
+        default: return state;
+      }
+    }
+
+    const labels = {
+      START_BACKUP: 'Lag backup', START_RESTORE: 'Gjenopprett fra fil', FILE_SELECTED: 'Velg denne filen',
+      CONTINUE_RESTORE: 'Fortsett',
+      CONFIRM_RESTORE: 'Erstatt alle data', BACKUP_READY: 'Backupen er ferdig og gyldig',
+      SHARE_RETURNED: 'Delingsvinduet lukkes', VALID_FILE: 'Filen er gyldig', INVALID_FILE: 'Filen er ugyldig',
+      RESTORE_SUCCEEDED: 'Gjenopprettingen lykkes', RESTORE_FAILED: 'Gjenopprettingen feiler og rulles tilbake',
+    };
+
+    const flows = [
+      { name: 'Lage backup', short: 'Normal flyt', copy: 'Lager og deler en kontrollert backupfil.', actions: ['START_BACKUP', 'BACKUP_READY', 'SHARE_RETURNED'] },
+      { name: 'Trygg gjenoppretting', short: 'Normal flyt', copy: 'Forhåndsviser filen og gjenoppretter med automatisk rollback-beskyttelse.', actions: ['START_RESTORE', 'FILE_SELECTED', 'VALID_FILE', 'CONTINUE_RESTORE', 'CONFIRM_RESTORE', 'RESTORE_SUCCEEDED'] },
+      { name: 'Ugyldig fil', short: 'Avvises trygt', copy: 'Viser hva som skjer når den valgte filen ikke kan brukes.', actions: ['START_RESTORE', 'FILE_SELECTED', 'INVALID_FILE'] },
+      { name: 'Feil underveis', short: 'Trygg rollback', copy: 'Simulerer teknisk feil og automatisk tilbakeføring til dagens data.', actions: ['START_RESTORE', 'FILE_SELECTED', 'VALID_FILE', 'CONTINUE_RESTORE', 'CONFIRM_RESTORE', 'RESTORE_FAILED'] },
+    ];
+
+    const userActions = new Set(['START_BACKUP', 'START_RESTORE', 'FILE_SELECTED', 'CONTINUE_RESTORE', 'CONFIRM_RESTORE']);
+    const systemScreens = new Set(['file-dialog', 'share-dialog']);
+    let activeFlow = 0;
+    let step = 0;
+    let state = { ...initialState };
+
+    function screenContent() {
+      const backup = state.selectedBackup;
+      return {
+        settings: ['Innstillinger', '<h2>Dine data</h2><p>Lag en fil med alle økter og øvelser, eller erstatt dataene i appen fra en tidligere backup.</p><p class="warning">Backupfiler inneholder treningsdata og er ikke passordbeskyttet.</p>'],
+        backup: ['Lag backup', '<div class="working" role="status"><span class="spinner" aria-hidden="true"></span><span>Klargjør backup …</span></div>'],
+        'share-dialog': ['Del eller lagre fil', '<h2>Trene-backup</h2><p>Velg en app, mappe eller skylagring for filen.</p><p class="warning">Dette er en forenklet fremstilling av Android/iOS, ikke en Trene-skjerm.</p>'],
+        'file-dialog': ['Velg fil', '<h2>Nylige filer</h2><div class="summary"><div><strong>Trene</strong>2026-08-08.trene-backup</div><div><strong>Annen</strong>notater.txt</div></div><p class="warning">Dette er en forenklet fremstilling av Android/iOS, ikke en Trene-skjerm.</p>'],
+        validating: ['Gjenopprett', '<div class="working" role="status"><span class="spinner" aria-hidden="true"></span><span>Kontrollerer filen …</span></div>'],
+        preview: ['Se gjennom backup', `<h2>Klar til å gjenopprette</h2><p>Laget ${backup?.created}</p><div class="summary"><div><strong>${backup?.workouts}</strong>økter</div><div><strong>${backup?.exercises}</strong>øvelser</div></div>`],
+        confirm: ['Bekreft', '<h2>Erstatt alle data?</h2><p>Backupen inneholder 9 økter og 16 øvelser.</p><p class="warning">Dagens 12 økter og 18 øvelser fjernes fra appen. Dette kan ikke angres i Trene.</p>'],
+        restoring: ['Gjenoppretter', '<div class="working" role="status"><span class="spinner" aria-hidden="true"></span><span>Gjenoppretter data …</span></div><p>Ikke lukk appen.</p>'],
+        success: ['Ferdig', '<h2>Backupen er gjenopprettet</h2><p>9 økter og 16 øvelser er nå tilgjengelige i Trene.</p>'],
+        'restore-error': ['Kunne ikke gjenopprette', `<h2 class="error">Gjenoppretting feilet</h2><p>${state.outcome === 'invalid' ? 'Filen var ugyldig eller ikke støttet.' : 'Noe gikk galt under gjenopprettingen.'}</p><p>Ingen data ble erstattet. Du har fortsatt 12 økter og 18 øvelser.</p>`],
+      }[state.screen];
+    }
+
+    function advance(action) {
+      if (flows[activeFlow].actions[step] !== action) return;
+      state = transition(state, action);
+      step += 1;
+      render();
+    }
+
+    function actionButton(action, target, prototype = false) {
+      target.innerHTML = '';
+      if (!action) return;
+      const button = document.createElement('button');
+      button.textContent = prototype ? `Simuler: ${labels[action]}` : labels[action];
+      if (!prototype && ['START_BACKUP', 'START_RESTORE', 'FILE_SELECTED'].includes(action)) button.className = 'primary';
+      if (action === 'CONFIRM_RESTORE') button.className = 'danger';
+      button.onclick = () => advance(action);
+      target.append(button);
+    }
+
+    function selectFlow(index) {
+      activeFlow = index;
+      step = 0;
+      state = { ...initialState };
+      render();
+    }
+
+    function renderSettingsActions(target) {
+      target.innerHTML = '';
+      ['START_BACKUP', 'START_RESTORE'].forEach((action) => {
+        const button = document.createElement('button');
+        button.textContent = labels[action];
+        button.className = action === 'START_BACKUP' ? 'primary' : '';
+        button.onclick = () => {
+          if (flows[activeFlow].actions[0] !== action) selectFlow(action === 'START_BACKUP' ? 0 : 1);
+          advance(action);
+        };
+        target.append(button);
+      });
+    }
+
+    function addCancelAction(target) {
+      const button = document.createElement('button');
+      button.textContent = 'Avbryt';
+      button.onclick = () => {
+        step = 0;
+        state = { ...initialState };
+        render();
+      };
+      target.append(button);
+    }
+
+    function addReturnAction(target, label = 'Tilbake til innstillinger') {
+      const button = document.createElement('button');
+      button.textContent = label;
+      button.onclick = () => {
+        step = flows[activeFlow].actions.length;
+        state = { ...initialState };
+        render();
+      };
+      target.append(button);
+    }
+
+    function render() {
+      const flowNav = document.querySelector('#flows');
+      flowNav.innerHTML = '';
+      flows.forEach((flow, index) => {
+        const button = document.createElement('button');
+        button.className = 'flow';
+        button.setAttribute('aria-selected', String(index === activeFlow));
+        button.innerHTML = `<strong>${flow.name}</strong><small>${flow.short}</small>`;
+        button.onclick = () => selectFlow(index);
+        flowNav.append(button);
+      });
+
+      const [title, copy] = screenContent();
+      const isSystem = systemScreens.has(state.screen);
+      document.querySelector('#phone').classList.toggle('system', isSystem);
+      document.querySelector('#surface-label').textContent = isSystem ? 'Android / iOS' : 'I Trene-appen';
+      document.querySelector('#nav-title').textContent = title;
+      document.querySelector('#screen').innerHTML = copy;
+
+      const next = flows[activeFlow].actions[step];
+      const screenActions = document.querySelector('#screen-actions');
+      if (state.screen === 'settings') renderSettingsActions(screenActions);
+      else {
+        actionButton(userActions.has(next) ? next : null, screenActions);
+        if (['file-dialog', 'preview', 'confirm'].includes(state.screen)) addCancelAction(screenActions);
+        if (['backup-finished', 'success', 'restore-error'].includes(state.screen)) addReturnAction(screenActions);
+      }
+      const control = document.querySelector('#control-action');
+      const explanation = document.querySelector('#control-explanation');
+      if (!next) {
+        explanation.textContent = 'Flyten er ferdig. Velg en annen flyt eller start denne på nytt.';
+        control.innerHTML = '';
+      } else if (userActions.has(next)) {
+        explanation.innerHTML = '<span class="idle">Neste handling gjøres i telefonrammen. Prototypekontrollen venter.</span>';
+        control.innerHTML = '';
+      } else {
+        explanation.textContent = 'Neste hendelse ville skjedd automatisk eller utenfor Trene. Bruk knappen for å fortsette simuleringen.';
+        actionButton(next, control, true);
+      }
+
+      const flow = flows[activeFlow];
+      document.querySelector('#flow-title').textContent = flow.name;
+      document.querySelector('#flow-copy').textContent = flow.copy;
+      document.querySelector('#progress').innerHTML = flow.actions.map((action, index) =>
+        `<li class="${index < step ? 'done' : index === step ? 'current' : ''}">${labels[action]}</li>`
+      ).join('');
+    }
+
+    document.querySelector('#reset').onclick = () => selectFlow(activeFlow);
+    render();
+  </script>
+</body>
+</html>
