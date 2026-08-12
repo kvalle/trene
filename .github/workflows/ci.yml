@@ -102,7 +102,7 @@ jobs:
             ${{ env.ANDROID_SMOKE_APK }}
             .artifacts/android/trene.apk.sha256
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
 
       - name: Upload Android build report
         if: always() && steps.android-smoke-apk.outputs.cache-hit != 'true'
@@ -170,7 +170,7 @@ jobs:
           script: bash scripts/ci-android-offline.sh
 
       - name: Upload smoke diagnostics
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v6
         with:
           name: android-smoke-diagnostics
