@@ -1,5 +1,4 @@
 import { Directory, File, FileMode, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { deserializeDatabaseAsync } from 'expo-sqlite';
 
 import { inspectDatabase } from '../database/inspectDatabase';
@@ -27,6 +26,7 @@ export function createNativeBackupPlatform(): BackupPlatform {
       return database.serializeAsync();
     },
     share: async (uri) => {
+      const Sharing = require('expo-sharing') as typeof import('expo-sharing');
       if (!await Sharing.isAvailableAsync()) throw new Error('File sharing is unavailable');
       await Sharing.shareAsync(uri, {
         dialogTitle: 'Del sikkerhetskopi',
