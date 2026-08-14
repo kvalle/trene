@@ -659,7 +659,7 @@ describe('active workout persistence', () => {
     });
   });
 
-  test('removes only active membership and its sets without renumbering remaining cards', async () => {
+  test('removes only active membership and keeps remaining positions contiguous', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const workoutId = await startWorkout(database);
@@ -672,7 +672,7 @@ describe('active workout persistence', () => {
 
     await removeExerciseFromWorkout(database, workoutId, kneboy.id);
 
-    expect((await loadActiveWorkout(database))!.exercises).toEqual([{ ...markloft, position: 1 }]);
+    expect((await loadActiveWorkout(database))!.exercises).toEqual([{ ...markloft, position: 0 }]);
     expect(await countExercises(database)).toBe(2);
     expect((await listAvailableExercises(database, workoutId)).map(({ id }) => id)).toEqual([kneboyId]);
   });
@@ -693,8 +693,29 @@ describe('active workout persistence', () => {
     await addExerciseToWorkout(database, workoutId, thirdId);
 
     expect((await loadActiveWorkout(database))!.exercises.map(({ exerciseId, position }) => ({ exerciseId, position })))
-      .toEqual([{ exerciseId: secondId, position: 1 }, { exerciseId: thirdId, position: 2 }]);
+      .toEqual([{ exerciseId: secondId, position: 0 }, { exerciseId: thirdId, position: 1 }]);
     await expect(addExerciseToWorkout(database, workoutId, secondId)).rejects.toThrow();
+  });
+
+  test('compacts positions when completion removes an empty exercise', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const emptyId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    const retainedId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
+    await addExerciseToWorkout(database, workoutId, emptyId);
+    await addExerciseToWorkout(database, workoutId, retainedId);
+    const [, retained] = (await loadActiveWorkout(database))!.exercises;
+    await confirmWorkoutSet(
+      database, workoutId, retained.sets[0].id, 100, 3, '2026-08-05T10:15:00.000Z',
+    );
+
+    await completeWorkout(database, workoutId, '2026-08-05T10:30:00.000Z');
+
+    expect((await loadCompletedWorkout(database, workoutId))!.exercises).toEqual([
+      { ...retained, position: 0, sets: [{ ...retained.sets[0], loadKg: 100, repetitions: 3,
+        confirmedAt: '2026-08-05T10:15:00.000Z' }] },
+    ]);
   });
 
   test('rolls back failed set additions and exercise removals', async () => {
