@@ -1,5 +1,5 @@
 import { exerciseNameKey } from '../domain/exerciseName';
-import type { Database } from './types';
+import { databaseOperation, type Database } from './types';
 
 export const DUPLICATE_EXERCISE_NAME = 'En øvelse med dette navnet finnes allerede';
 
@@ -66,7 +66,7 @@ function isUniqueConstraintError(error: unknown): boolean {
   return /unique/i.test(error instanceof Error ? error.message : String(error));
 }
 
-export async function listExercises(database: Database): Promise<ExerciseListItem[]> {
+async function listExercisesWithDatabase(database: Database): Promise<ExerciseListItem[]> {
   const rows = await database.getAllAsync<ExerciseRow>(`
     SELECT
       exercises.id,
@@ -99,7 +99,7 @@ export function searchExercises(
     : exercises.filter((exercise) => exerciseNameKey(exercise.name).includes(key));
 }
 
-export async function createExercise(
+async function createExerciseWithDatabase(
   database: Database,
   name: string,
   key: string,
@@ -126,7 +126,7 @@ export async function createExercise(
   }
 }
 
-export async function loadExerciseDetail(
+async function loadExerciseDetailWithDatabase(
   database: Database,
   exerciseId: number,
 ): Promise<ExerciseDetail | null> {
@@ -178,7 +178,7 @@ export async function loadExerciseDetail(
   };
 }
 
-export async function renameExercise(
+async function renameExerciseWithDatabase(
   database: Database,
   exerciseId: number,
   name: string,
@@ -213,7 +213,7 @@ export async function renameExercise(
   }
 }
 
-export async function deleteExercise(
+async function deleteExerciseWithDatabase(
   database: Database,
   exerciseId: number,
 ): Promise<ExerciseDeletion> {
@@ -269,3 +269,9 @@ export class ExerciseDeletionIneligibleError extends Error {
     this.name = 'ExerciseDeletionIneligibleError';
   }
 }
+
+export const listExercises = databaseOperation(listExercisesWithDatabase);
+export const createExercise = databaseOperation(createExerciseWithDatabase);
+export const loadExerciseDetail = databaseOperation(loadExerciseDetailWithDatabase);
+export const renameExercise = databaseOperation(renameExerciseWithDatabase);
+export const deleteExercise = databaseOperation(deleteExerciseWithDatabase);

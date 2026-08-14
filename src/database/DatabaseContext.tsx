@@ -1,24 +1,33 @@
-import { createContext, type PropsWithChildren, useContext } from 'react';
+import { createContext, Fragment, type PropsWithChildren, useContext, useSyncExternalStore } from 'react';
 
-import type { Database } from './types';
+import type { DatabaseRuntime } from './DatabaseRuntime';
+import type { DatabaseSource } from './types';
 
-const DatabaseContext = createContext<Database | null>(null);
+const DatabaseContext = createContext<DatabaseSource | null>(null);
 
 export function DatabaseProvider({
   children,
   database,
-}: PropsWithChildren<{ database: Database }>) {
+}: PropsWithChildren<{ database: DatabaseSource }>) {
+  const runtime = 'subscribe' in database ? database as DatabaseRuntime : null;
+  const generation = useSyncExternalStore(
+    runtime?.subscribe ?? emptySubscribe,
+    runtime?.getGeneration ?? zeroGeneration,
+  );
   return (
     <DatabaseContext.Provider value={database}>
-      {children}
+      <Fragment key={generation}>{children}</Fragment>
     </DatabaseContext.Provider>
   );
 }
 
-export function useDatabase(): Database {
+export function useDatabase(): DatabaseSource {
   const database = useContext(DatabaseContext);
   if (!database) {
     throw new Error('useDatabase must be used after startup has completed');
   }
   return database;
 }
+
+const emptySubscribe = () => () => undefined;
+const zeroGeneration = () => 0;
