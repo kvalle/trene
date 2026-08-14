@@ -11,6 +11,7 @@ export interface Database {
   getAllAsync<T>(source: string, ...params: DatabaseValue[]): Promise<T[]>;
   runAsync(source: string, ...params: DatabaseValue[]): Promise<DatabaseRunResult>;
   closeAsync(): Promise<void>;
+  serializeAsync?(databaseName?: string): Promise<Uint8Array>;
 }
 
 export interface DatabaseAccess {

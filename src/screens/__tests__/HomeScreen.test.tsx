@@ -37,6 +37,7 @@ test('shows the empty Home actions and opens them hierarchically', async () => {
   expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Tidligere økter' })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Øvelser' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Innstillinger' })).toBeOnTheScreen();
 
   fireEvent.press(screen.getByRole('button', { name: 'Tidligere økter' }));
   expect(navigate).toHaveBeenCalledWith('History');

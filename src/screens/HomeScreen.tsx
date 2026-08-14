@@ -101,6 +101,7 @@ export function HomeScreen({ navigation, route }: Props) {
         {error && <Text accessibilityRole="alert" style={{ color: colors.notification }}>Kunne ikke laste inn</Text>}
         <Action colors={colors} disabled={starting} label="Tidligere økter" onPress={() => navigation.navigate('History')} />
         <Action colors={colors} disabled={starting} label="Øvelser" onPress={() => navigation.navigate('Exercises')} />
+        <Action colors={colors} disabled={starting} label="Innstillinger" onPress={() => navigation.navigate('Settings')} />
       </View>
     </ScrollView>
   );
