@@ -1,4 +1,4 @@
-import { exerciseNameKey } from '../domain/exerciseName';
+import { exerciseNameKey, validateExerciseName } from '../domain/exerciseName';
 import { databaseOperation, type Database } from './types';
 
 export const DUPLICATE_EXERCISE_NAME = 'En øvelse med dette navnet finnes allerede';
@@ -104,6 +104,10 @@ async function createExerciseWithDatabase(
   name: string,
   key: string,
 ): Promise<number> {
+  const validated = validateExerciseName(name);
+  if ('error' in validated || validated.name !== name || validated.key !== key) {
+    throw new Error('Exercise name must use its normalized identity');
+  }
   const existing = await database.getFirstAsync<{ id: number }>(
     'SELECT id FROM exercises WHERE name_key = ?',
     key,
@@ -184,6 +188,10 @@ async function renameExerciseWithDatabase(
   name: string,
   key: string,
 ): Promise<void> {
+  const validated = validateExerciseName(name);
+  if ('error' in validated || validated.name !== name || validated.key !== key) {
+    throw new Error('Exercise name must use its normalized identity');
+  }
   try {
     await transaction(database, async () => {
       const exercise = await database.getFirstAsync<{ id: number }>(

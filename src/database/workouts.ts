@@ -1,4 +1,5 @@
-import { exerciseNameKey } from '../domain/exerciseName';
+import { exerciseNameKey, validateExerciseName } from '../domain/exerciseName';
+import { isValidLoad, isValidRepetitions } from '../domain/workoutSet';
 import { DuplicateExerciseNameError } from './exercises';
 import { databaseOperation, type Database } from './types';
 
@@ -63,6 +64,29 @@ async function transaction<T>(database: Database, operation: () => Promise<T>): 
   } catch (error) {
     await database.execAsync('ROLLBACK;');
     throw error;
+  }
+}
+
+async function compactWorkoutExercisePositions(
+  database: Database,
+  workoutId: number,
+): Promise<void> {
+  const memberships = await database.getAllAsync<{ id: number }>(`
+    SELECT id FROM workout_exercises WHERE workout_id = ? ORDER BY position ASC
+  `, workoutId);
+  if (memberships.length === 0) return;
+  const offset = (await database.getFirstAsync<{ offset: number }>(`
+    SELECT MAX(position) + 1 AS offset FROM workout_exercises WHERE workout_id = ?
+  `, workoutId))?.offset ?? memberships.length;
+  await database.runAsync(
+    'UPDATE workout_exercises SET position = position + ? WHERE workout_id = ?',
+    offset, workoutId,
+  );
+  for (const [position, membership] of memberships.entries()) {
+    await database.runAsync(
+      'UPDATE workout_exercises SET position = ? WHERE id = ?',
+      position, membership.id,
+    );
   }
 }
 
@@ -131,8 +155,9 @@ async function completeWorkoutWithDatabase(
         AND NOT EXISTS (
           SELECT 1 FROM workout_sets
           WHERE workout_sets.workout_exercise_id = workout_exercises.id
-        )
+      )
     `, workoutId);
+    await compactWorkoutExercisePositions(database, workoutId);
     const result = await database.runAsync(`
       UPDATE workouts SET status = 'completed', completed_at = ?
       WHERE id = ? AND status = 'active'
@@ -173,6 +198,10 @@ async function savePlannedWorkoutSetWithDatabase(
   loadKg: number | null,
   repetitions: number | null,
 ): Promise<void> {
+  if ((loadKg !== null && !isValidLoad(loadKg))
+    || (repetitions !== null && !isValidRepetitions(repetitions))) {
+    throw new Error('Invalid workout set values');
+  }
   await transaction(database, () => updateActiveWorkoutSet(
     database,
     'load_kg = ?, repetitions = ?', 'AND confirmed_at IS NULL',
@@ -188,6 +217,9 @@ async function confirmWorkoutSetWithDatabase(
   repetitions: number,
   confirmedAt = new Date().toISOString(),
 ): Promise<void> {
+  if (!isValidLoad(loadKg) || !isValidRepetitions(repetitions)) {
+    throw new Error('Invalid workout set values');
+  }
   await transaction(database, () => updateActiveWorkoutSet(
     database,
     'load_kg = ?, repetitions = ?, confirmed_at = ?', 'AND confirmed_at IS NULL',
@@ -271,6 +303,7 @@ async function removeExerciseFromWorkoutWithDatabase(
         AND EXISTS (SELECT 1 FROM workouts WHERE id = ? AND status = 'active')
     `, workoutExerciseId, workoutId, workoutId);
     if (result.changes !== 1) throw new Error('Active workout exercise not found');
+    await compactWorkoutExercisePositions(database, workoutId);
   });
 }
 
@@ -453,6 +486,10 @@ async function createExerciseInWorkoutWithDatabase(
   name: string,
   key = exerciseNameKey(name),
 ): Promise<number> {
+  const validated = validateExerciseName(name);
+  if ('error' in validated || validated.name !== name || validated.key !== key) {
+    throw new Error('Exercise name must use its normalized identity');
+  }
   try {
     return await transaction(database, async () => {
       const exerciseId = (await database.runAsync(

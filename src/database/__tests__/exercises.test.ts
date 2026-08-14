@@ -211,25 +211,27 @@ describe('exercise persistence', () => {
     expect((await loadExerciseDetail(database, completedId))?.canDelete).toBe(false);
   });
 
-  test('renames with a provided normalized identity and updates history through the stable ID', async () => {
+  test('renames with a normalized identity and updates history through the stable ID', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const workout = await addWorkout(database, exerciseId, 'completed', 'done');
     await addSet(database, workout.membershipId, 100, 5, 'confirmed');
 
-    await renameExercise(database, exerciseId, '  Ny Knebøy  ', 'provided-key');
+    await expect(renameExercise(database, exerciseId, '  Ny Knebøy  ', 'provided-key'))
+      .rejects.toThrow('normalized identity');
+    await renameExercise(database, exerciseId, 'Ny Knebøy', exerciseNameKey('Ny Knebøy'));
 
     expect(await loadExerciseDetail(database, exerciseId)).toMatchObject({
       id: exerciseId,
-      name: '  Ny Knebøy  ',
+      name: 'Ny Knebøy',
       history: [{ id: workout.workoutId }],
     });
     expect(await database.getFirstAsync<{ name_key: string }>(
       'SELECT name_key FROM exercises WHERE id = ?', exerciseId,
-    )).toEqual({ name_key: 'provided-key' });
+    )).toEqual({ name_key: exerciseNameKey('Ny Knebøy') });
 
-    await renameExercise(database, exerciseId, 'NY KNEBØY', 'provided-key');
+    await renameExercise(database, exerciseId, 'NY KNEBØY', exerciseNameKey('NY KNEBØY'));
     expect((await loadExerciseDetail(database, exerciseId))?.name).toBe('NY KNEBØY');
   });
 

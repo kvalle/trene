@@ -3,6 +3,7 @@ import {
   BackupManifestV1,
   BackupPackageError,
 } from './types';
+import { isCanonicalTimestamp } from '../domain/timestamp';
 
 const SHA_256 = /^[0-9a-f]{64}$/;
 const NAMESPACE = /^[a-z0-9]+(?:[.-][a-z0-9]+)+$/;
@@ -32,12 +33,6 @@ function exactKeys(value: Record<string, unknown>, expected: ReadonlySet<string>
 
 function isNaturalNumber(value: unknown): value is number {
   return Number.isSafeInteger(value) && typeof value === 'number' && value >= 0;
-}
-
-function isCanonicalTimestamp(value: unknown): value is string {
-  if (typeof value !== 'string') return false;
-  const timestamp = new Date(value);
-  return !Number.isNaN(timestamp.valueOf()) && timestamp.toISOString() === value;
 }
 
 function parseComponent(value: unknown): BackupManifestComponent {
