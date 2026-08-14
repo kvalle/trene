@@ -1,8 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
+import { useState } from 'react';
 
 import { StartupGate } from '../StartupGate';
 import type { Database } from '../database/types';
+import { useDatabase } from '../database/DatabaseContext';
+import type { DatabaseRuntime } from '../database/DatabaseRuntime';
 
 const database: Database = {
   closeAsync: jest.fn(async () => undefined),
@@ -64,6 +67,34 @@ test('adds restart guidance after persistent failure', async () => {
   expect(
     await screen.findByText('Hvis problemet fortsetter, avslutt appen helt og åpne den igjen.'),
   ).toBeOnTheScreen();
+});
+
+test('remounts data-dependent state after a successful database reopen', async () => {
+  const secondDatabase = { ...database, closeAsync: jest.fn(async () => undefined) };
+  const openDatabase = jest.fn<Promise<Database>, []>()
+    .mockResolvedValueOnce(database)
+    .mockResolvedValueOnce(secondDatabase);
+  let runtime!: DatabaseRuntime;
+
+  function Session() {
+    runtime = useDatabase() as DatabaseRuntime;
+    const [value, setValue] = useState('fresh');
+    return <Text onPress={() => setValue('stale')}>{value}</Text>;
+  }
+
+  await render(
+    <StartupGate openDatabase={openDatabase}>
+      <Session />
+    </StartupGate>,
+  );
+  fireEvent.press(await screen.findByText('fresh'));
+  expect(screen.getByText('stale')).toBeOnTheScreen();
+
+  await act(async () => {
+    await runtime.runExclusive((maintenance) => maintenance.reopen());
+  });
+
+  expect(screen.getByText('fresh')).toBeOnTheScreen();
 });
 
 function deferred<T>() {

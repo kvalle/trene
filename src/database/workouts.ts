@@ -1,6 +1,6 @@
 import { exerciseNameKey } from '../domain/exerciseName';
 import { DuplicateExerciseNameError } from './exercises';
-import type { Database } from './types';
+import { databaseOperation, type Database } from './types';
 
 export interface AvailableExercise {
   id: number;
@@ -66,15 +66,15 @@ async function transaction<T>(database: Database, operation: () => Promise<T>): 
   }
 }
 
-export async function getActiveWorkoutId(database: Database): Promise<number | null> {
+async function getActiveWorkoutIdWithDatabase(database: Database): Promise<number | null> {
   return (await database.getFirstAsync<WorkoutRow>(
     "SELECT id FROM workouts WHERE status = 'active'",
   ))?.id ?? null;
 }
 
-export async function startWorkout(database: Database): Promise<number> {
+async function startWorkoutWithDatabase(database: Database): Promise<number> {
   return transaction(database, async () => {
-    const existing = await getActiveWorkoutId(database);
+    const existing = await getActiveWorkoutIdWithDatabase(database);
     if (existing !== null) return existing;
     return (await database.runAsync(
       "INSERT INTO workouts (status, started_at) VALUES ('active', ?)",
@@ -83,7 +83,7 @@ export async function startWorkout(database: Database): Promise<number> {
   });
 }
 
-export async function cancelActiveWorkout(database: Database, workoutId: number): Promise<void> {
+async function cancelActiveWorkoutWithDatabase(database: Database, workoutId: number): Promise<void> {
   await transaction(database, async () => {
     const result = await database.runAsync(
       "DELETE FROM workouts WHERE id = ? AND status = 'active'",
@@ -93,7 +93,7 @@ export async function cancelActiveWorkout(database: Database, workoutId: number)
   });
 }
 
-export async function deleteCompletedWorkout(
+async function deleteCompletedWorkoutWithDatabase(
   database: Database,
   workoutId: number,
 ): Promise<CompletedWorkoutDeletion> {
@@ -114,7 +114,7 @@ export async function deleteCompletedWorkout(
   });
 }
 
-export async function completeWorkout(
+async function completeWorkoutWithDatabase(
   database: Database,
   workoutId: number,
   completedAt = new Date().toISOString(),
@@ -166,7 +166,7 @@ async function updateActiveWorkoutSet(
   if (result.changes !== 1) throw new Error('Workout set not found');
 }
 
-export async function savePlannedWorkoutSet(
+async function savePlannedWorkoutSetWithDatabase(
   database: Database,
   workoutId: number,
   setId: number,
@@ -180,7 +180,7 @@ export async function savePlannedWorkoutSet(
   ));
 }
 
-export async function confirmWorkoutSet(
+async function confirmWorkoutSetWithDatabase(
   database: Database,
   workoutId: number,
   setId: number,
@@ -195,7 +195,7 @@ export async function confirmWorkoutSet(
   ));
 }
 
-export async function unconfirmWorkoutSet(
+async function unconfirmWorkoutSetWithDatabase(
   database: Database,
   workoutId: number,
   setId: number,
@@ -205,7 +205,7 @@ export async function unconfirmWorkoutSet(
   ));
 }
 
-export async function deletePlannedWorkoutSet(
+async function deletePlannedWorkoutSetWithDatabase(
   database: Database,
   workoutId: number,
   setId: number,
@@ -224,7 +224,7 @@ export async function deletePlannedWorkoutSet(
   });
 }
 
-export async function addWorkoutSet(
+async function addWorkoutSetWithDatabase(
   database: Database,
   workoutId: number,
   workoutExerciseId: number,
@@ -260,7 +260,7 @@ export async function addWorkoutSet(
   });
 }
 
-export async function removeExerciseFromWorkout(
+async function removeExerciseFromWorkoutWithDatabase(
   database: Database,
   workoutId: number,
   workoutExerciseId: number,
@@ -274,8 +274,8 @@ export async function removeExerciseFromWorkout(
   });
 }
 
-export async function loadActiveWorkout(database: Database): Promise<ActiveWorkout | null> {
-  const id = await getActiveWorkoutId(database);
+async function loadActiveWorkoutWithDatabase(database: Database): Promise<ActiveWorkout | null> {
+  const id = await getActiveWorkoutIdWithDatabase(database);
   if (id === null) return null;
   const memberships = await database.getAllAsync<MembershipRow>(`
     SELECT workout_exercises.id, workout_exercises.exercise_id, exercises.name,
@@ -311,7 +311,7 @@ export async function loadActiveWorkout(database: Database): Promise<ActiveWorko
   };
 }
 
-export async function loadCompletedWorkout(
+async function loadCompletedWorkoutWithDatabase(
   database: Database,
   workoutId: number,
 ): Promise<CompletedWorkout | null> {
@@ -354,7 +354,7 @@ export async function loadCompletedWorkout(
   };
 }
 
-export async function listCompletedWorkouts(database: Database): Promise<CompletedWorkoutListItem[]> {
+async function listCompletedWorkoutsWithDatabase(database: Database): Promise<CompletedWorkoutListItem[]> {
   const rows = await database.getAllAsync<{
     id: number;
     completed_at: string;
@@ -380,7 +380,7 @@ export async function listCompletedWorkouts(database: Database): Promise<Complet
   }));
 }
 
-export async function listAvailableExercises(
+async function listAvailableExercisesWithDatabase(
   database: Database,
   workoutId: number,
 ): Promise<AvailableExercise[]> {
@@ -395,7 +395,7 @@ export async function listAvailableExercises(
   return rows.sort((left, right) => bokmalCollator.compare(left.name, right.name) || left.id - right.id);
 }
 
-export async function countExercises(database: Database): Promise<number> {
+async function countExercisesWithDatabase(database: Database): Promise<number> {
   return (await database.getFirstAsync<{ count: number }>(
     'SELECT COUNT(*) AS count FROM exercises',
   ))?.count ?? 0;
@@ -439,7 +439,7 @@ async function addMembership(database: Database, workoutId: number, exerciseId: 
   }
 }
 
-export async function addExerciseToWorkout(
+async function addExerciseToWorkoutWithDatabase(
   database: Database,
   workoutId: number,
   exerciseId: number,
@@ -447,7 +447,7 @@ export async function addExerciseToWorkout(
   await transaction(database, () => addMembership(database, workoutId, exerciseId));
 }
 
-export async function createExerciseInWorkout(
+async function createExerciseInWorkoutWithDatabase(
   database: Database,
   workoutId: number,
   name: string,
@@ -469,3 +469,22 @@ export async function createExerciseInWorkout(
     throw error;
   }
 }
+
+export const getActiveWorkoutId = databaseOperation(getActiveWorkoutIdWithDatabase);
+export const startWorkout = databaseOperation(startWorkoutWithDatabase);
+export const cancelActiveWorkout = databaseOperation(cancelActiveWorkoutWithDatabase);
+export const deleteCompletedWorkout = databaseOperation(deleteCompletedWorkoutWithDatabase);
+export const completeWorkout = databaseOperation(completeWorkoutWithDatabase);
+export const savePlannedWorkoutSet = databaseOperation(savePlannedWorkoutSetWithDatabase);
+export const confirmWorkoutSet = databaseOperation(confirmWorkoutSetWithDatabase);
+export const unconfirmWorkoutSet = databaseOperation(unconfirmWorkoutSetWithDatabase);
+export const deletePlannedWorkoutSet = databaseOperation(deletePlannedWorkoutSetWithDatabase);
+export const addWorkoutSet = databaseOperation(addWorkoutSetWithDatabase);
+export const removeExerciseFromWorkout = databaseOperation(removeExerciseFromWorkoutWithDatabase);
+export const loadActiveWorkout = databaseOperation(loadActiveWorkoutWithDatabase);
+export const loadCompletedWorkout = databaseOperation(loadCompletedWorkoutWithDatabase);
+export const listCompletedWorkouts = databaseOperation(listCompletedWorkoutsWithDatabase);
+export const listAvailableExercises = databaseOperation(listAvailableExercisesWithDatabase);
+export const countExercises = databaseOperation(countExercisesWithDatabase);
+export const addExerciseToWorkout = databaseOperation(addExerciseToWorkoutWithDatabase);
+export const createExerciseInWorkout = databaseOperation(createExerciseInWorkoutWithDatabase);

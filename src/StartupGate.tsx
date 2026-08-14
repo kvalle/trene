@@ -12,13 +12,14 @@ import {
 } from 'react-native';
 
 import { DatabaseProvider } from './database/DatabaseContext';
+import { DatabaseRuntime } from './database/DatabaseRuntime';
 import type { Database } from './database/types';
 import { darkTheme, lightTheme } from './theme';
 
 type StartupState =
   | { status: 'loading' }
   | { status: 'failed'; failures: number }
-  | { status: 'ready'; database: Database };
+  | { status: 'ready'; runtime: DatabaseRuntime };
 
 export function StartupGate({
   children,
@@ -29,6 +30,7 @@ export function StartupGate({
 }) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<StartupState>({ status: 'loading' });
+  const [runtime] = useState(() => new DatabaseRuntime(openDatabase));
   const colorScheme = useColorScheme();
   const colors = colorScheme === 'dark' ? darkTheme.colors : lightTheme.colors;
   const retryRef = useRef<View>(null);
@@ -36,10 +38,10 @@ export function StartupGate({
   useEffect(() => {
     let active = true;
     setState({ status: 'loading' });
-    openDatabase().then(
-      (database) => {
-        if (active) setState({ status: 'ready', database });
-        else void database.closeAsync();
+    runtime.start().then(
+      () => {
+        if (active) setState({ status: 'ready', runtime });
+        else void runtime.close();
       },
       () => {
         if (active) setState({ status: 'failed', failures: attempt + 1 });
@@ -48,7 +50,11 @@ export function StartupGate({
     return () => {
       active = false;
     };
-  }, [attempt, openDatabase]);
+  }, [attempt, runtime]);
+
+  useEffect(() => () => {
+    void runtime.close();
+  }, [runtime]);
 
   useEffect(() => {
     if (state.status !== 'failed') return;
@@ -57,7 +63,7 @@ export function StartupGate({
   }, [state.status]);
 
   if (state.status === 'ready') {
-    return <DatabaseProvider database={state.database}>{children}</DatabaseProvider>;
+    return <DatabaseProvider database={state.runtime}>{children}</DatabaseProvider>;
   }
 
   return (
