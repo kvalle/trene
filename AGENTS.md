@@ -71,11 +71,12 @@ After pushing and creating the pull request, wait for its GitHub Actions workflo
 ## Android smoke tests
 
 Do not prepare the local Android smoke environment before implementing a ticket.
-Wait for the smoke tests to run in CI. If they fail, inspect and download the CI
-logs before deciding whether local reproduction is needed.
+Wait for the pull request workflow first. If Android smoke ran and failed,
+inspect and download the CI logs before deciding whether local reproduction is
+needed. If Android smoke is absent or skipped in CI, run the complete smoke suite
+locally before treating the ticket as complete.
 
-Run the smoke tests locally only when needed for diagnosis. Before doing so,
-check whether Metro's port is available:
+Before running smoke tests locally, check whether Metro's port is available:
 
 ```sh
 lsof -nP -iTCP:8081 -sTCP:LISTEN
