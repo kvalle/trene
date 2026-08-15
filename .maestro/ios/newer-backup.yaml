@@ -16,6 +16,7 @@ tags:
 - tapOn:
     id: "create-exercise-submit"
 - back
+- back
 - tapOn: "Innstillinger"
 - tapOn:
     id: "settings-data"
