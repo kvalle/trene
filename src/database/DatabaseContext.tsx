@@ -29,5 +29,13 @@ export function useDatabase(): DatabaseSource {
   return database;
 }
 
+export function useDatabaseRuntime(): DatabaseRuntime {
+  const database = useContext(DatabaseContext);
+  if (!database || !('runExclusive' in database)) {
+    throw new Error('useDatabaseRuntime requires the application database runtime');
+  }
+  return database as DatabaseRuntime;
+}
+
 const emptySubscribe = () => () => undefined;
 const zeroGeneration = () => 0;

@@ -234,6 +234,16 @@ function leasedDatabase(database: Database): {
         }
         return track(database.runAsync(source, ...params));
       },
+      ...(database.serializeAsync ? {
+        serializeAsync: (databaseName?: string) => {
+          try {
+            assertActive();
+          } catch (error) {
+            return Promise.reject(error);
+          }
+          return track(database.serializeAsync!(databaseName));
+        },
+      } : {}),
     },
     drain: async () => {
       await Promise.allSettled([...pending]);
