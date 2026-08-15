@@ -16,6 +16,7 @@ import { DatabaseRuntime } from './database/DatabaseRuntime';
 import type { Database } from './database/types';
 import { darkTheme, lightTheme } from './theme';
 import { cleanupAbandonedBackupExports } from './backup/nativeBackupPlatform';
+import { cleanupAbandonedRestorePreparations } from './backup/nativeRestorePlatform';
 
 type StartupState =
   | { status: 'loading' }
@@ -39,7 +40,9 @@ export function StartupGate({
   useEffect(() => {
     let active = true;
     setState({ status: 'loading' });
-    cleanupAbandonedBackupExports().then(() => runtime.start()).then(
+    cleanupAbandonedBackupExports()
+      .then(() => cleanupAbandonedRestorePreparations())
+      .then(() => runtime.start()).then(
       () => {
         if (active) setState({ status: 'ready', runtime });
         else void runtime.close();

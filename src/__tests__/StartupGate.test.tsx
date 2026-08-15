@@ -7,12 +7,18 @@ import type { Database } from '../database/types';
 import { useDatabase } from '../database/DatabaseContext';
 import type { DatabaseRuntime } from '../database/DatabaseRuntime';
 import { cleanupAbandonedBackupExports } from '../backup/nativeBackupPlatform';
+import { cleanupAbandonedRestorePreparations } from '../backup/nativeRestorePlatform';
 
 jest.mock('../backup/nativeBackupPlatform', () => ({ cleanupAbandonedBackupExports: jest.fn(async () => undefined) }));
+jest.mock('../backup/nativeRestorePlatform', () => ({ cleanupAbandonedRestorePreparations: jest.fn(async () => undefined) }));
 
 const mockedCleanup = jest.mocked(cleanupAbandonedBackupExports);
+const mockedRestoreCleanup = jest.mocked(cleanupAbandonedRestorePreparations);
 
-beforeEach(() => mockedCleanup.mockResolvedValue());
+beforeEach(() => {
+  mockedCleanup.mockResolvedValue();
+  mockedRestoreCleanup.mockResolvedValue();
+});
 
 const database: Database = {
   closeAsync: jest.fn(async () => undefined),
@@ -52,6 +58,16 @@ test('blocks the app until startup succeeds and retries manually', async () => {
 
 test('does not open the database when abandoned export cleanup fails', async () => {
   mockedCleanup.mockRejectedValueOnce(new Error('cleanup failed'));
+  const openDatabase = jest.fn(async () => database);
+
+  render(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
+
+  expect(await screen.findByText('Trene kunne ikke starte')).toBeOnTheScreen();
+  expect(openDatabase).not.toHaveBeenCalled();
+});
+
+test('does not open the database when abandoned restore preparation cleanup fails', async () => {
+  mockedRestoreCleanup.mockRejectedValueOnce(new Error('cleanup failed'));
   const openDatabase = jest.fn(async () => database);
 
   render(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
