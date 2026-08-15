@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, usePreventRemove } from '@react-navigation/native';
 import { AccessibilityInfo, Modal } from 'react-native';
 
 import { DataScreen } from '../DataScreen';
@@ -7,6 +7,11 @@ import { DatabaseProvider } from '../../database/DatabaseContext';
 import { DatabaseRuntime } from '../../database/DatabaseRuntime';
 import { createAndShareBackup } from '../../backup/createBackup';
 import { prepareRestore, RestorePreparationError } from '../../backup/prepareRestore';
+
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  usePreventRemove: jest.fn(),
+}));
 
 jest.mock('../../backup/createBackup', () => ({ createAndShareBackup: jest.fn() }));
 jest.mock('../../backup/nativeBackupPlatform', () => ({ createNativeBackupPlatform: jest.fn(() => ({})) }));
@@ -72,6 +77,8 @@ test('previews validated creation time and database-derived counts, then cancels
       sourceSchemaVersion: 1,
       schemaVersion: 1,
       previewCounts: { workouts: 5, exercises: 7 },
+      currentCounts: jest.fn(async () => ({ workouts: 2, exercises: 3 })),
+      commit: jest.fn(async () => ({ workouts: 5, exercises: 7 })),
       cancel,
     },
   });
@@ -87,13 +94,45 @@ test('previews validated creation time and database-derived counts, then cancels
   fireEvent(view.UNSAFE_getByType(Modal), 'show');
 
   fireEvent.press(screen.getByRole('button', { name: 'Fortsett' }));
-  expect(screen.getByRole('header', { name: 'Klar for bekreftelse' })).toBeOnTheScreen();
-  expect(screen.getByText(/Dataene dine er fortsatt ikke endret/)).toBeOnTheScreen();
+  expect(await screen.findByRole('header', { name: 'Erstatt alle data?' })).toBeOnTheScreen();
+  expect(screen.getByText('2 treningsøkter og 3 øvelser')).toBeOnTheScreen();
+  expect(screen.getByText('5 treningsøkter og 7 øvelser')).toBeOnTheScreen();
 
   fireEvent.press(screen.getByRole('button', { name: 'Avbryt' }));
   expect(cancel).toHaveBeenCalled();
   expect(screen.queryByRole('header', { name: 'Kontroller sikkerhetskopien' })).not.toBeOnTheScreen();
   expect(focus).toHaveBeenCalledTimes(0);
+});
+
+test('requires destructive confirmation and blocks navigation during commit', async () => {
+  let finish!: () => void;
+  const commit = jest.fn(() => new Promise<{ workouts: number; exercises: number }>((resolve) => {
+    finish = () => resolve({ workouts: 5, exercises: 7 });
+  }));
+  mockedPrepareRestore.mockResolvedValue({
+    status: 'ready',
+    restore: {
+      createdAt: '2026-08-14T12:00:00.000Z',
+      sourceSchemaVersion: 1,
+      schemaVersion: 1,
+      previewCounts: { workouts: 5, exercises: 7 },
+      currentCounts: async () => ({ workouts: 2, exercises: 3 }),
+      commit,
+      cancel: jest.fn(),
+    },
+  });
+  renderScreen();
+  fireEvent.press(screen.getByRole('button', { name: 'Gjenopprett fra fil' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Fortsett' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Erstatt og gjenopprett' }));
+
+  expect(commit).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole('button', { name: 'Gjenoppretter' })).toBeDisabled();
+  expect(jest.mocked(usePreventRemove)).toHaveBeenLastCalledWith(true, expect.any(Function));
+  await act(async () => finish());
+  expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(
+    'Gjenopprettet 5 treningsøkter og 7 øvelser.',
+  );
 });
 
 test.each([

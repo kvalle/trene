@@ -2,6 +2,12 @@ import { SCHEMA_VERSION } from '../database/migrate';
 import { inspectDatabase, type DatabaseInspection } from '../database/inspectDatabase';
 import type { Database } from '../database/types';
 import type { BackupArtifact } from './createBackup';
+import {
+  commitPreparedRestore,
+  inspectCurrentDatabase,
+  type RestoreCommitPlatform,
+} from './commitRestore';
+import type { DatabaseRuntime } from '../database/DatabaseRuntime';
 import { inspectBackupPackage } from './packageCodec';
 import { BackupPackageError } from './types';
 
@@ -20,7 +26,7 @@ export class RestorePreparationError extends Error {
   }
 }
 
-export interface RestorePlatform {
+export interface RestorePlatform extends RestoreCommitPlatform {
   pickAndStagePackage(): Promise<BackupArtifact | null>;
   createArtifact(name: string): BackupArtifact;
   openDatabase(artifact: BackupArtifact): Promise<Database>;
@@ -32,6 +38,8 @@ export interface PreparedRestore {
   sourceSchemaVersion: number;
   schemaVersion: number;
   previewCounts: DatabaseInspection['previewCounts'];
+  currentCounts(runtime: DatabaseRuntime): Promise<DatabaseInspection['previewCounts']>;
+  commit(runtime: DatabaseRuntime): Promise<DatabaseInspection['previewCounts']>;
   cancel(): void;
 }
 
@@ -90,6 +98,10 @@ export async function prepareRestore(platform: RestorePlatform): Promise<Prepare
         sourceSchemaVersion: manifest.schemaVersion,
         schemaVersion: inspection.schemaVersion,
         previewCounts: inspection.previewCounts,
+        currentCounts: async (runtime) => (await inspectCurrentDatabase(runtime)).previewCounts,
+        commit: async (runtime) => (
+          await commitPreparedRestore(runtime, platform, retainedArtifact, inspection)
+        ).previewCounts,
         cancel: () => removeArtifact(retainedArtifact),
       },
     };

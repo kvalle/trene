@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { useTheme } from '@react-navigation/native';
+import { usePreventRemove, useTheme } from '@react-navigation/native';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, findNodeHandle, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -7,19 +7,22 @@ import { createAndShareBackup } from '../backup/createBackup';
 import { createNativeBackupPlatform } from '../backup/nativeBackupPlatform';
 import { createNativeRestorePlatform } from '../backup/nativeRestorePlatform';
 import { prepareRestore, RestorePreparationError, type PreparedRestore } from '../backup/prepareRestore';
+import { RestoreCommitError } from '../backup/commitRestore';
 import { useDatabaseRuntime } from '../database/DatabaseContext';
 import { formatDateTime } from '../locale';
 
 export function DataScreen() {
   const runtime = useDatabaseRuntime();
   const { colors } = useTheme();
-  const [operation, setOperation] = useState<'idle' | 'backup' | 'restore'>('idle');
+  const [operation, setOperation] = useState<'idle' | 'backup' | 'restore' | 'commit'>('idle');
   const [failure, setFailure] = useState<string | null>(null);
   const [restore, setRestore] = useState<PreparedRestore | null>(null);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [currentCounts, setCurrentCounts] = useState<PreparedRestore['previewCounts'] | null>(null);
   const restoreButtonRef = useRef<View>(null);
   const previewRef = useRef<View>(null);
   const busy = operation !== 'idle';
+  usePreventRemove(operation === 'commit', () => undefined);
 
   useEffect(() => () => restore?.cancel(), [restore]);
 
@@ -57,15 +60,54 @@ export function DataScreen() {
   }
 
   function closePreview() {
+    if (operation === 'commit') return;
     restore?.cancel();
     setRestore(null);
     setConfirmationOpen(false);
+    setCurrentCounts(null);
     requestAnimationFrame(() => focus(restoreButtonRef));
   }
 
-  function continueRestore() {
-    setConfirmationOpen(true);
-    requestAnimationFrame(() => focus(previewRef));
+  async function continueRestore() {
+    if (!restore || busy) return;
+    setOperation('restore');
+    setFailure(null);
+    try {
+      setCurrentCounts(await restore.currentCounts(runtime));
+      setConfirmationOpen(true);
+      requestAnimationFrame(() => focus(previewRef));
+    } catch {
+      const message = 'Kunne ikke kontrollere dataene som skal erstattes. Dataene dine er ikke endret.';
+      setFailure(message);
+      AccessibilityInfo.announceForAccessibility(message);
+    } finally {
+      setOperation('idle');
+    }
+  }
+
+  async function commitRestore() {
+    if (!restore || operation !== 'idle') return;
+    setOperation('commit');
+    setFailure(null);
+    try {
+      const restored = await restore.commit(runtime);
+      const message = `Gjenopprettet ${restored.workouts} treningsøkter og ${restored.exercises} øvelser.`;
+      AccessibilityInfo.announceForAccessibility(message);
+    } catch (error) {
+      const message = error instanceof RestoreCommitError && error.code === 'unrecoverable'
+        ? 'Gjenopprettingen kunne ikke fullføres trygt. Lukk Trene og behold appdataene for å kunne gjenopprette dem senere.'
+        : 'Gjenopprettingen mislyktes. De opprinnelige dataene er kontrollert og gjenopprettet.';
+      if (!(error instanceof RestoreCommitError) || error.code === 'unchanged') {
+        restore.cancel();
+        setRestore(null);
+        setConfirmationOpen(false);
+        setCurrentCounts(null);
+      }
+      setFailure(message);
+      AccessibilityInfo.announceForAccessibility(message);
+    } finally {
+      setOperation('idle');
+    }
   }
 
   return (
@@ -101,19 +143,29 @@ export function DataScreen() {
       <Modal animationType="none" onRequestClose={closePreview} onShow={() => focus(previewRef)} transparent visible={restore !== null}>
         <View accessibilityViewIsModal style={styles.modalBackdrop}>
           {restore && <View style={[styles.dialog, { backgroundColor: colors.card }]}>
-            <Text accessibilityRole="header" ref={previewRef} style={[styles.dialogTitle, { color: colors.text }]}>{confirmationOpen ? 'Klar for bekreftelse' : 'Kontroller sikkerhetskopien'}</Text>
+            <Text accessibilityRole="header" ref={previewRef} style={[styles.dialogTitle, { color: colors.text }]}>{confirmationOpen ? 'Erstatt alle data?' : 'Kontroller sikkerhetskopien'}</Text>
             {!confirmationOpen && <>
               <Text style={[styles.previewText, { color: colors.text }]}>Opprettet {formatDateTime(new Date(restore.createdAt))}</Text>
               <Text style={[styles.previewCount, { color: colors.text }]}>{restore.previewCounts.workouts} treningsøkter</Text>
               <Text style={[styles.previewCount, { color: colors.text }]}>{restore.previewCounts.exercises} øvelser</Text>
               <Text style={[styles.previewText, { color: colors.text }]}>Ingenting er gjenopprettet ennå.</Text>
             </>}
-            {confirmationOpen && <Text style={[styles.previewText, { color: colors.text }]}>Neste steg erstatter alle data først etter en egen bekreftelse. Dataene dine er fortsatt ikke endret.</Text>}
-            <Pressable accessibilityRole="button" onPress={closePreview} style={[styles.secondaryAction, { borderColor: colors.primary }]}>
+            {confirmationOpen && currentCounts && <>
+              <Text style={[styles.previewText, { color: colors.text }]}>Nåværende data som blir erstattet:</Text>
+              <Text style={[styles.previewCount, { color: colors.text }]}>{currentCounts.workouts} treningsøkter og {currentCounts.exercises} øvelser</Text>
+              <Text style={[styles.previewText, { color: colors.text }]}>Sikkerhetskopien som gjenopprettes:</Text>
+              <Text style={[styles.previewCount, { color: colors.text }]}>{restore.previewCounts.workouts} treningsøkter og {restore.previewCounts.exercises} øvelser</Text>
+              <Text style={[styles.warning, { color: colors.notification }]}>Dette erstatter alle data i Trene og kan ikke angres.</Text>
+            </>}
+            <Pressable accessibilityRole="button" accessibilityState={{ disabled: operation === 'commit' }} disabled={operation === 'commit'} onPress={closePreview} style={[styles.secondaryAction, { borderColor: colors.primary }, operation === 'commit' && styles.disabled]}>
               <Text style={[styles.actionText, { color: colors.primary }]}>Avbryt</Text>
             </Pressable>
-            {!confirmationOpen && <Pressable accessibilityRole="button" accessibilityHint="Åpner neste steg uten å endre data" onPress={continueRestore} style={[styles.action, { backgroundColor: colors.primary }]}>
-              <Text style={[styles.actionText, { color: colors.background }]}>Fortsett</Text>
+            {!confirmationOpen && <Pressable accessibilityRole="button" accessibilityHint="Åpner neste steg uten å endre data" accessibilityState={{ disabled: busy }} disabled={busy} onPress={() => void continueRestore()} style={[styles.action, { backgroundColor: colors.primary }, busy && styles.disabled]}>
+              <Text style={[styles.actionText, { color: colors.background }]}>{operation === 'restore' ? 'Kontrollerer nåværende data' : 'Fortsett'}</Text>
+            </Pressable>}
+            {confirmationOpen && <Pressable accessibilityRole="button" accessibilityState={{ disabled: operation === 'commit', busy: operation === 'commit' }} disabled={operation === 'commit'} onPress={() => void commitRestore()} style={[styles.destructiveAction, { backgroundColor: colors.notification }, operation === 'commit' && styles.disabled]}>
+              {operation === 'commit' && <ActivityIndicator color={colors.background} />}
+              <Text style={[styles.actionText, { color: colors.background }]}>{operation === 'commit' ? 'Gjenoppretter' : 'Erstatt og gjenopprett'}</Text>
             </Pressable>}
           </View>}
         </View>
@@ -140,6 +192,8 @@ const styles = StyleSheet.create({
   dialogTitle: { fontSize: 24, fontWeight: '700' },
   previewText: { fontSize: 16, lineHeight: 24, marginTop: 12 },
   previewCount: { fontSize: 20, fontWeight: '700', marginTop: 12 },
+  warning: { fontSize: 16, fontWeight: '700', lineHeight: 24, marginTop: 18 },
+  destructiveAction: { alignItems: 'center', borderRadius: 14, flexDirection: 'row', gap: 10, justifyContent: 'center', marginTop: 16, minHeight: 54, paddingHorizontal: 20 },
 });
 
 function focus(ref: React.RefObject<View | null>): void {

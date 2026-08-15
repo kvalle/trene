@@ -42,6 +42,12 @@ test('prepares a packaged real SQLite snapshot without touching live data', asyn
         return new TestDatabase(path);
       },
       availableBytes: () => Number.MAX_SAFE_INTEGER,
+      createRollbackSnapshot: async () => { throw new Error('not used'); },
+      verifyRollbackSnapshot: async () => { throw new Error('not used'); },
+      writeRestoreMarker: async () => undefined,
+      activateDatabase: async () => undefined,
+      activateRollback: async () => undefined,
+      cleanupRestoreCommit: () => undefined,
     };
 
     const result = await prepareRestore(platform);
