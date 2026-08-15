@@ -17,7 +17,8 @@ tags:
     id: "create-exercise-submit"
 - back
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn:
+    id: "settings-data"
 - assertVisible:
     id: "create-backup"
 - assertVisible:

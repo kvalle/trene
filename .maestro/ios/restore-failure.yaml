@@ -29,7 +29,8 @@ tags:
 - tapOn: "Fullfør økt"
 - tapOn: "Tilbake til forsiden"
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn:
+    id: "settings-data"
 - tapOn:
     id: "restore-from-file"
 - tapOn: "representative.trene-backup"

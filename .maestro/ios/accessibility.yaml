@@ -10,7 +10,8 @@ tags:
     visible: "Klar for en økt?"
     timeout: 120000
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn:
+    id: "settings-data"
 - assertVisible: "Lag sikkerhetskopi"
 - assertVisible: "Gjenopprett fra fil"
 - tapOn: "Gjenopprett fra fil"
