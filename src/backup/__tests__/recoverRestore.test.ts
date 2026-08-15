@@ -10,11 +10,13 @@ const original: DatabaseInspection = {
   schemaVersion: 1,
   tableCounts: { exercises: 2, workouts: 1, workout_exercises: 1, workout_sets: 2 },
   previewCounts: { exercises: 2, workouts: 1 },
+  semanticDigest: '1'.repeat(64),
 };
 const restored: DatabaseInspection = {
   schemaVersion: 1,
   tableCounts: { exercises: 4, workouts: 3, workout_exercises: 5, workout_sets: 8 },
   previewCounts: { exercises: 4, workouts: 3 },
+  semanticDigest: '2'.repeat(64),
 };
 
 test('does nothing without an interrupted restore', async () => {
@@ -83,6 +85,41 @@ test('enters safe stop and preserves artifacts when restore and rollback are inv
   expect(platform.cleanupRestoreCommit).not.toHaveBeenCalled();
 });
 
+test('rejects restored data with matching counts but different semantic values', async () => {
+  const platform = fakePlatform(marker('replacement-started'));
+  jest.mocked(platform.inspectActiveDatabase)
+    .mockResolvedValueOnce({ ...restored, semanticDigest: '3'.repeat(64) })
+    .mockResolvedValueOnce(original);
+
+  await expect(recoverInterruptedRestore(platform)).resolves.toEqual(platform.cleanupRestoreCommit);
+  expect(platform.activateRollback).toHaveBeenCalledTimes(1);
+});
+
+test.each([
+  'recovery.marker-read',
+  'recovery.active-validation',
+  'recovery.rollback-verify',
+  'recovery.rollback-activate',
+  'recovery.rollback-validation',
+] as const)('enters safe stop without cleanup when failure is injected at %s', async (stage) => {
+  const platform = fakePlatform(marker('replacement-started'));
+  jest.mocked(platform.inspectActiveDatabase).mockRejectedValue(new Error('active invalid'));
+
+  await expect(recoverInterruptedRestore(platform, async (current, timing) => {
+    if (current === stage && timing === 'before') throw new Error(`injected:${stage}`);
+  })).rejects.toBeInstanceOf(RestoreSafeStopError);
+
+  expect(platform.cleanupRestoreCommit).not.toHaveBeenCalled();
+});
+
+test('durable marker contains safe versions, counts, stages, and digests without user content', () => {
+  const serialized = JSON.stringify(marker('replacement-started'));
+
+  expect(serialized).toContain('replacement-started');
+  expect(serialized).toContain('semanticDigest');
+  expect(serialized).not.toMatch(/exercise name|SELECT |SQLite format|private:\/\//iu);
+});
+
 function marker(stage: RestoreMarker['stage']): RestoreMarker {
   return {
     version: 1,
@@ -92,6 +129,7 @@ function marker(stage: RestoreMarker['stage']): RestoreMarker {
       sha256: 'a'.repeat(64),
       schemaVersion: original.schemaVersion,
       tableCounts: original.tableCounts,
+      semanticDigest: original.semanticDigest,
     },
     restored,
   };

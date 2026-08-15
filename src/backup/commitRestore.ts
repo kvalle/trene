@@ -4,12 +4,14 @@ import type { DatabaseMaintenance, DatabaseRuntime } from '../database/DatabaseR
 import { inspectDatabase, type DatabaseInspection } from '../database/inspectDatabase';
 import type { Database } from '../database/types';
 import type { BackupArtifact } from './createBackup';
+import { atCheckpoint, atCleanupCheckpoint, type FaultCheckpoint } from './faultInjection';
 
 export interface RollbackSnapshot {
   size: number;
   sha256: string;
   schemaVersion: number;
   tableCounts: DatabaseInspection['tableCounts'];
+  semanticDigest: string;
 }
 
 export type RestoreMarkerStage = 'rollback-ready' | 'replacement-started' | 'replacement-verified';
@@ -53,34 +55,48 @@ export async function commitPreparedRestore(
   platform: RestoreCommitPlatform,
   stagedDatabase: BackupArtifact,
   expected: DatabaseInspection,
+  checkpoint?: FaultCheckpoint,
 ): Promise<DatabaseInspection> {
   let replacementStarted = false;
+  let replacementVerified = false;
   try {
     const restored = await runtime.runExclusive(async (maintenance) => {
-      const original = await maintenance.run(inspectDatabase);
-      const rollback = await maintenance.run((database) => platform.createRollbackSnapshot(database, original));
-      const verifiedRollback = await platform.verifyRollbackSnapshot(rollback);
+      const original = await atCheckpoint(checkpoint, 'restore.original-validation', () => maintenance.run(inspectDatabase));
+      const rollback = await atCheckpoint(checkpoint, 'restore.rollback-create', () => (
+        maintenance.run((database) => platform.createRollbackSnapshot(database, original))
+      ));
+      const verifiedRollback = await atCheckpoint(checkpoint, 'restore.rollback-verify', () => platform.verifyRollbackSnapshot(rollback));
       requireMatchingInspection(verifiedRollback, original);
-      await platform.writeRestoreMarker('rollback-ready', rollback, expected);
+      await atCheckpoint(checkpoint, 'restore.marker-rollback-ready', () => (
+        platform.writeRestoreMarker('rollback-ready', rollback, expected)
+      ));
 
       try {
-        await platform.writeRestoreMarker('replacement-started', rollback, expected);
         replacementStarted = true;
-        await maintenance.replace(() => platform.activateDatabase(stagedDatabase));
-        const active = await maintenance.run(inspectDatabase);
+        await atCheckpoint(checkpoint, 'restore.marker-replacement-started', () => (
+          platform.writeRestoreMarker('replacement-started', rollback, expected)
+        ));
+        await atCheckpoint(checkpoint, 'restore.replacement', () => (
+          maintenance.replace(() => platform.activateDatabase(stagedDatabase))
+        ));
+        const active = await atCheckpoint(checkpoint, 'restore.active-validation', () => maintenance.run(inspectDatabase));
         requireMatchingInspection(active, expected);
-        await platform.writeRestoreMarker('replacement-verified', rollback, expected);
+        await atCheckpoint(checkpoint, 'restore.marker-replacement-verified', () => (
+          platform.writeRestoreMarker('replacement-verified', rollback, expected)
+        ));
+        replacementVerified = true;
         return active;
       } catch (error) {
         if (!replacementStarted) throw error;
-        return rollbackOriginal(maintenance, platform, rollback, original, error);
+        return rollbackOriginal(maintenance, platform, rollback, original, error, checkpoint);
       }
     });
-    await runtime.waitForGeneration(runtime.getGeneration());
-    safeCleanup(platform, stagedDatabase);
+    await atCheckpoint(checkpoint, 'restore.application-remount', () => runtime.waitForGeneration(runtime.getGeneration()));
+    await atCleanupCheckpoint(checkpoint, 'restore.cleanup', () => safeCleanup(platform, stagedDatabase));
     return restored;
   } catch (error) {
     if (error instanceof RestoreCommitError && error.code === 'unrecoverable') throw error;
+    if (replacementVerified) throw new RestoreCommitError('unrecoverable', error);
     if (!replacementStarted || error instanceof RestoreCommitError) safeCleanup(platform);
     throw new RestoreCommitError('unchanged', error);
   }
@@ -92,12 +108,13 @@ async function rollbackOriginal(
   rollback: RollbackSnapshot,
   original: DatabaseInspection,
   restoreError: unknown,
+  checkpoint?: FaultCheckpoint,
 ): Promise<never> {
   try {
-    const verifiedSnapshot = await platform.verifyRollbackSnapshot(rollback);
+    const verifiedSnapshot = await atCheckpoint(checkpoint, 'restore.rollback-reverify', () => platform.verifyRollbackSnapshot(rollback));
     requireMatchingInspection(verifiedSnapshot, original);
-    await maintenance.replace(() => platform.activateRollback(), false);
-    const active = await maintenance.run(inspectDatabase);
+    await atCheckpoint(checkpoint, 'restore.rollback-activate', () => maintenance.replace(() => platform.activateRollback(), false));
+    const active = await atCheckpoint(checkpoint, 'restore.rollback-validation', () => maintenance.run(inspectDatabase));
     requireMatchingInspection(active, original);
     throw new RestoreCommitError('unchanged', restoreError);
   } catch (rollbackError) {
@@ -128,6 +145,7 @@ export function requireMatchingInspection(actual: DatabaseInspection, expected: 
     actual.schemaVersion !== expected.schemaVersion
     || JSON.stringify(actual.tableCounts) !== JSON.stringify(expected.tableCounts)
     || JSON.stringify(actual.previewCounts) !== JSON.stringify(expected.previewCounts)
+    || actual.semanticDigest !== expected.semanticDigest
   ) {
     throw new Error('Restored database differs from the validated preparation');
   }

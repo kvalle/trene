@@ -1,6 +1,7 @@
 import type { DatabaseInspection } from '../database/inspectDatabase';
 import type { RestoreMarker, RollbackSnapshot } from './commitRestore';
 import { requireMatchingInspection } from './commitRestore';
+import { atCheckpoint, type FaultCheckpoint } from './faultInjection';
 
 export interface RestoreRecoveryPlatform {
   readRestoreMarker(): Promise<RestoreMarker | null>;
@@ -19,10 +20,11 @@ export class RestoreSafeStopError extends Error {
 
 export async function recoverInterruptedRestore(
   platform: RestoreRecoveryPlatform,
+  checkpoint?: FaultCheckpoint,
 ): Promise<null | (() => void)> {
   let marker: RestoreMarker | null;
   try {
-    marker = await platform.readRestoreMarker();
+    marker = await atCheckpoint(checkpoint, 'recovery.marker-read', () => platform.readRestoreMarker());
   } catch (error) {
     throw new RestoreSafeStopError(error);
   }
@@ -33,7 +35,7 @@ export async function recoverInterruptedRestore(
     : marker.restored;
   let activeError: unknown;
   try {
-    const active = await platform.inspectActiveDatabase();
+    const active = await atCheckpoint(checkpoint, 'recovery.active-validation', () => platform.inspectActiveDatabase());
     requireMatchingInspection(active, expectedActive);
     return platform.cleanupRestoreCommit;
   } catch (error) {
@@ -42,10 +44,10 @@ export async function recoverInterruptedRestore(
   }
 
   try {
-    const rollback = await platform.verifyRollbackSnapshot(marker.rollback);
+    const rollback = await atCheckpoint(checkpoint, 'recovery.rollback-verify', () => platform.verifyRollbackSnapshot(marker.rollback));
     requireMatchingInspection(rollback, inspectionFromSnapshot(marker.rollback));
-    await platform.activateRollback();
-    const active = await platform.inspectActiveDatabase();
+    await atCheckpoint(checkpoint, 'recovery.rollback-activate', () => platform.activateRollback());
+    const active = await atCheckpoint(checkpoint, 'recovery.rollback-validation', () => platform.inspectActiveDatabase());
     requireMatchingInspection(active, rollback);
     return platform.cleanupRestoreCommit;
   } catch (error) {
@@ -61,5 +63,6 @@ function inspectionFromSnapshot(snapshot: RollbackSnapshot): DatabaseInspection 
       exercises: snapshot.tableCounts.exercises,
       workouts: snapshot.tableCounts.workouts,
     },
+    semanticDigest: snapshot.semanticDigest,
   };
 }

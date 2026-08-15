@@ -8,6 +8,7 @@ const inspection = {
   schemaVersion: 1,
   tableCounts: { exercises: 2, workouts: 1, workout_exercises: 2, workout_sets: 3 },
   previewCounts: { exercises: 2, workouts: 1 },
+  semanticDigest: '1'.repeat(64),
 };
 
 test('validates the snapshot and completed package before sharing', async () => {
@@ -64,6 +65,68 @@ test('never shares invalid output and removes every temporary artifact', async (
   await expect(createAndShareBackup(runtime, platform, { appVersion: '1' })).rejects.toThrow('invalid snapshot');
 
   expect(events).not.toContainEqual(expect.stringMatching(/^share:/));
+  expect(events.filter((event) => event.startsWith('remove:'))).toHaveLength(3);
+});
+
+test.each([
+  'backup.stage-artifacts',
+  'backup.snapshot',
+  'backup.snapshot-validation',
+  'backup.package',
+  'backup.package-validation',
+  'backup.share',
+] as const)('does not offer an export interrupted before %s completes', async (stage) => {
+  const events: string[] = [];
+  const runtime = new DatabaseRuntime(async () => fakeDatabase());
+  await runtime.start();
+  const platform = fakePlatform(events);
+
+  await expect(createAndShareBackup(runtime, platform, {
+    appVersion: '1',
+    checkpoint: async (current, timing) => {
+      if (current === stage && timing === 'before') throw new Error(`injected:${stage}`);
+    },
+  })).rejects.toThrow(`injected:${stage}`);
+
+  expect(events).not.toContainEqual(expect.stringMatching(/^share:/));
+  expect(events.filter((event) => event.startsWith('remove:'))).toHaveLength(
+    stage === 'backup.stage-artifacts' ? 0 : 3,
+  );
+});
+
+test('exposes every completed export stage to the fault matrix', async () => {
+  const runtime = new DatabaseRuntime(async () => fakeDatabase());
+  await runtime.start();
+  const visited = new Set<string>();
+
+  await createAndShareBackup(runtime, fakePlatform([]), {
+    appVersion: '1',
+    checkpoint: async (stage, timing) => { visited.add(`${stage}:${timing}`); },
+  });
+
+  expect([...visited]).toEqual(expect.arrayContaining([
+    'backup.stage-artifacts:before', 'backup.stage-artifacts:after',
+    'backup.snapshot:before', 'backup.snapshot:after',
+    'backup.snapshot-validation:before', 'backup.snapshot-validation:after',
+    'backup.package:before', 'backup.package:after',
+    'backup.package-validation:before', 'backup.package-validation:after',
+    'backup.share:before', 'backup.share:after',
+    'backup.cleanup:before', 'backup.cleanup:after',
+  ]));
+});
+
+test('cleans every artifact even when interruption is injected before cleanup', async () => {
+  const events: string[] = [];
+  const runtime = new DatabaseRuntime(async () => fakeDatabase());
+  await runtime.start();
+
+  await expect(createAndShareBackup(runtime, fakePlatform(events), {
+    appVersion: '1',
+    checkpoint: async (stage, timing) => {
+      if (stage === 'backup.cleanup' && timing === 'before') throw new Error('interrupted cleanup');
+    },
+  })).rejects.toThrow('interrupted cleanup');
+
   expect(events.filter((event) => event.startsWith('remove:'))).toHaveLength(3);
 });
 

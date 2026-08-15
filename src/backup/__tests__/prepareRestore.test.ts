@@ -17,6 +17,7 @@ const databaseInspection = {
   schemaVersion: 1,
   tableCounts: manifestCounts,
   previewCounts: { exercises: 7, workouts: 5 },
+  semanticDigest: '1'.repeat(64),
 };
 
 beforeEach(() => {
@@ -89,6 +90,19 @@ test('closes SQLite and removes every artifact when inspection fails', async () 
   expect(closeAsync).toHaveBeenCalled();
   expect(packageArtifact.removed).toBe(true);
   expect((jest.mocked(platform.createArtifact).mock.results[0]!.value as MemoryArtifact).removed).toBe(true);
+});
+
+test('cleans staged files when interruption is injected before preparation cleanup', async () => {
+  const packageArtifact = await validPackage();
+  const platform = fakePlatform(packageArtifact);
+
+  await expect(prepareRestore(platform, async (stage, timing) => {
+    if (stage === 'restore.preparation-cleanup' && timing === 'before') {
+      throw new Error('interrupted cleanup');
+    }
+  })).rejects.toThrow('interrupted cleanup');
+
+  expect(packageArtifact.removed).toBe(true);
 });
 
 test('maps storage exhaustion to actionable guidance and cleans partial staging', async () => {

@@ -61,6 +61,7 @@ function createNativeRestoreCommitPlatform(): RestoreCommitPlatform {
         sha256: digestBytes(bytes),
         schemaVersion: inspection.schemaVersion,
         tableCounts: inspection.tableCounts,
+        semanticDigest: inspection.semanticDigest,
       };
     },
     verifyRollbackSnapshot: async (snapshot) => inspectRollback(snapshot),
@@ -102,6 +103,7 @@ async function inspectRollback(snapshot: RollbackSnapshot): Promise<DatabaseInsp
     if (
       inspection.schemaVersion !== snapshot.schemaVersion
       || JSON.stringify(inspection.tableCounts) !== JSON.stringify(snapshot.tableCounts)
+      || inspection.semanticDigest !== snapshot.semanticDigest
     ) throw new Error('Rollback snapshot inspection does not match');
     return inspection;
   } finally {
@@ -150,6 +152,8 @@ function isRestoreMarker(value: unknown): value is RestoreMarker {
     && typeof marker.rollback.sha256 === 'string'
     && marker.rollback.sha256.length === 64
     && typeof marker.rollback.schemaVersion === 'number'
+    && typeof marker.rollback.semanticDigest === 'string'
+    && marker.rollback.semanticDigest.length === 64
     && isTableCounts(marker.rollback.tableCounts);
 }
 
@@ -160,7 +164,9 @@ function isInspection(value: unknown): value is DatabaseInspection {
     && isTableCounts(inspection.tableCounts)
     && !!inspection.previewCounts
     && typeof inspection.previewCounts.exercises === 'number'
-    && typeof inspection.previewCounts.workouts === 'number';
+    && typeof inspection.previewCounts.workouts === 'number'
+    && typeof inspection.semanticDigest === 'string'
+    && inspection.semanticDigest.length === 64;
 }
 
 function isTableCounts(value: unknown): value is DatabaseInspection['tableCounts'] {
