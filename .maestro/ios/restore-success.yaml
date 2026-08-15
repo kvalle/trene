@@ -1,0 +1,69 @@
+appId: no.kvalle.trene
+name: Restore a synthetic backup on iOS
+tags:
+  - ios
+  - backup-restore
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Øvelser"
+- tapOn: "Opprett første øvelse"
+- tapOn:
+    id: "exercise-name-input"
+- inputText: "Utdatert"
+- tapOn:
+    id: "create-exercise-submit"
+- back
+- tapOn: "Innstillinger"
+- tapOn: "Data"
+- assertVisible:
+    id: "create-backup"
+- assertVisible:
+    id: "restore-from-file"
+- tapOn:
+    id: "restore-from-file"
+- extendedWaitUntil:
+    visible: "representative.trene-backup"
+    timeout: 30000
+- tapOn: "representative.trene-backup"
+- extendedWaitUntil:
+    visible:
+      id: "restore-preview"
+    timeout: 30000
+- assertVisible: "1 treningsøkt"
+- assertVisible: "2 øvelser"
+- assertVisible: "Ingenting er gjenopprettet ennå."
+- tapOn:
+    id: "continue-restore"
+- assertVisible:
+    id: "restore-confirmation"
+- assertVisible: "Dette erstatter alle data i Trene og kan ikke angres."
+- tapOn:
+    id: "confirm-restore"
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
+- tapOn: "Øvelser"
+- assertVisible: "Knebøy"
+- assertVisible: "Markløft"
+- assertNotVisible: "Utdatert"
+- tapOn: "Knebøy"
+- assertVisible: "80 kg · 5 repetisjoner"
+- back
+- tapOn: "Markløft"
+- assertVisible: "100 kg · 3 repetisjoner"
+- back
+- back
+- tapOn: "Tidligere økter"
+- assertVisible: "2 øvelser"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
+- tapOn: "Øvelser"
+- assertVisible: "Knebøy"
+- assertVisible: "Markløft"
+- assertNotVisible: "Utdatert"

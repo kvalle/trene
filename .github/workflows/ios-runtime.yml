@@ -1,0 +1,68 @@
+name: iOS runtime
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'app.json'
+      - 'app.config.*'
+      - 'eas.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'plugins/**'
+      - 'ios/**'
+      - '.maestro/ios/**'
+      - 'scripts/build-ios-smoke-app.sh'
+      - 'scripts/create-ios-smoke-fixtures.mjs'
+      - 'scripts/run-ios-smoke.sh'
+      - '.github/workflows/**'
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios-runtime:
+    name: iOS backup and restore runtime
+    runs-on: macos-26
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Install Maestro
+        env:
+          MAESTRO_VERSION: 2.8.0
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Build the simulator app
+        run: npm run build:ios:smoke
+      - name: Run native backup and restore journeys
+        run: npm run smoke:ios
+      - name: Upload safe iOS diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ios-runtime-diagnostics
+          path: |
+            .artifacts/ios/xcodebuild.log
+            .artifacts/ios/simulator.log
+            .artifacts/ios/simulator-devices.txt
+            .artifacts/ios/runtime-metadata.json
+            .artifacts/maestro-ios/debug/
+            .artifacts/maestro-ios/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7

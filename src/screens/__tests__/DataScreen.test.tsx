@@ -29,6 +29,7 @@ test('discloses backup sensitivity and does not claim sharing saved it', async (
   renderScreen();
 
   expect(screen.getByText('Sikkerhetskopien er ikke kryptert av Trene. Oppbevar og del den på en trygg måte.')).toBeOnTheScreen();
+  expect(screen.getByTestId('create-backup')).toHaveProp('accessibilityState', { disabled: false, busy: false });
   fireEvent.press(screen.getByRole('button', { name: 'Lag sikkerhetskopi' }));
   await act(async () => undefined);
 
@@ -87,6 +88,7 @@ test('previews validated creation time and database-derived counts, then cancels
   fireEvent.press(screen.getByRole('button', { name: 'Gjenopprett fra fil' }));
 
   expect(await screen.findByRole('header', { name: 'Kontroller sikkerhetskopien' })).toBeOnTheScreen();
+  expect(screen.getByTestId('restore-preview')).toBeOnTheScreen();
   expect(screen.getByText('5 treningsøkter')).toBeOnTheScreen();
   expect(screen.getByText('7 øvelser')).toBeOnTheScreen();
   expect(screen.getByText(/14. august 2026/)).toBeOnTheScreen();
@@ -95,6 +97,7 @@ test('previews validated creation time and database-derived counts, then cancels
 
   fireEvent.press(screen.getByRole('button', { name: 'Fortsett' }));
   expect(await screen.findByRole('header', { name: 'Erstatt alle data?' })).toBeOnTheScreen();
+  expect(screen.getByTestId('restore-confirmation')).toBeOnTheScreen();
   expect(screen.getByText('2 treningsøkter og 3 øvelser')).toBeOnTheScreen();
   expect(screen.getByText('5 treningsøkter og 7 øvelser')).toBeOnTheScreen();
 
@@ -128,6 +131,10 @@ test('requires destructive confirmation and blocks navigation during commit', as
 
   expect(commit).toHaveBeenCalledTimes(1);
   expect(screen.getByRole('button', { name: 'Gjenoppretter' })).toBeDisabled();
+  expect(screen.getByTestId('confirm-restore')).toHaveProp(
+    'accessibilityHint',
+    'Erstatter alle data i Trene og kan ikke angres',
+  );
   expect(jest.mocked(usePreventRemove)).toHaveBeenLastCalledWith(true, expect.any(Function));
   await act(async () => finish());
   expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(
