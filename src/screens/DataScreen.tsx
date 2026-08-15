@@ -1,30 +1,71 @@
 import Constants from 'expo-constants';
 import { useTheme } from '@react-navigation/native';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, ActivityIndicator, findNodeHandle, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { createAndShareBackup } from '../backup/createBackup';
 import { createNativeBackupPlatform } from '../backup/nativeBackupPlatform';
+import { createNativeRestorePlatform } from '../backup/nativeRestorePlatform';
+import { prepareRestore, RestorePreparationError, type PreparedRestore } from '../backup/prepareRestore';
 import { useDatabaseRuntime } from '../database/DatabaseContext';
+import { formatDateTime } from '../locale';
 
 export function DataScreen() {
   const runtime = useDatabaseRuntime();
   const { colors } = useTheme();
-  const [creating, setCreating] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [operation, setOperation] = useState<'idle' | 'backup' | 'restore'>('idle');
+  const [failure, setFailure] = useState<string | null>(null);
+  const [restore, setRestore] = useState<PreparedRestore | null>(null);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const restoreButtonRef = useRef<View>(null);
+  const previewRef = useRef<View>(null);
+  const busy = operation !== 'idle';
+
+  useEffect(() => () => restore?.cancel(), [restore]);
 
   async function createBackup() {
-    setCreating(true);
-    setFailed(false);
+    setOperation('backup');
+    setFailure(null);
     try {
       await createAndShareBackup(runtime, createNativeBackupPlatform(), {
         appVersion: Constants.expoConfig?.version ?? 'unknown',
       });
     } catch {
-      setFailed(true);
+      setFailure('Kunne ikke lage sikkerhetskopien. Dataene dine er ikke endret.');
     } finally {
-      setCreating(false);
+      setOperation('idle');
     }
+  }
+
+  async function selectRestore() {
+    setOperation('restore');
+    setFailure(null);
+    try {
+      const result = await prepareRestore(createNativeRestorePlatform());
+      if (result.status === 'ready') setRestore(result.restore);
+    } catch (error) {
+      const message = error instanceof RestorePreparationError && error.code === 'update-required'
+        ? 'Sikkerhetskopien krever en nyere versjon av Trene. Dataene dine er ikke endret.'
+        : error instanceof RestorePreparationError && error.code === 'insufficient-storage'
+          ? 'Det er ikke nok ledig plass til å kontrollere sikkerhetskopien. Dataene dine er ikke endret.'
+          : 'Sikkerhetskopien er skadet eller kan ikke leses. Dataene dine er ikke endret.';
+      setFailure(message);
+      AccessibilityInfo.announceForAccessibility(message);
+    } finally {
+      setOperation('idle');
+    }
+  }
+
+  function closePreview() {
+    restore?.cancel();
+    setRestore(null);
+    setConfirmationOpen(false);
+    requestAnimationFrame(() => focus(restoreButtonRef));
+  }
+
+  function continueRestore() {
+    setConfirmationOpen(true);
+    requestAnimationFrame(() => focus(previewRef));
   }
 
   return (
@@ -37,15 +78,46 @@ export function DataScreen() {
       </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityState={{ disabled: creating, busy: creating }}
-        disabled={creating}
+        accessibilityState={{ disabled: busy, busy: operation === 'backup' }}
+        disabled={busy}
         onPress={() => void createBackup()}
-        style={({ pressed }) => [styles.action, { backgroundColor: colors.primary }, pressed && styles.pressed, creating && styles.disabled]}
+        style={({ pressed }) => [styles.action, { backgroundColor: colors.primary }, pressed && styles.pressed, busy && styles.disabled]}
       >
-        {creating && <ActivityIndicator color={colors.background} />}
-        <Text style={[styles.actionText, { color: colors.background }]}>{creating ? 'Lager sikkerhetskopi' : 'Lag sikkerhetskopi'}</Text>
+        {operation === 'backup' && <ActivityIndicator color={colors.background} />}
+        <Text style={[styles.actionText, { color: colors.background }]}>{operation === 'backup' ? 'Lager sikkerhetskopi' : 'Lag sikkerhetskopi'}</Text>
       </Pressable>
-      {failed && <Text accessibilityRole="alert" style={[styles.error, { color: colors.notification }]}>Kunne ikke lage sikkerhetskopien. Dataene dine er ikke endret.</Text>}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled: busy, busy: operation === 'restore' }}
+        disabled={busy}
+        onPress={() => void selectRestore()}
+        ref={restoreButtonRef}
+        style={({ pressed }) => [styles.secondaryAction, { borderColor: colors.primary }, pressed && styles.pressed, busy && styles.disabled]}
+      >
+        {operation === 'restore' && <ActivityIndicator color={colors.primary} />}
+        <Text style={[styles.actionText, { color: colors.primary }]}>{operation === 'restore' ? 'Kontrollerer sikkerhetskopi' : 'Gjenopprett fra fil'}</Text>
+      </Pressable>
+      {failure && <Text accessibilityRole="alert" style={[styles.error, { color: colors.notification }]}>{failure}</Text>}
+      <Modal animationType="none" onRequestClose={closePreview} onShow={() => focus(previewRef)} transparent visible={restore !== null}>
+        <View accessibilityViewIsModal style={styles.modalBackdrop}>
+          {restore && <View style={[styles.dialog, { backgroundColor: colors.card }]}>
+            <Text accessibilityRole="header" ref={previewRef} style={[styles.dialogTitle, { color: colors.text }]}>{confirmationOpen ? 'Klar for bekreftelse' : 'Kontroller sikkerhetskopien'}</Text>
+            {!confirmationOpen && <>
+              <Text style={[styles.previewText, { color: colors.text }]}>Opprettet {formatDateTime(new Date(restore.createdAt))}</Text>
+              <Text style={[styles.previewCount, { color: colors.text }]}>{restore.previewCounts.workouts} treningsøkter</Text>
+              <Text style={[styles.previewCount, { color: colors.text }]}>{restore.previewCounts.exercises} øvelser</Text>
+              <Text style={[styles.previewText, { color: colors.text }]}>Ingenting er gjenopprettet ennå.</Text>
+            </>}
+            {confirmationOpen && <Text style={[styles.previewText, { color: colors.text }]}>Neste steg erstatter alle data først etter en egen bekreftelse. Dataene dine er fortsatt ikke endret.</Text>}
+            <Pressable accessibilityRole="button" onPress={closePreview} style={[styles.secondaryAction, { borderColor: colors.primary }]}>
+              <Text style={[styles.actionText, { color: colors.primary }]}>Avbryt</Text>
+            </Pressable>
+            {!confirmationOpen && <Pressable accessibilityRole="button" accessibilityHint="Åpner neste steg uten å endre data" onPress={continueRestore} style={[styles.action, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.actionText, { color: colors.background }]}>Fortsett</Text>
+            </Pressable>}
+          </View>}
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -58,8 +130,19 @@ const styles = StyleSheet.create({
   noticeTitle: { fontSize: 17, fontWeight: '700' },
   noticeText: { fontSize: 16, lineHeight: 24, marginTop: 8 },
   action: { alignItems: 'center', borderRadius: 14, flexDirection: 'row', gap: 10, justifyContent: 'center', marginTop: 24, minHeight: 54, paddingHorizontal: 20 },
+  secondaryAction: { alignItems: 'center', borderRadius: 14, borderWidth: 2, flexDirection: 'row', gap: 10, justifyContent: 'center', marginTop: 16, minHeight: 54, paddingHorizontal: 20 },
   actionText: { fontSize: 18, fontWeight: '700' },
   error: { fontSize: 16, lineHeight: 24, marginTop: 16 },
   pressed: { opacity: 0.72 },
   disabled: { opacity: 0.7 },
+  modalBackdrop: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.55)', flex: 1, justifyContent: 'center', padding: 24 },
+  dialog: { borderRadius: 18, maxWidth: 440, padding: 22, width: '100%' },
+  dialogTitle: { fontSize: 24, fontWeight: '700' },
+  previewText: { fontSize: 16, lineHeight: 24, marginTop: 12 },
+  previewCount: { fontSize: 20, fontWeight: '700', marginTop: 12 },
 });
+
+function focus(ref: React.RefObject<View | null>): void {
+  const handle = findNodeHandle(ref.current);
+  if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
+}

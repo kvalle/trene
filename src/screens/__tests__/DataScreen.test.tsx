@@ -1,15 +1,23 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { AccessibilityInfo, Modal } from 'react-native';
 
 import { DataScreen } from '../DataScreen';
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import { DatabaseRuntime } from '../../database/DatabaseRuntime';
 import { createAndShareBackup } from '../../backup/createBackup';
+import { prepareRestore, RestorePreparationError } from '../../backup/prepareRestore';
 
 jest.mock('../../backup/createBackup', () => ({ createAndShareBackup: jest.fn() }));
 jest.mock('../../backup/nativeBackupPlatform', () => ({ createNativeBackupPlatform: jest.fn(() => ({})) }));
+jest.mock('../../backup/nativeRestorePlatform', () => ({ createNativeRestorePlatform: jest.fn(() => ({})) }));
+jest.mock('../../backup/prepareRestore', () => ({
+  prepareRestore: jest.fn(),
+  RestorePreparationError: jest.requireActual('../../backup/prepareRestore').RestorePreparationError,
+}));
 
 const mockedCreateBackup = jest.mocked(createAndShareBackup);
+const mockedPrepareRestore = jest.mocked(prepareRestore);
 
 test('discloses backup sensitivity and does not claim sharing saved it', async () => {
   mockedCreateBackup.mockResolvedValue({} as never);
@@ -31,6 +39,75 @@ test('reports failure without implying live data changed', async () => {
   fireEvent.press(screen.getByRole('button', { name: 'Lag sikkerhetskopi' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent(/Dataene dine er ikke endret/);
+});
+
+test('picker cancellation returns to Data without feedback or side effects', async () => {
+  mockedPrepareRestore.mockResolvedValue({ status: 'cancelled' });
+  renderScreen();
+
+  fireEvent.press(screen.getByRole('button', { name: 'Gjenopprett fra fil' }));
+
+  await waitFor(() => expect(mockedPrepareRestore).toHaveBeenCalled());
+  expect(screen.queryByRole('alert')).not.toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Gjenopprett fra fil' })).toBeEnabled();
+});
+
+test('prevents repeated actions while a restore is being prepared', () => {
+  mockedPrepareRestore.mockImplementation(() => new Promise(() => undefined));
+  renderScreen();
+
+  fireEvent.press(screen.getByRole('button', { name: 'Gjenopprett fra fil' }));
+
+  expect(screen.getByRole('button', { name: 'Kontrollerer sikkerhetskopi' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Lag sikkerhetskopi' })).toBeDisabled();
+});
+
+test('previews validated creation time and database-derived counts, then cancels cleanly', async () => {
+  const cancel = jest.fn();
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  mockedPrepareRestore.mockResolvedValue({
+    status: 'ready',
+    restore: {
+      createdAt: '2026-08-14T12:00:00.000Z',
+      sourceSchemaVersion: 1,
+      schemaVersion: 1,
+      previewCounts: { workouts: 5, exercises: 7 },
+      cancel,
+    },
+  });
+  const view = renderScreen();
+
+  fireEvent.press(screen.getByRole('button', { name: 'Gjenopprett fra fil' }));
+
+  expect(await screen.findByRole('header', { name: 'Kontroller sikkerhetskopien' })).toBeOnTheScreen();
+  expect(screen.getByText('5 treningsøkter')).toBeOnTheScreen();
+  expect(screen.getByText('7 øvelser')).toBeOnTheScreen();
+  expect(screen.getByText(/14. august 2026/)).toBeOnTheScreen();
+  expect(screen.getByText('Ingenting er gjenopprettet ennå.')).toBeOnTheScreen();
+  fireEvent(view.UNSAFE_getByType(Modal), 'show');
+
+  fireEvent.press(screen.getByRole('button', { name: 'Fortsett' }));
+  expect(screen.getByRole('header', { name: 'Klar for bekreftelse' })).toBeOnTheScreen();
+  expect(screen.getByText(/Dataene dine er fortsatt ikke endret/)).toBeOnTheScreen();
+
+  fireEvent.press(screen.getByRole('button', { name: 'Avbryt' }));
+  expect(cancel).toHaveBeenCalled();
+  expect(screen.queryByRole('header', { name: 'Kontroller sikkerhetskopien' })).not.toBeOnTheScreen();
+  expect(focus).toHaveBeenCalledTimes(0);
+});
+
+test.each([
+  ['update-required', /nyere versjon av Trene/],
+  ['insufficient-storage', /ikke nok ledig plass/],
+  ['damaged-backup', /skadet eller kan ikke leses/],
+] as const)('shows safe restore guidance for %s', async (code, message) => {
+  mockedPrepareRestore.mockRejectedValue(new RestorePreparationError(code));
+  renderScreen();
+
+  fireEvent.press(screen.getByRole('button', { name: 'Gjenopprett fra fil' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(message);
+  expect(screen.getByRole('alert')).toHaveTextContent(/Dataene dine er ikke endret/);
 });
 
 function renderScreen() {
