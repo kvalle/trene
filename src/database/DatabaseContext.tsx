@@ -1,4 +1,4 @@
-import { createContext, Fragment, type PropsWithChildren, useContext, useSyncExternalStore } from 'react';
+import { createContext, Fragment, type PropsWithChildren, useContext, useEffect, useSyncExternalStore } from 'react';
 
 import type { DatabaseRuntime } from './DatabaseRuntime';
 import type { DatabaseSource } from './types';
@@ -14,6 +14,7 @@ export function DatabaseProvider({
     runtime?.subscribe ?? emptySubscribe,
     runtime?.getGeneration ?? zeroGeneration,
   );
+  useEffect(() => runtime?.confirmGeneration(generation), [generation, runtime]);
   return (
     <DatabaseContext.Provider value={database}>
       <Fragment key={generation}>{children}</Fragment>

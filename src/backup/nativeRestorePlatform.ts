@@ -1,11 +1,17 @@
 import { Directory, File, FileMode, Paths } from 'expo-file-system';
-import { openDatabaseAsync } from 'expo-sqlite';
+import { defaultDatabaseDirectory, openDatabaseAsync } from 'expo-sqlite';
 
+import { DATABASE_NAME } from '../database/openDatabase';
+import { inspectDatabase, type DatabaseInspection } from '../database/inspectDatabase';
 import type { BackupArtifact } from './createBackup';
+import { digestBytes, type RestoreCommitPlatform, type RollbackSnapshot, type RestoreMarkerStage } from './commitRestore';
 import type { RestorePlatform } from './prepareRestore';
 import type { BackupByteSink } from './types';
 
 const RESTORE_DIRECTORY = 'trene-restore-preparation';
+const RECOVERY_DIRECTORY = 'trene-restore-recovery';
+const ROLLBACK_NAME = 'rollback.sqlite';
+const MARKER_NAME = 'operation.json';
 
 export function createNativeRestorePlatform(): RestorePlatform {
   return {
@@ -31,6 +37,33 @@ export function createNativeRestorePlatform(): RestorePlatform {
       return openDatabaseAsync(file.name, { useNewConnection: true }, file.parentDirectory.uri);
     },
     availableBytes: () => Paths.availableDiskSpace,
+    ...createNativeRestoreCommitPlatform(),
+  };
+}
+
+function createNativeRestoreCommitPlatform(): RestoreCommitPlatform {
+  return {
+    createRollbackSnapshot: async (database, inspection) => {
+      if (!database.serializeAsync) throw new Error('SQLite snapshot export is unavailable');
+      const bytes = await database.serializeAsync();
+      const file = rollbackFile();
+      recoveryDirectory().create({ idempotent: true, intermediates: true });
+      file.write(bytes);
+      return {
+        size: bytes.length,
+        sha256: digestBytes(bytes),
+        schemaVersion: inspection.schemaVersion,
+        tableCounts: inspection.tableCounts,
+      };
+    },
+    verifyRollbackSnapshot: async (snapshot) => inspectRollback(snapshot),
+    writeRestoreMarker: async (stage, snapshot) => writeMarker(stage, snapshot),
+    activateDatabase: async (artifact) => activate(fileForArtifact(artifact)),
+    activateRollback: async () => activate(rollbackFile()),
+    cleanupRestoreCommit: () => {
+      const directory = recoveryDirectory();
+      if (directory.exists) directory.delete();
+    },
   };
 }
 
@@ -38,6 +71,44 @@ export async function cleanupAbandonedRestorePreparations(): Promise<void> {
   const directory = restoreDirectory();
   if (!directory.exists) return;
   for (const entry of directory.list()) entry.delete();
+}
+
+async function inspectRollback(snapshot: RollbackSnapshot): Promise<DatabaseInspection> {
+  const file = rollbackFile();
+  if (!file.exists || file.size !== snapshot.size || digestBytes(await file.bytes()) !== snapshot.sha256) {
+    throw new Error('Rollback snapshot metadata does not match');
+  }
+  const database = await openDatabaseAsync(file.name, { useNewConnection: true }, file.parentDirectory.uri);
+  try {
+    const inspection = await inspectDatabase(database);
+    if (
+      inspection.schemaVersion !== snapshot.schemaVersion
+      || JSON.stringify(inspection.tableCounts) !== JSON.stringify(snapshot.tableCounts)
+    ) throw new Error('Rollback snapshot inspection does not match');
+    return inspection;
+  } finally {
+    await database.closeAsync();
+  }
+}
+
+async function writeMarker(stage: RestoreMarkerStage, snapshot: RollbackSnapshot): Promise<void> {
+  const directory = recoveryDirectory();
+  directory.create({ idempotent: true, intermediates: true });
+  const pending = new File(directory, `${MARKER_NAME}.pending`);
+  const marker = new File(directory, MARKER_NAME);
+  pending.write(JSON.stringify({ version: 1, stage, rollback: snapshot }));
+  await pending.move(marker, { overwrite: true });
+}
+
+async function activate(source: File): Promise<void> {
+  const live = new File(defaultDatabaseDirectory, DATABASE_NAME);
+  const pending = new File(defaultDatabaseDirectory, `${DATABASE_NAME}.restore`);
+  await source.copy(pending, { overwrite: true });
+  for (const suffix of ['-wal', '-shm']) {
+    const sidecar = new File(defaultDatabaseDirectory, `${DATABASE_NAME}${suffix}`);
+    if (sidecar.exists) sidecar.delete();
+  }
+  await pending.move(live, { overwrite: true });
 }
 
 function createFileArtifact(name: string): BackupArtifact {
@@ -99,6 +170,14 @@ function fileSink(file: File): BackupByteSink {
 
 function restoreDirectory(): Directory {
   return new Directory(Paths.cache, RESTORE_DIRECTORY);
+}
+
+function recoveryDirectory(): Directory {
+  return new Directory(Paths.document, RECOVERY_DIRECTORY);
+}
+
+function rollbackFile(): File {
+  return new File(recoveryDirectory(), ROLLBACK_NAME);
 }
 
 function uniqueSuffix(): string {

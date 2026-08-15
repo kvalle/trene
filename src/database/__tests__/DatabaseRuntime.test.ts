@@ -152,6 +152,44 @@ test('does not publish a reopened generation until maintenance is released', asy
   expect(runtime.getGeneration()).toBe(1);
 });
 
+test('closes before replacement and publishes only the final replacement generation', async () => {
+  const original = fakeDatabase();
+  const candidate = fakeDatabase();
+  const rollback = fakeDatabase();
+  const open = jest.fn<Promise<Database>, []>()
+    .mockResolvedValueOnce(original)
+    .mockResolvedValueOnce(candidate)
+    .mockResolvedValueOnce(rollback);
+  const runtime = new DatabaseRuntime(open);
+  const replacement = jest.fn(async () => {
+    expect(original.closeAsync).toHaveBeenCalledTimes(1);
+  });
+  await runtime.start();
+
+  await runtime.runExclusive(async (maintenance) => {
+    await maintenance.replace(replacement);
+    await maintenance.replace(async () => undefined, false);
+    expect(runtime.getGeneration()).toBe(0);
+  });
+
+  expect(candidate.closeAsync).toHaveBeenCalledTimes(1);
+  expect(runtime.getGeneration()).toBe(0);
+});
+
+test('waits until the published generation has been mounted', async () => {
+  const runtime = new DatabaseRuntime(async () => fakeDatabase());
+  await runtime.start();
+  await runtime.runExclusive((maintenance) => maintenance.replace(async () => undefined));
+  const mounted = jest.fn();
+  const waiting = runtime.waitForGeneration(1).then(mounted);
+
+  await Promise.resolve();
+  expect(mounted).not.toHaveBeenCalled();
+  runtime.confirmGeneration(1);
+  await waiting;
+  expect(mounted).toHaveBeenCalled();
+});
+
 test('requires maintenance reopen after a failed reopen', async () => {
   const open = jest.fn<Promise<Database>, []>()
     .mockResolvedValueOnce(fakeDatabase())

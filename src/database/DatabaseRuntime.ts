@@ -10,12 +10,13 @@ export class DatabaseMaintenanceError extends Error {
 export interface DatabaseMaintenance {
   run<T>(operation: (database: Database) => Promise<T>): Promise<T>;
   reopen(): Promise<void>;
+  replace(operation: () => Promise<void>, publishGeneration?: boolean): Promise<void>;
 }
 
 export class DatabaseRuntime implements DatabaseAccess {
   private database: Database | null = null;
   private generation = 0;
-  private pendingGenerations = 0;
+  private generationPending = false;
   private started = false;
   private activeOperations = 0;
   private maintenance = false;
@@ -25,6 +26,8 @@ export class DatabaseRuntime implements DatabaseAccess {
   private maintenanceFinished: Promise<void> | null = null;
   private drainWaiters: Array<() => void> = [];
   private listeners = new Set<() => void>();
+  private confirmedGeneration = 0;
+  private generationWaiters = new Map<number, Array<() => void>>();
 
   constructor(private readonly openDatabase: () => Promise<Database>) {}
 
@@ -34,6 +37,25 @@ export class DatabaseRuntime implements DatabaseAccess {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   };
+
+  confirmGeneration = (generation: number): void => {
+    if (generation <= this.confirmedGeneration) return;
+    this.confirmedGeneration = generation;
+    for (const [target, waiters] of this.generationWaiters) {
+      if (target > generation) continue;
+      this.generationWaiters.delete(target);
+      waiters.forEach((resolve) => resolve());
+    }
+  };
+
+  waitForGeneration(generation: number): Promise<void> {
+    if (generation <= this.confirmedGeneration) return Promise.resolve();
+    return new Promise((resolve) => {
+      const waiters = this.generationWaiters.get(generation) ?? [];
+      waiters.push(resolve);
+      this.generationWaiters.set(generation, waiters);
+    });
+  }
 
   async start(): Promise<void> {
     if (this.closed) throw new Error('Database runtime is closed');
@@ -105,6 +127,9 @@ export class DatabaseRuntime implements DatabaseAccess {
         }
       }),
       reopen: () => schedule(() => this.reopen()),
+      replace: (replace, publishGeneration = true) => schedule(
+        () => this.replace(replace, publishGeneration),
+      ),
     };
 
     try {
@@ -115,9 +140,9 @@ export class DatabaseRuntime implements DatabaseAccess {
       this.maintenance = false;
       this.maintenanceFinished = null;
       finishMaintenance();
-      if (this.pendingGenerations > 0) {
-        this.generation += this.pendingGenerations;
-        this.pendingGenerations = 0;
+      if (this.generationPending) {
+        this.generation += 1;
+        this.generationPending = false;
         this.listeners.forEach((listener) => listener());
       }
     }
@@ -140,7 +165,22 @@ export class DatabaseRuntime implements DatabaseAccess {
       throw new Error('Database runtime is closed');
     }
     this.database = next;
-    this.pendingGenerations += 1;
+    this.generationPending = true;
+  }
+
+  private async replace(operation: () => Promise<void>, publishGeneration: boolean): Promise<void> {
+    if (this.closed) throw new Error('Database runtime is closed');
+    const previous = this.database;
+    this.database = null;
+    if (previous) await previous.closeAsync();
+    await operation();
+    const next = await this.openDatabase();
+    if (this.closed) {
+      await next.closeAsync();
+      throw new Error('Database runtime is closed');
+    }
+    this.database = next;
+    this.generationPending = publishGeneration;
   }
 
   private async performStart(): Promise<void> {

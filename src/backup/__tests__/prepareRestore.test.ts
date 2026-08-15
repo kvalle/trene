@@ -122,6 +122,12 @@ function fakePlatform(packageArtifact: BackupArtifact | null, database: Database
     createArtifact: jest.fn((name) => new MemoryArtifact(`private://${name}`)),
     openDatabase: jest.fn(async () => database),
     availableBytes: jest.fn(() => Number.MAX_SAFE_INTEGER),
+    createRollbackSnapshot: jest.fn(),
+    verifyRollbackSnapshot: jest.fn(),
+    writeRestoreMarker: jest.fn(),
+    activateDatabase: jest.fn(),
+    activateRollback: jest.fn(),
+    cleanupRestoreCommit: jest.fn(),
   };
 }
 
