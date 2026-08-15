@@ -14,10 +14,21 @@ export interface RollbackSnapshot {
 
 export type RestoreMarkerStage = 'rollback-ready' | 'replacement-started' | 'replacement-verified';
 
+export interface RestoreMarker {
+  version: 1;
+  stage: RestoreMarkerStage;
+  rollback: RollbackSnapshot;
+  restored: DatabaseInspection;
+}
+
 export interface RestoreCommitPlatform {
   createRollbackSnapshot(database: Database, inspection: DatabaseInspection): Promise<RollbackSnapshot>;
   verifyRollbackSnapshot(snapshot: RollbackSnapshot): Promise<DatabaseInspection>;
-  writeRestoreMarker(stage: RestoreMarkerStage, snapshot: RollbackSnapshot): Promise<void>;
+  writeRestoreMarker(
+    stage: RestoreMarkerStage,
+    snapshot: RollbackSnapshot,
+    restored: DatabaseInspection,
+  ): Promise<void>;
   activateDatabase(artifact: BackupArtifact): Promise<void>;
   activateRollback(): Promise<void>;
   cleanupRestoreCommit(): void;
@@ -50,15 +61,15 @@ export async function commitPreparedRestore(
       const rollback = await maintenance.run((database) => platform.createRollbackSnapshot(database, original));
       const verifiedRollback = await platform.verifyRollbackSnapshot(rollback);
       requireMatchingInspection(verifiedRollback, original);
-      await platform.writeRestoreMarker('rollback-ready', rollback);
+      await platform.writeRestoreMarker('rollback-ready', rollback, expected);
 
       try {
-        await platform.writeRestoreMarker('replacement-started', rollback);
+        await platform.writeRestoreMarker('replacement-started', rollback, expected);
         replacementStarted = true;
         await maintenance.replace(() => platform.activateDatabase(stagedDatabase));
         const active = await maintenance.run(inspectDatabase);
         requireMatchingInspection(active, expected);
-        await platform.writeRestoreMarker('replacement-verified', rollback);
+        await platform.writeRestoreMarker('replacement-verified', rollback, expected);
         return active;
       } catch (error) {
         if (!replacementStarted) throw error;
@@ -112,7 +123,7 @@ export function digestBytes(bytes: Uint8Array): string {
   return Array.from(sha256(bytes), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function requireMatchingInspection(actual: DatabaseInspection, expected: DatabaseInspection): void {
+export function requireMatchingInspection(actual: DatabaseInspection, expected: DatabaseInspection): void {
   if (
     actual.schemaVersion !== expected.schemaVersion
     || JSON.stringify(actual.tableCounts) !== JSON.stringify(expected.tableCounts)

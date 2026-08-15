@@ -42,9 +42,9 @@ test('replaces all data, validates the active database, and publishes a fresh ge
 
   await expect(commitPreparedRestore(runtime, platform, artifact, restored)).resolves.toEqual(restored);
 
-  expect(platform.writeRestoreMarker).toHaveBeenNthCalledWith(1, 'rollback-ready', rollback);
-  expect(platform.writeRestoreMarker).toHaveBeenNthCalledWith(2, 'replacement-started', rollback);
-  expect(platform.writeRestoreMarker).toHaveBeenNthCalledWith(3, 'replacement-verified', rollback);
+  expect(platform.writeRestoreMarker).toHaveBeenNthCalledWith(1, 'rollback-ready', rollback, restored);
+  expect(platform.writeRestoreMarker).toHaveBeenNthCalledWith(2, 'replacement-started', rollback, restored);
+  expect(platform.writeRestoreMarker).toHaveBeenNthCalledWith(3, 'replacement-verified', rollback, restored);
   expect(platform.activateDatabase).toHaveBeenCalledWith(artifact);
   expect(platform.activateRollback).not.toHaveBeenCalled();
   expect(platform.cleanupRestoreCommit).toHaveBeenCalledTimes(1);

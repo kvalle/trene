@@ -16,11 +16,16 @@ import { DatabaseRuntime } from './database/DatabaseRuntime';
 import type { Database } from './database/types';
 import { darkTheme, lightTheme } from './theme';
 import { cleanupAbandonedBackupExports } from './backup/nativeBackupPlatform';
-import { cleanupAbandonedRestorePreparations } from './backup/nativeRestorePlatform';
+import {
+  cleanupAbandonedRestorePreparations,
+  createNativeRestoreRecoveryPlatform,
+} from './backup/nativeRestorePlatform';
+import { recoverInterruptedRestore, RestoreSafeStopError } from './backup/recoverRestore';
 
 type StartupState =
   | { status: 'loading' }
   | { status: 'failed'; failures: number }
+  | { status: 'safe-stop' }
   | { status: 'ready'; runtime: DatabaseRuntime };
 
 export function StartupGate({
@@ -36,25 +41,41 @@ export function StartupGate({
   const colorScheme = useColorScheme();
   const colors = colorScheme === 'dark' ? darkTheme.colors : lightTheme.colors;
   const retryRef = useRef<View>(null);
+  const recoveryCleanup = useRef<null | (() => void)>(null);
 
   useEffect(() => {
     let active = true;
     setState({ status: 'loading' });
     cleanupAbandonedBackupExports()
-      .then(() => cleanupAbandonedRestorePreparations())
+      .then(() => recoverInterruptedRestore(createNativeRestoreRecoveryPlatform()))
+      .then((cleanup) => { recoveryCleanup.current = cleanup; })
       .then(() => runtime.start()).then(
       () => {
         if (active) setState({ status: 'ready', runtime });
         else void runtime.close();
       },
-      () => {
-        if (active) setState({ status: 'failed', failures: attempt + 1 });
+      (error) => {
+        if (active) setState(error instanceof RestoreSafeStopError
+          ? { status: 'safe-stop' }
+          : { status: 'failed', failures: attempt + 1 });
       },
     );
     return () => {
       active = false;
     };
   }, [attempt, runtime]);
+
+  useEffect(() => {
+    if (state.status !== 'ready') return;
+    const cleanup = recoveryCleanup.current;
+    recoveryCleanup.current = null;
+    try {
+      cleanup?.();
+    } catch {
+      // A later startup can retry cleanup after the verified database is active.
+    }
+    void cleanupAbandonedRestorePreparations().catch(() => undefined);
+  }, [state.status]);
 
   useEffect(() => () => {
     void runtime.close();
@@ -78,6 +99,16 @@ export function StartupGate({
       <Text style={[styles.brand, { color: colors.text }]}>Trene</Text>
       {state.status === 'loading' ? (
         <ActivityIndicator accessibilityLabel="Starter Trene" color={colors.primary} size="large" />
+      ) : state.status === 'safe-stop' ? (
+        <View accessibilityLiveRegion="assertive" style={styles.failure}>
+          <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>
+            Trene kan ikke åpne dataene trygt
+          </Text>
+          <Text style={[styles.message, { color: colors.text }]}>
+            Gjenopprettingen ble avbrutt, og ingen av databasene kunne bekreftes. Dataene er bevart for hjelp med gjenoppretting.
+          </Text>
+          <Text style={[styles.message, { color: colors.text }]}>Ikke slett eller installer appen på nytt.</Text>
+        </View>
       ) : (
         <View accessibilityLiveRegion="assertive" style={styles.failure}>
           <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>
