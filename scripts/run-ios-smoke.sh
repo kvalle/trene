@@ -36,7 +36,23 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for flow in .maestro/ios/*.yaml; do
+requested_flow="${IOS_SMOKE_FLOW:-all}"
+if [[ ! "$requested_flow" =~ ^[A-Za-z0-9_-]+$ ]]; then
+  echo "Invalid iOS smoke flow name: $requested_flow" >&2
+  exit 1
+fi
+if [[ "$requested_flow" == "all" ]]; then
+  flows=(.maestro/ios/*.yaml)
+else
+  flow_path=".maestro/ios/$requested_flow.yaml"
+  if [[ ! -f "$flow_path" || "$requested_flow" == "select-backup-file" ]]; then
+    echo "Unknown standalone iOS smoke flow: $requested_flow" >&2
+    exit 1
+  fi
+  flows=("$flow_path")
+fi
+
+for flow in "${flows[@]}"; do
   if [[ "$(basename "$flow")" == "select-backup-file.yaml" ]]; then continue; fi
   export scenario="$(basename "$flow" .yaml)"
   xcrun simctl uninstall "$udid" no.kvalle.trene >/dev/null 2>&1 || true
