@@ -4,8 +4,15 @@ import { defaultDatabaseDirectory, openDatabaseAsync } from 'expo-sqlite';
 import { DATABASE_NAME } from '../database/openDatabase';
 import { inspectDatabase, type DatabaseInspection } from '../database/inspectDatabase';
 import type { BackupArtifact } from './createBackup';
-import { digestBytes, type RestoreCommitPlatform, type RollbackSnapshot, type RestoreMarkerStage } from './commitRestore';
+import {
+  digestBytes,
+  type RestoreCommitPlatform,
+  type RestoreMarker,
+  type RollbackSnapshot,
+  type RestoreMarkerStage,
+} from './commitRestore';
 import type { RestorePlatform } from './prepareRestore';
+import type { RestoreRecoveryPlatform } from './recoverRestore';
 import type { BackupByteSink } from './types';
 
 const RESTORE_DIRECTORY = 'trene-restore-preparation';
@@ -57,13 +64,24 @@ function createNativeRestoreCommitPlatform(): RestoreCommitPlatform {
       };
     },
     verifyRollbackSnapshot: async (snapshot) => inspectRollback(snapshot),
-    writeRestoreMarker: async (stage, snapshot) => writeMarker(stage, snapshot),
+    writeRestoreMarker: async (stage, snapshot, restored) => writeMarker(stage, snapshot, restored),
     activateDatabase: async (artifact) => activate(fileForArtifact(artifact)),
     activateRollback: async () => activate(rollbackFile()),
     cleanupRestoreCommit: () => {
       const directory = recoveryDirectory();
       if (directory.exists) directory.delete();
     },
+  };
+}
+
+export function createNativeRestoreRecoveryPlatform(): RestoreRecoveryPlatform {
+  const commit = createNativeRestoreCommitPlatform();
+  return {
+    readRestoreMarker: readMarker,
+    inspectActiveDatabase: inspectActiveDatabase,
+    verifyRollbackSnapshot: commit.verifyRollbackSnapshot,
+    activateRollback: commit.activateRollback,
+    cleanupRestoreCommit: commit.cleanupRestoreCommit,
   };
 }
 
@@ -91,13 +109,65 @@ async function inspectRollback(snapshot: RollbackSnapshot): Promise<DatabaseInsp
   }
 }
 
-async function writeMarker(stage: RestoreMarkerStage, snapshot: RollbackSnapshot): Promise<void> {
+async function writeMarker(
+  stage: RestoreMarkerStage,
+  snapshot: RollbackSnapshot,
+  restored: DatabaseInspection,
+): Promise<void> {
   const directory = recoveryDirectory();
   directory.create({ idempotent: true, intermediates: true });
   const pending = new File(directory, `${MARKER_NAME}.pending`);
   const marker = new File(directory, MARKER_NAME);
-  pending.write(JSON.stringify({ version: 1, stage, rollback: snapshot }));
+  pending.write(JSON.stringify({ version: 1, stage, rollback: snapshot, restored }));
   await pending.move(marker, { overwrite: true });
+}
+
+async function readMarker(): Promise<RestoreMarker | null> {
+  const file = new File(recoveryDirectory(), MARKER_NAME);
+  if (!file.exists) return null;
+  const marker: unknown = JSON.parse(await file.text());
+  if (!isRestoreMarker(marker)) throw new Error('Restore operation marker is invalid');
+  return marker;
+}
+
+async function inspectActiveDatabase(): Promise<DatabaseInspection> {
+  const database = await openDatabaseAsync(DATABASE_NAME, { useNewConnection: true }, defaultDatabaseDirectory);
+  try {
+    return await inspectDatabase(database);
+  } finally {
+    await database.closeAsync();
+  }
+}
+
+function isRestoreMarker(value: unknown): value is RestoreMarker {
+  if (!value || typeof value !== 'object') return false;
+  const marker = value as Partial<RestoreMarker>;
+  return marker.version === 1
+    && ['rollback-ready', 'replacement-started', 'replacement-verified'].includes(marker.stage ?? '')
+    && isInspection(marker.restored)
+    && !!marker.rollback
+    && typeof marker.rollback.size === 'number'
+    && typeof marker.rollback.sha256 === 'string'
+    && marker.rollback.sha256.length === 64
+    && typeof marker.rollback.schemaVersion === 'number'
+    && isTableCounts(marker.rollback.tableCounts);
+}
+
+function isInspection(value: unknown): value is DatabaseInspection {
+  if (!value || typeof value !== 'object') return false;
+  const inspection = value as Partial<DatabaseInspection>;
+  return typeof inspection.schemaVersion === 'number'
+    && isTableCounts(inspection.tableCounts)
+    && !!inspection.previewCounts
+    && typeof inspection.previewCounts.exercises === 'number'
+    && typeof inspection.previewCounts.workouts === 'number';
+}
+
+function isTableCounts(value: unknown): value is DatabaseInspection['tableCounts'] {
+  if (!value || typeof value !== 'object') return false;
+  const counts = value as Record<string, unknown>;
+  return ['exercises', 'workouts', 'workout_exercises', 'workout_sets']
+    .every((table) => typeof counts[table] === 'number');
 }
 
 async function activate(source: File): Promise<void> {
