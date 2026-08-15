@@ -28,7 +28,7 @@ tags:
 - inputText: "42.5"
 - tapOn: "Repetisjoner"
 - inputText: "6"
-- tapOn: "Bekreft"
+- tapOn: "Bekreft planlagt sett for Beholdes"
 - tapOn: "Ferdig"
 - tapOn: "Fullfør økt"
 - tapOn: "Tilbake til forsiden"
