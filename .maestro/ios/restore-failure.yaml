@@ -33,7 +33,10 @@ tags:
     id: "settings-data"
 - tapOn:
     id: "restore-from-file"
-- tapOn: "representative.trene-backup"
+- runFlow:
+    file: select-backup-file.yaml
+    env:
+      BACKUP_FILE: representative.trene-backup
 - extendedWaitUntil:
     visible:
       id: "restore-preview"

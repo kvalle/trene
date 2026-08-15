@@ -1,0 +1,15 @@
+appId: no.kvalle.trene
+---
+- tapOn: "Browse"
+- extendedWaitUntil:
+    visible: "On My iPhone"
+    timeout: 30000
+- tapOn: "On My iPhone"
+- extendedWaitUntil:
+    visible: "Trene"
+    timeout: 30000
+- tapOn: "Trene"
+- extendedWaitUntil:
+    visible: "${BACKUP_FILE}"
+    timeout: 30000
+- tapOn: "${BACKUP_FILE}"

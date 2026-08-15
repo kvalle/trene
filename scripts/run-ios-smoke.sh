@@ -37,6 +37,7 @@ cleanup() {
 trap cleanup EXIT
 
 for flow in .maestro/ios/*.yaml; do
+  if [[ "$(basename "$flow")" == "select-backup-file.yaml" ]]; then continue; fi
   export scenario="$(basename "$flow" .yaml)"
   xcrun simctl uninstall "$udid" no.kvalle.trene >/dev/null 2>&1 || true
   xcrun simctl install "$udid" "$app"
