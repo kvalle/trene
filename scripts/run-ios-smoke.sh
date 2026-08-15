@@ -69,7 +69,7 @@ for flow in "${flows[@]}"; do
     rollback-failure.yaml) fault_scenario="rollback-failure" ;;
   esac
   if [[ -n "$fault_scenario" ]]; then printf '%s\n' "$fault_scenario" > "$container/Documents/trene-automation-scenario.txt"; fi
-  maestro test --debug-output "$maestro_artifacts/debug/$(basename "$flow" .yaml)" "$flow"
+  maestro --device "$udid" test --debug-output "$maestro_artifacts/debug/$(basename "$flow" .yaml)" "$flow"
   if [[ "$scenario" == "rollback-failure" ]]; then
     test -f "$container/Documents/trene-restore-recovery/operation.json"
     test -f "$container/Documents/trene-restore-recovery/rollback.sqlite"
