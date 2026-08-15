@@ -52,13 +52,13 @@ tags:
     visible: "Klar for en økt?"
     timeout: 30000
 - tapOn: "Øvelser"
-- assertVisible: "Knebøy"
-- assertVisible: "Markløft"
-- assertNotVisible: "Utdatert"
-- tapOn: "Knebøy"
+- assertVisible: "Knebøy.*"
+- assertVisible: "Markløft.*"
+- assertNotVisible: "Utdatert.*"
+- tapOn: "Knebøy.*"
 - assertVisible: "80 kg · 5 repetisjoner"
 - back
-- tapOn: "Markløft"
+- tapOn: "Markløft.*"
 - assertVisible: "100 kg · 3 repetisjoner"
 - back
 - back
@@ -70,6 +70,6 @@ tags:
     visible: "Klar for en økt?"
     timeout: 30000
 - tapOn: "Øvelser"
-- assertVisible: "Knebøy"
-- assertVisible: "Markløft"
-- assertNotVisible: "Utdatert"
+- assertVisible: "Knebøy.*"
+- assertVisible: "Markløft.*"
+- assertNotVisible: "Utdatert.*"

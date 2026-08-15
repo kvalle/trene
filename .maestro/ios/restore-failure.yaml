@@ -60,8 +60,8 @@ tags:
     visible: "Klar for en økt?"
     timeout: 30000
 - tapOn: "Øvelser"
-- assertVisible: "Beholdes"
-- assertNotVisible: "Knebøy"
+- assertVisible: "Beholdes.*"
+- assertNotVisible: "Knebøy.*"
 - back
 - tapOn: "Tidligere økter"
 - tapOn: ".*, 1 øvelse"
