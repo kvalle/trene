@@ -1,3 +1,5 @@
+import { sha256 } from '@noble/hashes/sha256';
+
 import { exerciseNameKey, validateExerciseName } from '../domain/exerciseName';
 import { isCanonicalTimestamp } from '../domain/timestamp';
 import { isValidLoad, isValidRepetitions } from '../domain/workoutSet';
@@ -17,6 +19,7 @@ export interface DatabaseInspection {
   schemaVersion: number;
   tableCounts: Record<AuthoritativeTable, number>;
   previewCounts: { workouts: number; exercises: number };
+  semanticDigest: string;
 }
 
 export type DatabaseInspectionErrorCode =
@@ -215,7 +218,13 @@ async function inspectDatabaseWithConnection(database: Database): Promise<Databa
     schemaVersion: version,
     tableCounts,
     previewCounts,
+    semanticDigest: digestSemanticRows({ exercises, workouts, memberships, sets }),
   };
+}
+
+function digestSemanticRows(value: unknown): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  return Array.from(sha256(bytes), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export const inspectDatabase = databaseOperation(inspectDatabaseWithConnection);

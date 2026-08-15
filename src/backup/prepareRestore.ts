@@ -10,6 +10,7 @@ import {
 import type { DatabaseRuntime } from '../database/DatabaseRuntime';
 import { inspectBackupPackage } from './packageCodec';
 import { BackupPackageError } from './types';
+import { atCheckpoint, atCleanupCheckpoint, type FaultCheckpoint } from './faultInjection';
 
 export type RestorePreparationErrorCode =
   | 'damaged-backup'
@@ -47,31 +48,35 @@ export type PrepareRestoreResult =
   | { status: 'cancelled' }
   | { status: 'ready'; restore: PreparedRestore };
 
-export async function prepareRestore(platform: RestorePlatform): Promise<PrepareRestoreResult> {
+export async function prepareRestore(
+  platform: RestorePlatform,
+  checkpoint?: FaultCheckpoint,
+): Promise<PrepareRestoreResult> {
   let packageArtifact: BackupArtifact | null = null;
   let databaseArtifact: BackupArtifact | null = null;
   let database: Database | null = null;
   let keepDatabase = false;
 
   try {
-    packageArtifact = await platform.pickAndStagePackage();
+    packageArtifact = await atCheckpoint(checkpoint, 'restore.package-staging', () => platform.pickAndStagePackage());
     if (!packageArtifact) return { status: 'cancelled' };
+    const stagedPackage = packageArtifact;
     const availableBytes = platform.availableBytes();
     if (!Number.isSafeInteger(availableBytes) || availableBytes <= 0) {
       throw new RestorePreparationError('insufficient-storage');
     }
 
     databaseArtifact = platform.createArtifact(`restore-${uniqueSuffix()}.sqlite`);
-    const packageInspection = await inspectBackupPackage(packageArtifact, {
+    const packageInspection = await atCheckpoint(checkpoint, 'restore.package-validation', () => inspectBackupPackage(stagedPackage, {
       limits: {
-        maxCompressedBytes: Math.max(1, packageArtifact.size),
+        maxCompressedBytes: Math.max(1, stagedPackage.size),
         maxUncompressedBytes: availableBytes,
       },
       createComponentSink: async (path) => {
         if (path !== 'database.sqlite') throw new RestorePreparationError('damaged-backup');
         return databaseArtifact!.sink();
       },
-    });
+    }));
     if (packageInspection.status === 'update-required') {
       throw new RestorePreparationError('update-required');
     }
@@ -80,7 +85,7 @@ export async function prepareRestore(platform: RestorePlatform): Promise<Prepare
     if (manifest.schemaVersion !== SCHEMA_VERSION) throw new RestorePreparationError('damaged-backup');
 
     database = await platform.openDatabase(databaseArtifact);
-    const inspection = await inspectDatabase(database);
+    const inspection = await atCheckpoint(checkpoint, 'restore.source-validation', () => inspectDatabase(database!));
     if (
       inspection.schemaVersion !== manifest.schemaVersion
       || Object.entries(inspection.tableCounts).some(([table, count]) => manifest.tableCounts[table] !== count)
@@ -100,7 +105,7 @@ export async function prepareRestore(platform: RestorePlatform): Promise<Prepare
         previewCounts: inspection.previewCounts,
         currentCounts: async (runtime) => (await inspectCurrentDatabase(runtime)).previewCounts,
         commit: async (runtime) => (
-          await commitPreparedRestore(runtime, platform, retainedArtifact, inspection)
+          await commitPreparedRestore(runtime, platform, retainedArtifact, inspection, checkpoint)
         ).previewCounts,
         cancel: () => removeArtifact(retainedArtifact),
       },
@@ -114,8 +119,10 @@ export async function prepareRestore(platform: RestorePlatform): Promise<Prepare
     throw new RestorePreparationError('damaged-backup', error);
   } finally {
     if (database) await database.closeAsync().catch(() => undefined);
-    removeArtifact(packageArtifact);
-    if (!keepDatabase) removeArtifact(databaseArtifact);
+    await atCleanupCheckpoint(checkpoint, 'restore.preparation-cleanup', () => {
+      removeArtifact(packageArtifact);
+      if (!keepDatabase) removeArtifact(databaseArtifact);
+    });
   }
 }
 

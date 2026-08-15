@@ -15,17 +15,20 @@ const original: DatabaseInspection = {
   schemaVersion: 1,
   tableCounts: { exercises: 2, workouts: 1, workout_exercises: 1, workout_sets: 1 },
   previewCounts: { exercises: 2, workouts: 1 },
+  semanticDigest: '1'.repeat(64),
 };
 const restored: DatabaseInspection = {
   schemaVersion: 1,
   tableCounts: { exercises: 4, workouts: 3, workout_exercises: 5, workout_sets: 8 },
   previewCounts: { exercises: 4, workouts: 3 },
+  semanticDigest: '2'.repeat(64),
 };
 const rollback: RollbackSnapshot = {
   size: 1024,
   sha256: 'a'.repeat(64),
   schemaVersion: 1,
   tableCounts: original.tableCounts,
+  semanticDigest: original.semanticDigest,
 };
 
 beforeEach(() => jest.clearAllMocks());
@@ -72,6 +75,110 @@ test('restores and fully validates the original database when active validation 
   expect(platform.cleanupRestoreCommit).toHaveBeenCalledTimes(1);
   expect(artifact.remove).not.toHaveBeenCalled();
   expect(runtime.getGeneration()).toBe(0);
+  await expect(runtime.runOperation(async () => undefined)).resolves.toBeUndefined();
+});
+
+test('rolls back a valid database whose row values differ despite matching counts', async () => {
+  const runtime = runtimeWithConnections(3);
+  const platform = fakePlatform();
+  const differentRows = { ...restored, semanticDigest: '3'.repeat(64) };
+  jest.mocked(inspectDatabase)
+    .mockResolvedValueOnce(original)
+    .mockResolvedValueOnce(differentRows)
+    .mockResolvedValueOnce(original);
+  await runtime.start();
+  runtime.subscribe(() => runtime.confirmGeneration(runtime.getGeneration()));
+
+  await expect(commitPreparedRestore(runtime, platform, fakeArtifact(), restored)).rejects.toMatchObject({
+    code: 'unchanged',
+  });
+
+  expect(platform.activateRollback).toHaveBeenCalledTimes(1);
+});
+
+test.each([
+  'restore.original-validation',
+  'restore.rollback-create',
+  'restore.rollback-verify',
+  'restore.marker-rollback-ready',
+] as const)('keeps the original database when failure is injected at %s', async (stage) => {
+  const runtime = runtimeWithConnections(1);
+  const platform = fakePlatform();
+  jest.mocked(inspectDatabase).mockResolvedValue(original);
+  await runtime.start();
+
+  await expect(commitPreparedRestore(runtime, platform, fakeArtifact(), restored, async (current, timing) => {
+    if (current === stage && timing === 'before') throw new Error(`injected:${stage}`);
+  })).rejects.toMatchObject({ code: 'unchanged' });
+
+  expect(platform.activateDatabase).not.toHaveBeenCalled();
+  expect(platform.activateRollback).not.toHaveBeenCalled();
+  await expect(runtime.runOperation(async () => undefined)).resolves.toBeUndefined();
+});
+
+test.each(['restore.application-remount', 'restore.cleanup'] as const)(
+  'preserves a verified replacement for startup recovery when %s fails',
+  async (stage) => {
+    const runtime = runtimeWithConnections(2);
+    const platform = fakePlatform();
+    const artifact = fakeArtifact();
+    jest.mocked(inspectDatabase).mockResolvedValueOnce(original).mockResolvedValueOnce(restored);
+    await runtime.start();
+    runtime.subscribe(() => runtime.confirmGeneration(runtime.getGeneration()));
+
+    await expect(commitPreparedRestore(runtime, platform, artifact, restored, async (current, timing) => {
+      if (current === stage && timing === 'before') throw new Error(`injected:${stage}`);
+    })).rejects.toMatchObject({ code: 'unrecoverable' });
+
+    expect(platform.activateRollback).not.toHaveBeenCalled();
+    expect(platform.writeRestoreMarker).toHaveBeenLastCalledWith(
+      'replacement-verified', rollback, restored,
+    );
+    if (stage === 'restore.cleanup') {
+      expect(platform.cleanupRestoreCommit).toHaveBeenCalledTimes(1);
+      expect(artifact.remove).toHaveBeenCalledTimes(1);
+    } else {
+      expect(platform.cleanupRestoreCommit).not.toHaveBeenCalled();
+    }
+  },
+);
+
+test('enters safe stop when rollback re-verification fails after replacement starts', async () => {
+  const runtime = runtimeWithConnections(1);
+  const platform = fakePlatform();
+  jest.mocked(inspectDatabase).mockResolvedValue(original);
+  await runtime.start();
+
+  await expect(commitPreparedRestore(runtime, platform, fakeArtifact(), restored, async (stage, timing) => {
+    if (stage === 'restore.rollback-reverify' && timing === 'before') {
+      throw new Error('rollback cannot be proven');
+    }
+    if (stage === 'restore.replacement' && timing === 'before') throw new Error('replacement failed');
+  })).rejects.toMatchObject({ code: 'unrecoverable' });
+
+  expect(platform.cleanupRestoreCommit).not.toHaveBeenCalled();
+});
+
+test.each([
+  'restore.marker-replacement-started',
+  'restore.replacement',
+  'restore.active-validation',
+  'restore.marker-replacement-verified',
+] as const)('produces only verified original data when failure is injected after replacement starts at %s', async (stage) => {
+  const runtime = runtimeWithConnections(3);
+  const platform = fakePlatform();
+  if (stage === 'restore.active-validation' || stage === 'restore.marker-replacement-verified') {
+    jest.mocked(inspectDatabase).mockResolvedValueOnce(original).mockResolvedValueOnce(restored).mockResolvedValue(original);
+  } else {
+    jest.mocked(inspectDatabase).mockResolvedValue(original);
+  }
+  await runtime.start();
+
+  await expect(commitPreparedRestore(runtime, platform, fakeArtifact(), restored, async (current, timing) => {
+    if (current === stage && timing === 'after') throw new Error(`injected:${stage}`);
+  })).rejects.toMatchObject({ code: 'unchanged' });
+
+  expect(platform.activateRollback).toHaveBeenCalledTimes(1);
   await expect(runtime.runOperation(async () => undefined)).resolves.toBeUndefined();
 });
 

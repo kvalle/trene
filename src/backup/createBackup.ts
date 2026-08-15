@@ -8,6 +8,7 @@ import type {
   BackupManifestV1,
 } from './types';
 import { createBackupPackage, inspectBackupPackage } from './packageCodec';
+import { atCheckpoint, atCleanupCheckpoint, type FaultCheckpoint } from './faultInjection';
 
 export interface BackupArtifact extends BackupArchiveReader, BackupByteSource {
   uri: string;
@@ -25,6 +26,7 @@ export interface BackupPlatform {
 export interface CreateBackupOptions {
   appVersion: string;
   now?: () => Date;
+  checkpoint?: FaultCheckpoint;
 }
 
 export async function createAndShareBackup(
@@ -37,47 +39,67 @@ export async function createAndShareBackup(
   const artifacts: BackupArtifact[] = [];
 
   try {
-    const snapshot = platform.createArtifact(`trene-export-${suffix}.sqlite`);
-    artifacts.push(snapshot);
-    const backup = platform.createArtifact(`trene-backup-${suffix}.trene-backup`);
-    artifacts.push(backup);
-    const extracted = platform.createArtifact(`trene-check-${suffix}.sqlite`);
-    artifacts.push(extracted);
-    const manifest = await runtime.runExclusive(async (maintenance) => {
-      const inspection = await maintenance.run(async (database) => {
+    const { snapshot, backup, extracted } = await atCheckpoint(options.checkpoint, 'backup.stage-artifacts', async () => {
+      const snapshotArtifact = platform.createArtifact(`trene-export-${suffix}.sqlite`);
+      artifacts.push(snapshotArtifact);
+      const backupArtifact = platform.createArtifact(`trene-backup-${suffix}.trene-backup`);
+      artifacts.push(backupArtifact);
+      const extractedArtifact = platform.createArtifact(`trene-check-${suffix}.sqlite`);
+      artifacts.push(extractedArtifact);
+      return { snapshot: snapshotArtifact, backup: backupArtifact, extracted: extractedArtifact };
+    });
+    const { manifest, sourceInspection } = await runtime.runExclusive(async (maintenance) => {
+      const inspection = await maintenance.run((database) => atCheckpoint(options.checkpoint, 'backup.snapshot', async () => {
         const bytes = await platform.serializeSnapshot(database);
         await writeBytes(snapshot.sink(), bytes);
-        return platform.inspectSnapshot(snapshot);
-      });
-      const result = await createBackupPackage({
-        schemaVersion: inspection.schemaVersion,
+      }));
+      const validated = await atCheckpoint(options.checkpoint, 'backup.snapshot-validation', () => (
+        platform.inspectSnapshot(snapshot)
+      ));
+      const result = await atCheckpoint(options.checkpoint, 'backup.package', () => createBackupPackage({
+        schemaVersion: validated.schemaVersion,
         appVersion: options.appVersion,
         createdAt,
-        tableCounts: inspection.tableCounts,
+        tableCounts: validated.tableCounts,
         database: snapshot,
-      }, backup.sink());
-      return result;
+      }, backup.sink()));
+      return { manifest: result, sourceInspection: validated };
     });
 
-    const packageInspection = await inspectBackupPackage(backup, {
-      createComponentSink: async (path) => {
-        if (path !== 'database.sqlite') throw new Error(`Unexpected backup component: ${path}`);
-        return extracted.sink();
+    const { packageInspection, snapshotInspection } = await atCheckpoint(
+      options.checkpoint,
+      'backup.package-validation',
+      async () => {
+        const inspectedPackage = await inspectBackupPackage(backup, {
+          createComponentSink: async (path) => {
+            if (path !== 'database.sqlite') throw new Error(`Unexpected backup component: ${path}`);
+            return extracted.sink();
+          },
+        });
+        if (inspectedPackage.status !== 'valid') {
+          throw new Error('The newly created backup format is unsupported');
+        }
+        return {
+          packageInspection: inspectedPackage,
+          snapshotInspection: await platform.inspectSnapshot(extracted),
+        };
       },
-    });
+    );
     if (packageInspection.status !== 'valid') throw new Error('The newly created backup format is unsupported');
-    const snapshotInspection = await platform.inspectSnapshot(extracted);
     if (
       snapshotInspection.schemaVersion !== manifest.schemaVersion
       || JSON.stringify(snapshotInspection.tableCounts) !== JSON.stringify(manifest.tableCounts)
+      || snapshotInspection.semanticDigest !== sourceInspection.semanticDigest
     ) {
       throw new Error('Backup contents differ from the validated snapshot');
     }
 
-    await platform.share(backup.uri);
+    await atCheckpoint(options.checkpoint, 'backup.share', () => platform.share(backup.uri));
     return manifest;
   } finally {
-    artifacts.forEach((artifact) => artifact.remove());
+    await atCleanupCheckpoint(options.checkpoint, 'backup.cleanup', () => {
+      artifacts.forEach((artifact) => artifact.remove());
+    });
   }
 }
 

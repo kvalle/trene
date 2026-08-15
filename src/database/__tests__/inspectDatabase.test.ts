@@ -78,6 +78,7 @@ describe('inspectDatabase', () => {
       schemaVersion: 1,
       tableCounts: { exercises: 0, workouts: 0, workout_exercises: 0, workout_sets: 0 },
       previewCounts: { workouts: 0, exercises: 0 },
+      semanticDigest: expect.stringMatching(/^[a-f0-9]{64}$/u),
     });
     await database.closeAsync();
   });
@@ -89,6 +90,7 @@ describe('inspectDatabase', () => {
       schemaVersion: 1,
       tableCounts: { exercises: 1, workouts: 1, workout_exercises: 1, workout_sets: 1 },
       previewCounts: { workouts: 1, exercises: 1 },
+      semanticDigest: expect.stringMatching(/^[a-f0-9]{64}$/u),
     });
     await database.closeAsync();
   });
