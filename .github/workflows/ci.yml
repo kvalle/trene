@@ -20,7 +20,7 @@ env:
   ANDROID_COMPILE_SDK: '36'
   ANDROID_CMAKE: 3.22.1
   ANDROID_NDK: 27.1.12297006
-  ANDROID_SMOKE_APK_CACHE_VERSION: v4
+  ANDROID_SMOKE_APK_CACHE_VERSION: v5
   GRADLE_USER_HOME: /home/runner/.gradle
   GRADLE_VERSION: 9.3.1
   JAVA_VERSION: '17'
@@ -46,7 +46,6 @@ jobs:
   android-apk:
     name: Standalone Android APK
     needs: test
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 40
     outputs:
@@ -88,7 +87,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ${{ env.ANDROID_SMOKE_APK }}
-          key: android-smoke-apk-${{ env.ANDROID_SMOKE_APK_CACHE_VERSION }}-${{ runner.os }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'eas.json', '.nvmrc', 'index.ts', 'src/**', 'locales/**', 'assets/**', 'plugins/**', 'android/**', 'scripts/build-android-smoke-apk.sh', '.github/workflows/ci.yml') }}
+          key: android-smoke-apk-${{ env.ANDROID_SMOKE_APK_CACHE_VERSION }}-${{ runner.os }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'eas.json', '.nvmrc', 'index.ts', 'src/**', 'locales/**', 'assets/**', 'plugins/**', 'android/**', 'scripts/build-android-smoke-apk.sh', 'scripts/run-android-backup-smoke.sh', 'scripts/create-ios-smoke-fixtures.mjs', '.maestro/android-backup/**', '.maestro/android-interruption/**', '.github/workflows/ci.yml') }}
 
       - name: Build Android smoke APK
         if: steps.android-smoke-apk.outputs.cache-hit != 'true'
@@ -172,17 +171,17 @@ jobs:
           profile: pixel_2
           script: bash scripts/ci-android-offline.sh
 
-      - name: Upload smoke diagnostics
+      - name: Upload safe smoke diagnostics
         if: failure()
         uses: actions/upload-artifact@v6
         with:
           name: android-smoke-diagnostics
           path: |
             .artifacts/maestro/debug/
-            .artifacts/logcat.txt
-            .artifacts/activity-processes.txt
-            .artifacts/meminfo.txt
-            .artifacts/window.txt
+            .artifacts/maestro-android-backup/debug/
+            .artifacts/maestro-android-backup/screenshots/
+            .artifacts/android/runtime-metadata.json
+            .artifacts/android/accessibility.xml
             .artifacts/runner-disk.txt
             .artifacts/runner-memory.txt
           if-no-files-found: ignore

@@ -8,6 +8,7 @@ phase="${1:-all}"
 mkdir -p "$(dirname "$apk")" "$PWD/.artifacts/expo"
 
 export __UNSAFE_EXPO_HOME_DIRECTORY="$PWD/.artifacts/expo"
+export EXPO_PUBLIC_BACKUP_RESTORE_AUTOMATION=1
 
 if [[ "$phase" == "prebuild" || "$phase" == "all" ]]; then
   # Restore native build state only after this generated project exists.

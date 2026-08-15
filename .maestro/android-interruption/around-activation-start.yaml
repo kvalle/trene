@@ -1,0 +1,4 @@
+appId: no.kvalle.trene
+name: Interrupt Android restore around activation
+---
+- runFlow: before-replacement-start.yaml

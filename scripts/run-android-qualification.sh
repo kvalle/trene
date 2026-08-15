@@ -22,3 +22,5 @@ for flow in .maestro/smoke/*.yaml .maestro/qualification/*.yaml; do
   sleep 2
   maestro test --debug-output "$artifacts/debug" "$flow"
 done
+
+npm run smoke:android:backup

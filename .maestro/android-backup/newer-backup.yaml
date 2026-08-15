@@ -1,0 +1,20 @@
+appId: no.kvalle.trene
+name: Reject a newer Android backup
+---
+- launchApp
+- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
+- tapOn: "Øvelser"
+- tapOn: "Opprett første øvelse"
+- tapOn: { id: "exercise-name-input" }
+- inputText: "Beholdes"
+- tapOn: { id: "create-exercise-submit" }
+- back
+- tapOn: "Innstillinger"
+- tapOn: "Data"
+- tapOn: { id: "restore-from-file" }
+- tapOn: "newer.trene-backup"
+- extendedWaitUntil: { visible: "Sikkerhetskopien krever en nyere versjon av Trene. Dataene dine er ikke endret.", timeout: 30000 }
+- back
+- back
+- tapOn: "Øvelser"
+- assertVisible: "Beholdes"

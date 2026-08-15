@@ -21,7 +21,7 @@ import {
   createNativeRestoreRecoveryPlatform,
 } from './backup/nativeRestorePlatform';
 import { recoverInterruptedRestore, RestoreSafeStopError } from './backup/recoverRestore';
-import { nativeRestoreFaultCheckpoint } from './backup/nativeRestoreAutomation';
+import { nativeBackupRestoreFaultCheckpoint } from './backup/nativeRestoreAutomation';
 
 type StartupState =
   | { status: 'loading' }
@@ -50,7 +50,7 @@ export function StartupGate({
     cleanupAbandonedBackupExports()
       .then(() => recoverInterruptedRestore(
         createNativeRestoreRecoveryPlatform(),
-        nativeRestoreFaultCheckpoint,
+        nativeBackupRestoreFaultCheckpoint,
       ))
       .then((cleanup) => { recoveryCleanup.current = cleanup; })
       .then(() => runtime.start()).then(

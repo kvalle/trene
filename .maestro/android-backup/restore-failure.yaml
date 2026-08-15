@@ -1,0 +1,24 @@
+appId: no.kvalle.trene
+name: Roll back a failed Android restore
+---
+- launchApp
+- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
+- tapOn: "Øvelser"
+- tapOn: "Opprett første øvelse"
+- tapOn: { id: "exercise-name-input" }
+- inputText: "Beholdes"
+- tapOn: { id: "create-exercise-submit" }
+- back
+- tapOn: "Innstillinger"
+- tapOn: "Data"
+- tapOn: { id: "restore-from-file" }
+- tapOn: "representative.trene-backup"
+- extendedWaitUntil: { visible: { id: "restore-preview" }, timeout: 30000 }
+- tapOn: { id: "continue-restore" }
+- tapOn: { id: "confirm-restore" }
+- extendedWaitUntil: { visible: "Gjenopprettingen mislyktes. De opprinnelige dataene er kontrollert og gjenopprettet.", timeout: 30000 }
+- back
+- back
+- tapOn: "Øvelser"
+- assertVisible: "Beholdes"
+- assertNotVisible: "Knebøy"

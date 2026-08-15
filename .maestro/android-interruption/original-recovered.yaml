@@ -1,0 +1,8 @@
+appId: no.kvalle.trene
+name: Verify original Android data after interruption
+---
+- launchApp
+- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 30000 }
+- tapOn: "Øvelser"
+- assertVisible: "Beholdes"
+- assertNotVisible: "Knebøy"

@@ -1,0 +1,18 @@
+appId: no.kvalle.trene
+name: Safely stop after Android restore and rollback failure
+---
+- launchApp
+- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
+- tapOn: "Innstillinger"
+- tapOn: "Data"
+- tapOn: { id: "restore-from-file" }
+- tapOn: "representative.trene-backup"
+- extendedWaitUntil: { visible: { id: "restore-preview" }, timeout: 30000 }
+- tapOn: { id: "continue-restore" }
+- tapOn: { id: "confirm-restore" }
+- extendedWaitUntil: { visible: "Gjenopprettingen kunne ikke fullføres trygt. Lukk Trene og behold appdataene for å kunne gjenopprette dem senere.", timeout: 30000 }
+- stopApp
+- launchApp
+- extendedWaitUntil: { visible: "Trene kan ikke åpne dataene trygt", timeout: 30000 }
+- assertVisible: "Gjenopprettingen ble avbrutt, og ingen av databasene kunne bekreftes. Dataene er bevart for hjelp med gjenoppretting."
+- assertNotVisible: "Klar for en økt?"

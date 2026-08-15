@@ -8,7 +8,7 @@ import { createNativeBackupPlatform } from '../backup/nativeBackupPlatform';
 import { createNativeRestorePlatform } from '../backup/nativeRestorePlatform';
 import { prepareRestore, RestorePreparationError, type PreparedRestore } from '../backup/prepareRestore';
 import { RestoreCommitError } from '../backup/commitRestore';
-import { nativeRestoreFaultCheckpoint } from '../backup/nativeRestoreAutomation';
+import { nativeBackupRestoreFaultCheckpoint } from '../backup/nativeRestoreAutomation';
 import { useDatabaseRuntime } from '../database/DatabaseContext';
 import { formatDateTime } from '../locale';
 
@@ -33,6 +33,7 @@ export function DataScreen() {
     try {
       await createAndShareBackup(runtime, createNativeBackupPlatform(), {
         appVersion: Constants.expoConfig?.version ?? 'unknown',
+        checkpoint: nativeBackupRestoreFaultCheckpoint,
       });
     } catch {
       setFailure('Kunne ikke lage sikkerhetskopien. Dataene dine er ikke endret.');
@@ -45,7 +46,7 @@ export function DataScreen() {
     setOperation('restore');
     setFailure(null);
     try {
-      const result = await prepareRestore(createNativeRestorePlatform(), nativeRestoreFaultCheckpoint);
+      const result = await prepareRestore(createNativeRestorePlatform(), nativeBackupRestoreFaultCheckpoint);
       if (result.status === 'ready') setRestore(result.restore);
     } catch (error) {
       const message = error instanceof RestorePreparationError && error.code === 'update-required'

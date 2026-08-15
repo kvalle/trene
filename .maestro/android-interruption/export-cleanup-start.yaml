@@ -1,0 +1,8 @@
+appId: no.kvalle.trene
+name: Interrupt Android backup before sharing
+---
+- launchApp
+- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
+- tapOn: "Innstillinger"
+- tapOn: "Data"
+- tapOn: { id: "create-backup" }
