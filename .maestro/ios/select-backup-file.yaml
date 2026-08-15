@@ -22,4 +22,5 @@ appId: no.kvalle.trene
 - extendedWaitUntil:
     visible: "${BACKUP_FILE}"
     timeout: 30000
-- tapOn: "${BACKUP_FILE}"
+- tapOn:
+    id: "${BACKUP_FILE}, trene-backup"
