@@ -1,0 +1,29 @@
+appId: no.kvalle.trene
+name: Verify iOS restore accessibility journey
+tags:
+  - ios
+  - backup-restore
+  - accessibility
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Innstillinger"
+- tapOn: "Data"
+- assertVisible: "Lag sikkerhetskopi"
+- assertVisible: "Gjenopprett fra fil"
+- tapOn: "Gjenopprett fra fil"
+- tapOn: "representative.trene-backup"
+- extendedWaitUntil:
+    visible: "Kontroller sikkerhetskopien"
+    timeout: 30000
+- assertVisible: "Ingenting er gjenopprettet ennå."
+- assertVisible: "Avbryt"
+- assertVisible: "Fortsett"
+- tapOn: "Fortsett"
+- assertVisible: "Erstatt alle data?"
+- assertVisible: "Dette erstatter alle data i Trene og kan ikke angres."
+- assertVisible: "Erstatt og gjenopprett"
+- tapOn: "Avbryt"
+- assertVisible: "Gjenopprett fra fil"

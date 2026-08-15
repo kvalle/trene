@@ -1,0 +1,30 @@
+appId: no.kvalle.trene
+name: Reject a damaged backup on iOS
+tags:
+  - ios
+  - backup-restore
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Øvelser"
+- tapOn: "Opprett første øvelse"
+- tapOn:
+    id: "exercise-name-input"
+- inputText: "Beholdes"
+- tapOn:
+    id: "create-exercise-submit"
+- back
+- tapOn: "Innstillinger"
+- tapOn: "Data"
+- tapOn:
+    id: "restore-from-file"
+- tapOn: "damaged.trene-backup"
+- extendedWaitUntil:
+    visible: "Sikkerhetskopien er skadet eller kan ikke leses. Dataene dine er ikke endret."
+    timeout: 30000
+- back
+- back
+- tapOn: "Øvelser"
+- assertVisible: "Beholdes"

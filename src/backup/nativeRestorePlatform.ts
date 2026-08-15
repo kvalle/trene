@@ -14,6 +14,7 @@ import {
 import type { RestorePlatform } from './prepareRestore';
 import type { RestoreRecoveryPlatform } from './recoverRestore';
 import type { BackupByteSink } from './types';
+import { nativeRestoreAvailableBytes } from './nativeRestoreAutomation';
 
 const RESTORE_DIRECTORY = 'trene-restore-preparation';
 const RECOVERY_DIRECTORY = 'trene-restore-recovery';
@@ -43,7 +44,7 @@ export function createNativeRestorePlatform(): RestorePlatform {
       const file = fileForArtifact(artifact);
       return openDatabaseAsync(file.name, { useNewConnection: true }, file.parentDirectory.uri);
     },
-    availableBytes: () => Paths.availableDiskSpace,
+    availableBytes: () => nativeRestoreAvailableBytes(Paths.availableDiskSpace),
     ...createNativeRestoreCommitPlatform(),
   };
 }

@@ -1,0 +1,21 @@
+appId: no.kvalle.trene
+name: Cancel iOS backup sharing
+tags:
+  - ios
+  - backup-restore
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Innstillinger"
+- tapOn: "Data"
+- tapOn:
+    id: "create-backup"
+- extendedWaitUntil:
+    visible: "Copy"
+    timeout: 30000
+- tapOn: "Close"
+- assertVisible:
+    id: "create-backup"
+- assertNotVisible: "lagret"
