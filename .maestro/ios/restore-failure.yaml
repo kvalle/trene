@@ -54,8 +54,11 @@ tags:
 - extendedWaitUntil:
     visible: "Gjenopprettingen mislyktes. De opprinnelige dataene er kontrollert og gjenopprettet."
     timeout: 30000
-- back
-- back
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 - tapOn: "Øvelser"
 - assertVisible: "Beholdes"
 - assertNotVisible: "Knebøy"
