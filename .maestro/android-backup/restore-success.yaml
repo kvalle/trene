@@ -9,6 +9,7 @@ name: Restore a synthetic backup on Android
 - inputText: "Utdatert"
 - tapOn: { id: "create-exercise-submit" }
 - back
+- back
 - tapOn: "Innstillinger"
 - tapOn: { id: "settings-data" }
 - tapOn: { id: "create-backup" }

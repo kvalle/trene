@@ -9,6 +9,7 @@ name: Reject a damaged Android backup
 - inputText: "Beholdes"
 - tapOn: { id: "create-exercise-submit" }
 - back
+- back
 - tapOn: "Innstillinger"
 - tapOn: { id: "settings-data" }
 - tapOn: { id: "restore-from-file" }
