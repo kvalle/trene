@@ -62,7 +62,11 @@ tags:
 - tapOn: "Øvelser"
 - assertVisible: "Beholdes.*"
 - assertNotVisible: "Knebøy.*"
-- back
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 - tapOn: "Tidligere økter"
 - tapOn: ".*, 1 øvelse"
-- assertVisible: "42,5 kg · 6 repetisjoner"
+- assertVisible: "Sett 1, 6 repetisjoner med 42,5 kilogram"
