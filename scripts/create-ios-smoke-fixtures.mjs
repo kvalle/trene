@@ -46,7 +46,7 @@ const manifest = {
 };
 writePackage('representative.trene-backup', manifest, databaseBytes);
 writePackage('newer.trene-backup', { ...manifest, formatVersion: 2 }, databaseBytes);
-writeFileSync(join(output, 'damaged.trene-backup'), 'not a backup');
+writePackage('damaged.trene-backup', manifest, new Uint8Array(databaseBytes.length));
 writeFileSync(join(output, 'checksums.txt'), [
   'representative.trene-backup', 'newer.trene-backup', 'damaged.trene-backup',
 ].map((name) => `${digest(readFileSync(join(output, name)))}  ${name}`).join('\n') + '\n');
