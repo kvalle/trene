@@ -14,6 +14,7 @@ export function SettingsScreen({ navigation }: Props) {
       <Pressable
         accessibilityRole="button"
         onPress={() => navigation.navigate('Data')}
+        testID="settings-data"
         style={({ pressed }) => [styles.row, { backgroundColor: colors.card, borderColor: colors.border }, pressed && styles.pressed]}
       >
         <Text style={[styles.rowTitle, { color: colors.text }]}>Data</Text>

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { dirname, join } from 'node:path';
 import { zipSync, strToU8 } from 'fflate';
@@ -9,6 +9,7 @@ if (!output) throw new Error('Usage: node scripts/create-ios-smoke-fixtures.mjs 
 mkdirSync(output, { recursive: true });
 
 const databasePath = join(output, 'database.sqlite');
+rmSync(databasePath, { force: true });
 const database = new DatabaseSync(databasePath);
 const schemaSource = readFileSync(new URL('../src/database/schema.ts', import.meta.url), 'utf8');
 const schema = /VERSION_ONE_SQL = `([\s\S]*?)`/u.exec(schemaSource)?.[1];

@@ -9,11 +9,12 @@ tags:
     visible: "Klar for en økt?"
     timeout: 120000
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn:
+    id: "settings-data"
 - tapOn:
     id: "restore-from-file"
 - extendedWaitUntil:
-    visible: "representative.trene-backup"
+    visible: "Recents"
     timeout: 30000
 - tapOn: "Cancel"
 - assertVisible:
