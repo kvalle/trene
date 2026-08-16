@@ -47,6 +47,7 @@ run_flow() {
 }
 
 for flow in .maestro/android-backup/*.yaml; do
+  if [[ "$(basename "$flow")" == "select-backup-file.yaml" ]]; then continue; fi
   export scenario="$(basename "$flow" .yaml)"
   reset_app
   scenario=""

@@ -12,7 +12,9 @@ name: Interrupt Android restore before replacement
 - tapOn: "Innstillinger"
 - tapOn: { id: "settings-data" }
 - tapOn: { id: "restore-from-file" }
-- tapOn: "representative.trene-backup"
+- runFlow:
+    file: ../android-backup/select-backup-file.yaml
+    env: { BACKUP_FILE: "representative.trene-backup" }
 - extendedWaitUntil: { visible: { id: "restore-preview" }, timeout: 30000 }
 - tapOn: { id: "continue-restore" }
 - tapOn: { id: "confirm-restore" }
