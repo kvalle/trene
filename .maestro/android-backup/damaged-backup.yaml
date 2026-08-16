@@ -15,7 +15,7 @@ name: Reject a damaged Android backup
 - tapOn: { id: "restore-from-file" }
 - runFlow:
     file: select-backup-file.yaml
-    env: { BACKUP_FILE: "damaged.trene-backup" }
+    env: { BACKUP_FILE: "representative.trene-backup" }
 - extendedWaitUntil: { visible: "Sikkerhetskopien er skadet eller kan ikke leses. Dataene dine er ikke endret.", timeout: 30000 }
 - back
 - back

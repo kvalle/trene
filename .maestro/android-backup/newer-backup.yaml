@@ -15,7 +15,7 @@ name: Reject a newer Android backup
 - tapOn: { id: "restore-from-file" }
 - runFlow:
     file: select-backup-file.yaml
-    env: { BACKUP_FILE: "newer.trene-backup" }
+    env: { BACKUP_FILE: "representative.trene-backup" }
 - extendedWaitUntil: { visible: "Sikkerhetskopien krever en nyere versjon av Trene. Dataene dine er ikke endret.", timeout: 30000 }
 - back
 - back

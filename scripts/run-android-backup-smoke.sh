@@ -31,7 +31,7 @@ cleanup() {
 trap cleanup EXIT
 
 node scripts/create-ios-smoke-fixtures.mjs "$fixtures"
-adb push "$fixtures"/*.trene-backup /sdcard/Download/ >/dev/null
+adb push "$fixtures/representative.trene-backup" /sdcard/Download/representative.trene-backup >/dev/null
 
 reset_app() {
   adb shell pm clear "$package" >/dev/null
@@ -49,6 +49,12 @@ run_flow() {
 for flow in .maestro/android-backup/*.yaml; do
   if [[ "$(basename "$flow")" == "select-backup-file.yaml" ]]; then continue; fi
   export scenario="$(basename "$flow" .yaml)"
+  fixture=representative
+  case "$(basename "$flow")" in
+    damaged-backup.yaml) fixture=damaged ;;
+    newer-backup.yaml) fixture=newer ;;
+  esac
+  adb push "$fixtures/$fixture.trene-backup" /sdcard/Download/representative.trene-backup >/dev/null
   reset_app
   scenario=""
   case "$(basename "$flow")" in
