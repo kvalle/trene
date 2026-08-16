@@ -4,7 +4,7 @@ name: Cancel Android backup sharing
 - launchApp
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn: { id: "settings-data" }
 - tapOn: { id: "create-backup" }
 - extendedWaitUntil: { visible: "Del sikkerhetskopi", timeout: 30000 }
 - pressKey: BACK

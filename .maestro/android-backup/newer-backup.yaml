@@ -10,7 +10,7 @@ name: Reject a newer Android backup
 - tapOn: { id: "create-exercise-submit" }
 - back
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn: { id: "settings-data" }
 - tapOn: { id: "restore-from-file" }
 - tapOn: "newer.trene-backup"
 - extendedWaitUntil: { visible: "Sikkerhetskopien krever en nyere versjon av Trene. Dataene dine er ikke endret.", timeout: 30000 }

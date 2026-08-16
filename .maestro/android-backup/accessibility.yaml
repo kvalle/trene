@@ -4,7 +4,7 @@ name: Verify Android restore accessibility journey
 - launchApp
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn: { id: "settings-data" }
 - assertVisible: { id: "create-backup", enabled: true }
 - assertVisible: { id: "restore-from-file", enabled: true }
 - tapOn: { id: "restore-from-file" }

@@ -10,7 +10,7 @@ name: Restore a synthetic backup on Android
 - tapOn: { id: "create-exercise-submit" }
 - back
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn: { id: "settings-data" }
 - tapOn: { id: "create-backup" }
 - extendedWaitUntil: { visible: "Del sikkerhetskopi", timeout: 30000 }
 - pressKey: BACK

@@ -10,7 +10,7 @@ name: Roll back a failed Android restore
 - tapOn: { id: "create-exercise-submit" }
 - back
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn: { id: "settings-data" }
 - tapOn: { id: "restore-from-file" }
 - tapOn: "representative.trene-backup"
 - extendedWaitUntil: { visible: { id: "restore-preview" }, timeout: 30000 }

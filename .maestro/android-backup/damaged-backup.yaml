@@ -10,7 +10,7 @@ name: Reject a damaged Android backup
 - tapOn: { id: "create-exercise-submit" }
 - back
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn: { id: "settings-data" }
 - tapOn: { id: "restore-from-file" }
 - tapOn: "damaged.trene-backup"
 - extendedWaitUntil: { visible: "Sikkerhetskopien er skadet eller kan ikke leses. Dataene dine er ikke endret.", timeout: 30000 }

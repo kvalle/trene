@@ -10,7 +10,7 @@ name: Report Android restore storage failure
 - tapOn: { id: "create-exercise-submit" }
 - back
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn: { id: "settings-data" }
 - tapOn: { id: "restore-from-file" }
 - tapOn: "representative.trene-backup"
 - extendedWaitUntil: { visible: "Det er ikke nok ledig plass til å kontrollere sikkerhetskopien. Dataene dine er ikke endret.", timeout: 30000 }
