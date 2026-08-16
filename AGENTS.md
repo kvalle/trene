@@ -43,12 +43,17 @@ When the user asks to implement a GitHub ticket, whether in natural language or
 through an implementation skill, deliver the work through a pull request:
 
 1. Fetch the ticket and its comments before making changes.
-2. Start from an up-to-date `origin/main` and create a dedicated branch named
+2. Before implementation, identify every required verification step and confirm
+   that the necessary local tools, runtimes, credentials, devices, emulators,
+   ports, fixtures, and services are available. Resolve missing prerequisites or
+   ask the user for help before starting work rather than discovering the blocker
+   midway through implementation.
+3. Start from an up-to-date `origin/main` and create a dedicated branch named
    `issue-<number>-<short-description>`. If a branch or open pull request already
    exists for the ticket, continue there instead of creating a duplicate.
-3. Implement, test, and review the ticket on that branch. Never push ticket work
+4. Implement, test, and review the ticket on that branch. Never push ticket work
    directly to `main`.
-4. Decide whether the ticket causes user-visible changes. For visible changes,
+5. Decide whether the ticket causes user-visible changes. For visible changes,
    capture before and after screenshots of every relevant screen, commit them
    under `docs/pr-screenshots/<issue-number>/`, and include them in the pull
    request description. Commit the implementation before capturing screenshots,
@@ -57,10 +62,10 @@ through an implementation skill, deliver the work through a pull request:
    screenshots, and commit the screenshots separately. Do not depend on another
    worktree where `main` may already be checked out. See
    `docs/pr-screenshots/README.md`.
-5. Commit only the intended changes, push the branch, and create a pull request
+6. Commit only the intended changes, push the branch, and create a pull request
    against `main`. Write a concise description of what changed and why so the
    result is easy to review. Include `Closes #<number>` in the pull request body.
-6. Treat the ticket implementation as incomplete until the pull request exists
+7. Treat the ticket implementation as incomplete until the pull request exists
    and return its URL to the user.
 
 If local changes prevent safely switching or creating branches, stop and ask the
@@ -70,11 +75,17 @@ After pushing and creating the pull request, wait for its GitHub Actions workflo
 
 ## Android smoke tests
 
-Do not prepare the local Android smoke environment before implementing a ticket.
-Wait for the pull request workflow first. If Android smoke ran and failed,
-inspect and download the CI logs before deciding whether local reproduction is
-needed. If Android smoke is absent or skipped in CI, run the complete smoke suite
-locally before treating the ticket as complete.
+During ticket preflight, decide whether Android runtime verification is required
+and verify that the emulator, ADB, Maestro, Metro when needed, and required test
+fixtures are available before implementation starts. If a required local
+prerequisite is unavailable, notify the user and resolve it before continuing.
+
+For Android native, file-flow, database-lifecycle, or Maestro changes, test
+locally before pushing. Run the narrowest affected Maestro flow while iterating,
+then run the complete relevant smoke suite locally before using CI as the final
+platform verification. Do not use repeated full CI runs as the primary debugging
+loop. If sandbox restrictions make local native testing impossible, state the
+constraint and use one focused CI job or flow before running the full matrix.
 
 Before running smoke tests locally, check whether Metro's port is available:
 
