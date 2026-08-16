@@ -8,16 +8,21 @@ appId: no.kvalle.trene
     when:
       notVisible: "${BACKUP_FILE}"
     commands:
-      - extendedWaitUntil:
-          visible:
-            id: "DOC.sidebar.item.On My iPhone"
-          timeout: 30000
-      - tapOn:
-          id: "DOC.sidebar.item.On My iPhone"
-      - extendedWaitUntil:
-          visible:
-            id: "DOC.browsingRoot.*Title: On My iPhone"
-          timeout: 30000
+      - runFlow:
+          when:
+            notVisible:
+              id: "DOC.browsingRoot.*Title: On My iPhone"
+          commands:
+            - extendedWaitUntil:
+                visible:
+                  id: "DOC.sidebar.item.On My iPhone"
+                timeout: 30000
+            - tapOn:
+                id: "DOC.sidebar.item.On My iPhone"
+            - extendedWaitUntil:
+                visible:
+                  id: "DOC.browsingRoot.*Title: On My iPhone"
+                timeout: 30000
       - tapOn: "Trene"
 - extendedWaitUntil:
     visible: "${BACKUP_FILE}"
