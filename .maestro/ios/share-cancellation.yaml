@@ -16,7 +16,8 @@ tags:
 - extendedWaitUntil:
     visible: "Copy"
     timeout: 30000
-- tapOn: "Close"
+- tapOn:
+    id: "PopoverDismissRegion"
 - assertVisible:
     id: "create-backup"
 - assertNotVisible: "lagret"
