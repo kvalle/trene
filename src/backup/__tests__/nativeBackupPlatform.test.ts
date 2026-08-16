@@ -1,15 +1,15 @@
 import { createNativeBackupPlatform } from '../nativeBackupPlatform';
 import { inspectDatabase } from '../../database/inspectDatabase';
-import { deserializeDatabaseAsync } from 'expo-sqlite';
+import { openDatabaseAsync } from 'expo-sqlite';
 import * as Sharing from 'expo-sharing';
 import type { BackupByteSource } from '../types';
 import type { Database } from '../../database/types';
 
 jest.mock('expo-sharing', () => ({ isAvailableAsync: jest.fn(), shareAsync: jest.fn() }));
-jest.mock('expo-sqlite', () => ({ deserializeDatabaseAsync: jest.fn() }));
+jest.mock('expo-sqlite', () => ({ openDatabaseAsync: jest.fn() }));
 jest.mock('../../database/inspectDatabase', () => ({ inspectDatabase: jest.fn() }));
 
-const mockedDeserialize = jest.mocked(deserializeDatabaseAsync);
+const mockedOpenDatabase = jest.mocked(openDatabaseAsync);
 const mockedInspect = jest.mocked(inspectDatabase);
 
 beforeEach(() => jest.clearAllMocks());
@@ -34,9 +34,9 @@ test('rejects sharing when the platform boundary is unavailable', async () => {
   expect(Sharing.shareAsync).not.toHaveBeenCalled();
 });
 
-test('deserializes, fully inspects, and closes a snapshot', async () => {
+test('stages, fully inspects, and closes a snapshot', async () => {
   const database = { closeAsync: jest.fn() } as unknown as Database;
-  mockedDeserialize.mockResolvedValue(database as never);
+  mockedOpenDatabase.mockResolvedValue(database as never);
   mockedInspect.mockResolvedValue({ schemaVersion: 1 } as never);
   const source: BackupByteSource = {
     size: 3,
@@ -44,7 +44,11 @@ test('deserializes, fully inspects, and closes a snapshot', async () => {
   };
 
   await expect(createNativeBackupPlatform().inspectSnapshot(source)).resolves.toEqual({ schemaVersion: 1 });
-  expect(mockedDeserialize).toHaveBeenCalledWith(Uint8Array.of(1, 2, 3));
+  expect(mockedOpenDatabase).toHaveBeenCalledWith(
+    expect.stringMatching(/^trene-inspect-.*\.sqlite$/u),
+    { useNewConnection: true },
+    expect.any(String),
+  );
   expect(mockedInspect).toHaveBeenCalledWith(database);
   expect(database.closeAsync).toHaveBeenCalled();
 });

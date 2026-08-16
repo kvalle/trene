@@ -15,24 +15,30 @@ tags:
 - inputText: "Utdatert"
 - tapOn:
     id: "create-exercise-submit"
-- back
+- assertVisible: "Utdatert"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn:
+    id: "settings-data"
 - assertVisible:
     id: "create-backup"
 - assertVisible:
     id: "restore-from-file"
 - tapOn:
     id: "restore-from-file"
-- extendedWaitUntil:
-    visible: "representative.trene-backup"
-    timeout: 30000
-- tapOn: "representative.trene-backup"
+- runFlow:
+    file: select-backup-file.yaml
+    env:
+      BACKUP_FILE: representative.trene-backup
 - extendedWaitUntil:
     visible:
       id: "restore-preview"
     timeout: 30000
-- assertVisible: "1 treningsøkt"
+- assertVisible: "1 treningsøkter"
 - assertVisible: "2 øvelser"
 - assertVisible: "Ingenting er gjenopprettet ennå."
 - tapOn:
@@ -46,24 +52,32 @@ tags:
     visible: "Klar for en økt?"
     timeout: 30000
 - tapOn: "Øvelser"
-- assertVisible: "Knebøy"
-- assertVisible: "Markløft"
-- assertNotVisible: "Utdatert"
-- tapOn: "Knebøy"
-- assertVisible: "80 kg · 5 repetisjoner"
-- back
-- tapOn: "Markløft"
-- assertVisible: "100 kg · 3 repetisjoner"
-- back
-- back
-- tapOn: "Tidligere økter"
-- assertVisible: "2 øvelser"
+- assertVisible: "Knebøy.*"
+- assertVisible: "Markløft.*"
+- assertNotVisible: "Utdatert.*"
+- tapOn: "Knebøy.*"
+- assertVisible: "Sett 1, 5 repetisjoner med 80 kilogram"
 - stopApp
 - launchApp
 - extendedWaitUntil:
     visible: "Klar for en økt?"
     timeout: 30000
 - tapOn: "Øvelser"
-- assertVisible: "Knebøy"
-- assertVisible: "Markløft"
-- assertNotVisible: "Utdatert"
+- tapOn: "Markløft.*"
+- assertVisible: "Sett 1, 3 repetisjoner med 100 kilogram"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
+- tapOn: "Tidligere økter"
+- assertVisible: ".*, 2 øvelser"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
+- tapOn: "Øvelser"
+- assertVisible: "Knebøy.*"
+- assertVisible: "Markløft.*"
+- assertNotVisible: "Utdatert.*"

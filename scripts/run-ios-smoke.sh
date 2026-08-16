@@ -27,11 +27,33 @@ cleanup() {
     --predicate 'process == "Trene"' > "$ios_artifacts/simulator.log" 2>&1 || true
   xcrun simctl io "$udid" screenshot "$maestro_artifacts/screenshots/final.png" >/dev/null 2>&1 || true
   xcrun simctl list devices > "$ios_artifacts/simulator-devices.txt" 2>&1 || true
+  for directory in "$maestro_artifacts"/debug/*/.maestro; do
+    if [[ -d "$directory" ]]; then
+      cp -R "$directory" "${directory%/.maestro}/maestro" || true
+    fi
+  done
   node -e 'const fs=require("node:fs"); const p=process.argv[1]; if (!fs.existsSync(p)) { const value={appVersion:"0.1.0",formatVersion:1,schemaVersion:1,platform:"iOS Simulator",scenario:process.env.scenario||"unknown"}; fs.writeFileSync(p, JSON.stringify(value,null,2)+"\n"); }' "$ios_artifacts/runtime-metadata.json" || true
 }
 trap cleanup EXIT
 
-for flow in .maestro/ios/*.yaml; do
+requested_flow="${IOS_SMOKE_FLOW:-all}"
+if [[ ! "$requested_flow" =~ ^[A-Za-z0-9_-]+$ ]]; then
+  echo "Invalid iOS smoke flow name: $requested_flow" >&2
+  exit 1
+fi
+if [[ "$requested_flow" == "all" ]]; then
+  flows=(.maestro/ios/*.yaml)
+else
+  flow_path=".maestro/ios/$requested_flow.yaml"
+  if [[ ! -f "$flow_path" || "$requested_flow" == "select-backup-file" ]]; then
+    echo "Unknown standalone iOS smoke flow: $requested_flow" >&2
+    exit 1
+  fi
+  flows=("$flow_path")
+fi
+
+for flow in "${flows[@]}"; do
+  if [[ "$(basename "$flow")" == "select-backup-file.yaml" ]]; then continue; fi
   export scenario="$(basename "$flow" .yaml)"
   xcrun simctl uninstall "$udid" no.kvalle.trene >/dev/null 2>&1 || true
   xcrun simctl install "$udid" "$app"
@@ -47,7 +69,7 @@ for flow in .maestro/ios/*.yaml; do
     rollback-failure.yaml) fault_scenario="rollback-failure" ;;
   esac
   if [[ -n "$fault_scenario" ]]; then printf '%s\n' "$fault_scenario" > "$container/Documents/trene-automation-scenario.txt"; fi
-  maestro test --debug-output "$maestro_artifacts/debug/$(basename "$flow" .yaml)" "$flow"
+  maestro --device "$udid" test --debug-output "$maestro_artifacts/debug/$(basename "$flow" .yaml)" "$flow"
   if [[ "$scenario" == "rollback-failure" ]]; then
     test -f "$container/Documents/trene-restore-recovery/operation.json"
     test -f "$container/Documents/trene-restore-recovery/rollback.sqlite"

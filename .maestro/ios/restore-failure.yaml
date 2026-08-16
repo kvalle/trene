@@ -15,8 +15,12 @@ tags:
 - inputText: "Beholdes"
 - tapOn:
     id: "create-exercise-submit"
-- back
-- back
+- assertVisible: "Beholdes"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 - tapOn: "Start økt"
 - tapOn: "Legg til øvelse"
 - tapOn: "Beholdes"
@@ -24,15 +28,19 @@ tags:
 - inputText: "42.5"
 - tapOn: "Repetisjoner"
 - inputText: "6"
-- tapOn: "Bekreft"
+- tapOn: "Bekreft planlagt sett for Beholdes"
 - tapOn: "Ferdig"
 - tapOn: "Fullfør økt"
 - tapOn: "Tilbake til forsiden"
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn:
+    id: "settings-data"
 - tapOn:
     id: "restore-from-file"
-- tapOn: "representative.trene-backup"
+- runFlow:
+    file: select-backup-file.yaml
+    env:
+      BACKUP_FILE: representative.trene-backup
 - extendedWaitUntil:
     visible:
       id: "restore-preview"
@@ -46,12 +54,19 @@ tags:
 - extendedWaitUntil:
     visible: "Gjenopprettingen mislyktes. De opprinnelige dataene er kontrollert og gjenopprettet."
     timeout: 30000
-- back
-- back
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 - tapOn: "Øvelser"
-- assertVisible: "Beholdes"
-- assertNotVisible: "Knebøy"
-- back
+- assertVisible: "Beholdes.*"
+- assertNotVisible: "Knebøy.*"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 - tapOn: "Tidligere økter"
 - tapOn: ".*, 1 øvelse"
-- assertVisible: "42,5 kg · 6 repetisjoner"
+- assertVisible: "Sett 1, 6 repetisjoner med 42,5 kilogram"

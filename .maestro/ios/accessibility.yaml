@@ -10,11 +10,15 @@ tags:
     visible: "Klar for en økt?"
     timeout: 120000
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn:
+    id: "settings-data"
 - assertVisible: "Lag sikkerhetskopi"
 - assertVisible: "Gjenopprett fra fil"
 - tapOn: "Gjenopprett fra fil"
-- tapOn: "representative.trene-backup"
+- runFlow:
+    file: select-backup-file.yaml
+    env:
+      BACKUP_FILE: representative.trene-backup
 - extendedWaitUntil:
     visible: "Kontroller sikkerhetskopien"
     timeout: 30000

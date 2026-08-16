@@ -15,16 +15,28 @@ tags:
 - inputText: "Beholdes"
 - tapOn:
     id: "create-exercise-submit"
-- back
+- assertVisible: "Beholdes"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 - tapOn: "Innstillinger"
-- tapOn: "Data"
+- tapOn:
+    id: "settings-data"
 - tapOn:
     id: "restore-from-file"
-- tapOn: "newer.trene-backup"
+- runFlow:
+    file: select-backup-file.yaml
+    env:
+      BACKUP_FILE: newer.trene-backup
 - extendedWaitUntil:
     visible: "Sikkerhetskopien krever en nyere versjon av Trene. Dataene dine er ikke endret."
     timeout: 30000
-- back
-- back
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 - tapOn: "Øvelser"
-- assertVisible: "Beholdes"
+- assertVisible: "Beholdes.*"

@@ -1,5 +1,5 @@
 import { Directory, File, FileMode, Paths } from 'expo-file-system';
-import { deserializeDatabaseAsync } from 'expo-sqlite';
+import { openDatabaseAsync } from 'expo-sqlite';
 
 import { inspectDatabase } from '../database/inspectDatabase';
 import type { Database } from '../database/types';
@@ -12,13 +12,26 @@ export function createNativeBackupPlatform(): BackupPlatform {
   return {
     createArtifact: createFileArtifact,
     inspectSnapshot: async (source) => {
-      const chunks: Uint8Array[] = [];
-      for await (const chunk of source.open()) chunks.push(chunk);
-      const database = await deserializeDatabaseAsync(join(chunks));
+      const file = new File(exportDirectory(), `trene-inspect-${uniqueSuffix()}.sqlite`);
+      const sink = fileSink(file);
       try {
-        return await inspectDatabase(database);
+        for await (const chunk of source.open()) await sink.write(chunk);
+        await sink.close();
+        const database = await openDatabaseAsync(
+          file.name,
+          { useNewConnection: true },
+          file.parentDirectory.uri,
+        );
+        try {
+          return await inspectDatabase(database);
+        } finally {
+          await database.closeAsync();
+        }
+      } catch (error) {
+        await sink.abort();
+        throw error;
       } finally {
-        await database.closeAsync();
+        if (file.exists) file.delete();
       }
     },
     serializeSnapshot: async (database: Database) => {
@@ -95,9 +108,6 @@ function exportDirectory(): Directory {
   return new Directory(Paths.cache, EXPORT_DIRECTORY);
 }
 
-function join(chunks: Uint8Array[]): Uint8Array {
-  const bytes = new Uint8Array(chunks.reduce((size, chunk) => size + chunk.length, 0));
-  let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
-  return bytes;
+function uniqueSuffix(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
