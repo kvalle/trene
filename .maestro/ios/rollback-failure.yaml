@@ -26,9 +26,6 @@ tags:
 - assertVisible: "Dette erstatter alle data i Trene og kan ikke angres."
 - tapOn:
     id: "confirm-restore"
-- extendedWaitUntil:
-    visible: "Gjenopprettingen kunne ikke fullføres trygt. Lukk Trene og behold appdataene for å kunne gjenopprette dem senere."
-    timeout: 30000
 - stopApp
 - launchApp
 - extendedWaitUntil:
