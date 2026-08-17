@@ -3,6 +3,13 @@ name: Interrupt Android backup before sharing
 ---
 - launchApp
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
+- tapOn: "Øvelser"
+- tapOn: "Opprett første øvelse"
+- tapOn: { id: "exercise-name-input" }
+- inputText: "Beholdes"
+- tapOn: { id: "create-exercise-submit" }
+- back
+- back
 - tapOn: "Innstillinger"
 - tapOn: { id: "settings-data" }
 - tapOn: { id: "create-backup" }
