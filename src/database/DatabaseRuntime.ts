@@ -11,6 +11,7 @@ export interface DatabaseMaintenance {
   run<T>(operation: (database: Database) => Promise<T>): Promise<T>;
   reopen(): Promise<void>;
   replace(operation: () => Promise<void>, publishGeneration?: boolean): Promise<void>;
+  publishGeneration(): Promise<void>;
 }
 
 export class DatabaseRuntime implements DatabaseAccess {
@@ -130,6 +131,9 @@ export class DatabaseRuntime implements DatabaseAccess {
       replace: (replace, publishGeneration = true) => schedule(
         () => this.replace(replace, publishGeneration),
       ),
+      publishGeneration: () => schedule(async () => {
+        this.generationPending = true;
+      }),
     };
 
     try {

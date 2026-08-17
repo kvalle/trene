@@ -144,19 +144,25 @@ test.each(['restore.application-remount', 'restore.cleanup'] as const)(
 );
 
 test('enters safe stop when rollback re-verification fails after replacement starts', async () => {
-  const runtime = runtimeWithConnections(1);
+  const runtime = runtimeWithConnections(2);
   const platform = fakePlatform();
-  jest.mocked(inspectDatabase).mockResolvedValue(original);
+  const generationPublished = jest.fn();
+  jest.mocked(inspectDatabase)
+    .mockResolvedValueOnce(original)
+    .mockRejectedValueOnce(new Error('candidate is invalid'));
   await runtime.start();
+  runtime.subscribe(generationPublished);
 
   await expect(commitPreparedRestore(runtime, platform, fakeArtifact(), restored, async (stage, timing) => {
     if (stage === 'restore.rollback-reverify' && timing === 'before') {
       throw new Error('rollback cannot be proven');
     }
-    if (stage === 'restore.replacement' && timing === 'before') throw new Error('replacement failed');
   })).rejects.toMatchObject({ code: 'unrecoverable' });
 
+  expect(platform.activateDatabase).toHaveBeenCalledTimes(1);
   expect(platform.cleanupRestoreCommit).not.toHaveBeenCalled();
+  expect(runtime.getGeneration()).toBe(0);
+  expect(generationPublished).not.toHaveBeenCalled();
 });
 
 test.each([

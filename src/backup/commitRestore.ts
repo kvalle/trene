@@ -77,13 +77,14 @@ export async function commitPreparedRestore(
           platform.writeRestoreMarker('replacement-started', rollback, expected)
         ));
         await atCheckpoint(checkpoint, 'restore.replacement', () => (
-          maintenance.replace(() => platform.activateDatabase(stagedDatabase))
+          maintenance.replace(() => platform.activateDatabase(stagedDatabase), false)
         ));
         const active = await atCheckpoint(checkpoint, 'restore.active-validation', () => maintenance.run(inspectDatabase));
         requireMatchingInspection(active, expected);
         await atCheckpoint(checkpoint, 'restore.marker-replacement-verified', () => (
           platform.writeRestoreMarker('replacement-verified', rollback, expected)
         ));
+        await maintenance.publishGeneration();
         replacementVerified = true;
         return active;
       } catch (error) {
