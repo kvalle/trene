@@ -6,7 +6,7 @@ name: Cancel Android backup sharing
 - tapOn: "Innstillinger"
 - tapOn: { id: "settings-data" }
 - tapOn: { id: "create-backup" }
-- extendedWaitUntil: { visible: "Quick Share", timeout: 30000 }
+- extendedWaitUntil: { notVisible: { id: "create-backup" }, timeout: 30000 }
 - pressKey: BACK
 - assertVisible: { id: "create-backup" }
 - assertNotVisible: "lagret"
