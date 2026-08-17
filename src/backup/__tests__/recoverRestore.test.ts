@@ -70,6 +70,23 @@ test('accepts the verified original when replacement may not have started', asyn
   expect(platform.activateRollback).not.toHaveBeenCalled();
 });
 
+test('accepts equivalent count objects regardless of property order', async () => {
+  const platform = fakePlatform(marker('replacement-started'));
+  jest.mocked(platform.inspectActiveDatabase).mockResolvedValue({
+    ...original,
+    tableCounts: {
+      workout_sets: 2,
+      workout_exercises: 1,
+      workouts: 1,
+      exercises: 2,
+    },
+    previewCounts: { workouts: 1, exercises: 2 },
+  });
+
+  await expect(recoverInterruptedRestore(platform)).resolves.toEqual(platform.cleanupRestoreCommit);
+  expect(platform.verifyRollbackSnapshot).not.toHaveBeenCalled();
+});
+
 test('repeats recovery on restart until deferred cleanup completes', async () => {
   const platform = fakePlatform(marker('replacement-verified'));
   jest.mocked(platform.inspectActiveDatabase).mockResolvedValue(restored);

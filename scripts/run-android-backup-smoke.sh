@@ -35,11 +35,18 @@ trap cleanup EXIT
 node scripts/create-ios-smoke-fixtures.mjs "$fixtures"
 
 requested_flow="${ANDROID_BACKUP_SMOKE_FLOW:-all}"
+requested_interruption="${ANDROID_BACKUP_INTERRUPTION_FLOW:-}"
 if [[ ! "$requested_flow" =~ ^[A-Za-z0-9_-]+$ ]]; then
   echo "Invalid Android backup smoke flow name: $requested_flow" >&2
   exit 1
 fi
-if [[ "$requested_flow" == "all" ]]; then
+if [[ -n "$requested_interruption" && "$requested_flow" != "all" ]]; then
+  echo "ANDROID_BACKUP_SMOKE_FLOW cannot be combined with ANDROID_BACKUP_INTERRUPTION_FLOW" >&2
+  exit 1
+fi
+if [[ -n "$requested_interruption" ]]; then
+  flows=()
+elif [[ "$requested_flow" == "all" ]]; then
   flows=(.maestro/android-backup/*.yaml)
 else
   flow_path=".maestro/android-backup/$requested_flow.yaml"
@@ -86,7 +93,13 @@ for flow in "${flows[@]}"; do
   run_flow "$flow"
 done
 
-if [[ "$requested_flow" != "all" ]]; then exit 0; fi
+if [[ -n "$requested_interruption" ]]; then
+  adb push "$fixtures/representative.trene-backup" /sdcard/Download/representative.trene-backup >/dev/null
+  adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
+    -d file:///sdcard/Download/representative.trene-backup >/dev/null
+fi
+
+if [[ -z "$requested_interruption" && "$requested_flow" != "all" ]]; then exit 0; fi
 
 run_interruption() {
   local name="$1" stage="$2" expected="$3"
@@ -126,10 +139,22 @@ run_interruption() {
   fi
 }
 
-run_interruption export-cleanup backup.share:before original-recovered
-run_interruption before-replacement restore.replacement:before original-recovered
-run_interruption around-activation restore.replacement:after restored-recovered
-run_interruption after-replacement restore.cleanup:before restored-recovered
+case "$requested_interruption" in
+  "")
+    run_interruption export-cleanup backup.share:before original-recovered
+    run_interruption before-replacement restore.replacement:before original-recovered
+    run_interruption around-activation restore.replacement:after restored-recovered
+    run_interruption after-replacement restore.cleanup:before restored-recovered
+    ;;
+  export-cleanup) run_interruption export-cleanup backup.share:before original-recovered ;;
+  before-replacement) run_interruption before-replacement restore.replacement:before original-recovered ;;
+  around-activation) run_interruption around-activation restore.replacement:after restored-recovered ;;
+  after-replacement) run_interruption after-replacement restore.cleanup:before restored-recovered ;;
+  *)
+    echo "Unknown Android backup interruption flow: $requested_interruption" >&2
+    exit 1
+    ;;
+esac
 
 test -z "$(adb shell find /data/user/0/$package/cache/trene-exports -type f 2>/dev/null || true)"
 node -e '
