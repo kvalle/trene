@@ -13,7 +13,7 @@ name: Restore a synthetic backup on Android
 - tapOn: "Innstillinger"
 - tapOn: { id: "settings-data" }
 - tapOn: { id: "create-backup" }
-- extendedWaitUntil: { visible: "Del sikkerhetskopi", timeout: 30000 }
+- extendedWaitUntil: { visible: "Quick Share", timeout: 30000 }
 - pressKey: BACK
 - assertVisible: { id: "create-backup" }
 - tapOn: { id: "restore-from-file" }
@@ -21,7 +21,7 @@ name: Restore a synthetic backup on Android
     file: select-backup-file.yaml
     env: { BACKUP_FILE: "representative.trene-backup" }
 - extendedWaitUntil: { visible: { id: "restore-preview" }, timeout: 30000 }
-- assertVisible: "1 treningsøkt"
+- assertVisible: "1 treningsøkter"
 - assertVisible: "2 øvelser"
 - assertVisible: "Ingenting er gjenopprettet ennå."
 - tapOn: { id: "continue-restore" }

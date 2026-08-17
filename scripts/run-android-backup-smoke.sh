@@ -31,14 +31,28 @@ cleanup() {
 trap cleanup EXIT
 
 node scripts/create-ios-smoke-fixtures.mjs "$fixtures"
-adb push "$fixtures/representative.trene-backup" /sdcard/Download/representative.trene-backup >/dev/null
+
+requested_flow="${ANDROID_BACKUP_SMOKE_FLOW:-all}"
+if [[ ! "$requested_flow" =~ ^[A-Za-z0-9_-]+$ ]]; then
+  echo "Invalid Android backup smoke flow name: $requested_flow" >&2
+  exit 1
+fi
+if [[ "$requested_flow" == "all" ]]; then
+  flows=(.maestro/android-backup/*.yaml)
+else
+  flow_path=".maestro/android-backup/$requested_flow.yaml"
+  if [[ ! -f "$flow_path" || "$requested_flow" == "select-backup-file" ]]; then
+    echo "Unknown standalone Android backup smoke flow: $requested_flow" >&2
+    exit 1
+  fi
+  flows=("$flow_path")
+fi
 
 reset_app() {
   adb shell pm clear "$package" >/dev/null
   adb shell monkey -p "$package" 1 >/dev/null 2>&1
   sleep 2
   adb shell am force-stop "$package"
-  adb shell mkdir -p "$documents"
 }
 
 run_flow() {
@@ -46,7 +60,7 @@ run_flow() {
   maestro test --debug-output "$maestro_artifacts/debug/$(basename "$flow" .yaml)" "$flow"
 }
 
-for flow in .maestro/android-backup/*.yaml; do
+for flow in "${flows[@]}"; do
   if [[ "$(basename "$flow")" == "select-backup-file.yaml" ]]; then continue; fi
   export scenario="$(basename "$flow" .yaml)"
   fixture=representative
@@ -55,6 +69,8 @@ for flow in .maestro/android-backup/*.yaml; do
     newer-backup.yaml) fixture=newer ;;
   esac
   adb push "$fixtures/$fixture.trene-backup" /sdcard/Download/representative.trene-backup >/dev/null
+  adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
+    -d file:///sdcard/Download/representative.trene-backup >/dev/null
   reset_app
   scenario=""
   case "$(basename "$flow")" in
@@ -67,6 +83,8 @@ for flow in .maestro/android-backup/*.yaml; do
   fi
   run_flow "$flow"
 done
+
+if [[ "$requested_flow" != "all" ]]; then exit 0; fi
 
 run_interruption() {
   local name="$1" stage="$2" expected="$3"

@@ -6,7 +6,7 @@ name: Cancel Android backup selection
 - tapOn: "Innstillinger"
 - tapOn: { id: "settings-data" }
 - tapOn: { id: "restore-from-file" }
-- assertVisible: "Recent"
+- assertVisible: "Show roots"
 - pressKey: BACK
 - assertVisible: { id: "restore-from-file" }
 - assertNotVisible: { id: "data-error" }

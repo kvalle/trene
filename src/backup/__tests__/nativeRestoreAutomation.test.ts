@@ -35,7 +35,7 @@ test.each([
   mockedFile.mockImplementation(() => ({
     exists: true,
     textSync: () => scenario,
-  }) as File);
+  }) as unknown as File);
 
   expect(nativeRestoreAvailableBytes(123)).toBe(bytes);
   if (failingStage) {
