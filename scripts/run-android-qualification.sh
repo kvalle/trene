@@ -17,10 +17,26 @@ if ! adb devices | grep -q 'device$'; then
   exit 1
 fi
 
-for flow in .maestro/smoke/*.yaml .maestro/qualification/*.yaml; do
-  adb shell pm clear no.kvalle.trene >/dev/null
-  sleep 2
-  maestro test --debug-output "$artifacts/debug" "$flow"
-done
+qualification_suite="${ANDROID_QUALIFICATION_SUITE:-all}"
+case "$qualification_suite" in
+  all|standalone|interruptions) ;;
+  *)
+    echo "Unknown Android qualification suite: $qualification_suite" >&2
+    exit 2
+    ;;
+esac
 
-npm run smoke:android:backup
+if [ "$qualification_suite" != interruptions ]; then
+  for flow in .maestro/smoke/*.yaml .maestro/qualification/*.yaml; do
+    adb shell pm clear no.kvalle.trene >/dev/null
+    sleep 2
+    maestro test --debug-output "$artifacts/debug" "$flow"
+  done
+  ANDROID_BACKUP_INTERRUPTION_FLOW=none npm run smoke:android:backup
+fi
+
+if [ "$qualification_suite" != standalone ]; then
+  for flow in export-cleanup before-replacement around-activation after-replacement; do
+    ANDROID_BACKUP_INTERRUPTION_FLOW="$flow" npm run smoke:android:backup
+  done
+fi

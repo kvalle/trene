@@ -44,7 +44,7 @@ if [[ -n "$requested_interruption" && "$requested_flow" != "all" ]]; then
   echo "ANDROID_BACKUP_SMOKE_FLOW cannot be combined with ANDROID_BACKUP_INTERRUPTION_FLOW" >&2
   exit 1
 fi
-if [[ -n "$requested_interruption" ]]; then
+if [[ -n "$requested_interruption" && "$requested_interruption" != "none" ]]; then
   flows=()
 elif [[ "$requested_flow" == "all" ]]; then
   flows=(.maestro/android-backup/*.yaml)
@@ -93,13 +93,14 @@ for flow in "${flows[@]}"; do
   run_flow "$flow"
 done
 
-if [[ -n "$requested_interruption" ]]; then
+if [[ -n "$requested_interruption" && "$requested_interruption" != "none" ]]; then
   adb push "$fixtures/representative.trene-backup" /sdcard/Download/representative.trene-backup >/dev/null
   adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
     -d file:///sdcard/Download/representative.trene-backup >/dev/null
 fi
 
-if [[ -z "$requested_interruption" && "$requested_flow" != "all" ]]; then exit 0; fi
+if [[ "$requested_interruption" == "none"
+  || (-z "$requested_interruption" && "$requested_flow" != "all") ]]; then exit 0; fi
 
 run_interruption() {
   local name="$1" stage="$2" expected="$3"
