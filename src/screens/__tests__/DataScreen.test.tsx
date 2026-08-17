@@ -6,6 +6,7 @@ import { DataScreen } from '../DataScreen';
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import { DatabaseRuntime } from '../../database/DatabaseRuntime';
 import { createAndShareBackup } from '../../backup/createBackup';
+import { RestoreCommitError } from '../../backup/commitRestore';
 import { prepareRestore, RestorePreparationError } from '../../backup/prepareRestore';
 
 jest.mock('@react-navigation/native', () => ({
@@ -140,6 +141,59 @@ test('requires destructive confirmation and blocks navigation during commit', as
   expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(
     'Gjenopprettet 5 treningsøkter og 7 øvelser.',
   );
+});
+
+test('locks the restore dialog on unrecoverable failure guidance', async () => {
+  const cancel = jest.fn();
+  mockedPrepareRestore.mockResolvedValue({
+    status: 'ready',
+    restore: {
+      createdAt: '2026-08-14T12:00:00.000Z',
+      sourceSchemaVersion: 1,
+      schemaVersion: 1,
+      previewCounts: { workouts: 5, exercises: 7 },
+      currentCounts: async () => ({ workouts: 2, exercises: 3 }),
+      commit: jest.fn(async () => { throw new RestoreCommitError('unrecoverable'); }),
+      cancel,
+    },
+  });
+  const view = renderScreen();
+
+  fireEvent.press(screen.getByRole('button', { name: 'Gjenopprett fra fil' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Fortsett' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Erstatt og gjenopprett' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/Gjenopprettingen kunne ikke fullføres trygt/);
+  expect(screen.queryByRole('button', { name: 'Erstatt og gjenopprett' })).not.toBeOnTheScreen();
+  expect(screen.queryByRole('button', { name: 'Avbryt' })).not.toBeOnTheScreen();
+  fireEvent(view.UNSAFE_getByType(Modal), 'requestClose');
+  expect(screen.getByRole('alert')).toBeOnTheScreen();
+  expect(cancel).not.toHaveBeenCalled();
+});
+
+test('closes and cleans up after a recoverable restore failure', async () => {
+  const cancel = jest.fn();
+  mockedPrepareRestore.mockResolvedValue({
+    status: 'ready',
+    restore: {
+      createdAt: '2026-08-14T12:00:00.000Z',
+      sourceSchemaVersion: 1,
+      schemaVersion: 1,
+      previewCounts: { workouts: 5, exercises: 7 },
+      currentCounts: async () => ({ workouts: 2, exercises: 3 }),
+      commit: jest.fn(async () => { throw new RestoreCommitError('unchanged'); }),
+      cancel,
+    },
+  });
+  renderScreen();
+
+  fireEvent.press(screen.getByRole('button', { name: 'Gjenopprett fra fil' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Fortsett' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Erstatt og gjenopprett' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/opprinnelige dataene er kontrollert og gjenopprettet/);
+  expect(screen.queryByRole('header', { name: 'Erstatt alle data?' })).not.toBeOnTheScreen();
+  expect(cancel).toHaveBeenCalled();
 });
 
 test.each([
