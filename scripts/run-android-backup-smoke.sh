@@ -21,9 +21,11 @@ export ADB_SERVER_SOCKET=tcp:127.0.0.1:5037
 cleanup() {
   if [[ -n "$maestro_pid" ]]; then kill "$maestro_pid" >/dev/null 2>&1 || true; wait "$maestro_pid" >/dev/null 2>&1 || true; fi
   adb exec-out screencap -p > "$maestro_artifacts/screenshots/final.png" 2>/dev/null || true
-  if [[ -d "$maestro_artifacts/debug/.maestro" ]]; then
-    cp -R "$maestro_artifacts/debug/.maestro" "$maestro_artifacts/debug/maestro" || true
-  fi
+  for debug_directory in "$maestro_artifacts"/debug/*/.maestro; do
+    if [[ -d "$debug_directory" ]]; then
+      cp -R "$debug_directory" "${debug_directory%/.maestro}/maestro" || true
+    fi
+  done
   if [[ ! -f "$android_artifacts/runtime-metadata.json" ]]; then
     node -e 'const fs=require("node:fs"); fs.writeFileSync(process.argv[1],JSON.stringify({appVersion:"0.1.0",formatVersion:1,schemaVersion:1,platform:"Android API 34",scenario:process.env.scenario||"unknown"},null,2)+"\n")' "$android_artifacts/runtime-metadata.json" || true
   fi
