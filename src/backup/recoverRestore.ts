@@ -30,13 +30,15 @@ export async function recoverInterruptedRestore(
   }
   if (!marker) return null;
 
-  const expectedActive = marker.stage === 'rollback-ready'
-    ? inspectionFromSnapshot(marker.rollback)
-    : marker.restored;
+  const original = inspectionFromSnapshot(marker.rollback);
   let activeError: unknown;
   try {
     const active = await atCheckpoint(checkpoint, 'recovery.active-validation', () => platform.inspectActiveDatabase());
-    requireMatchingInspection(active, expectedActive);
+    if (marker.stage === 'replacement-started') {
+      requireMatchingEither(active, original, marker.restored);
+    } else {
+      requireMatchingInspection(active, marker.stage === 'rollback-ready' ? original : marker.restored);
+    }
     return platform.cleanupRestoreCommit;
   } catch (error) {
     activeError = error;
@@ -45,13 +47,25 @@ export async function recoverInterruptedRestore(
 
   try {
     const rollback = await atCheckpoint(checkpoint, 'recovery.rollback-verify', () => platform.verifyRollbackSnapshot(marker.rollback));
-    requireMatchingInspection(rollback, inspectionFromSnapshot(marker.rollback));
+    requireMatchingInspection(rollback, original);
     await atCheckpoint(checkpoint, 'recovery.rollback-activate', () => platform.activateRollback());
     const active = await atCheckpoint(checkpoint, 'recovery.rollback-validation', () => platform.inspectActiveDatabase());
     requireMatchingInspection(active, rollback);
     return platform.cleanupRestoreCommit;
   } catch (error) {
     throw new RestoreSafeStopError({ activeError, rollbackError: error });
+  }
+}
+
+function requireMatchingEither(
+  actual: DatabaseInspection,
+  first: DatabaseInspection,
+  second: DatabaseInspection,
+): void {
+  try {
+    requireMatchingInspection(actual, first);
+  } catch {
+    requireMatchingInspection(actual, second);
   }
 }
 
