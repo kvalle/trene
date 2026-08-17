@@ -59,6 +59,10 @@ export function StartupGate({
         else void runtime.close();
       },
       (error) => {
+        if (error instanceof RestoreSafeStopError
+          && process.env.EXPO_PUBLIC_BACKUP_RESTORE_AUTOMATION === '1') {
+          console.warn(`Restore recovery safe stop phase: ${error.phase}`);
+        }
         if (active) setState(error instanceof RestoreSafeStopError
           ? { status: 'safe-stop' }
           : { status: 'failed', failures: attempt + 1 });

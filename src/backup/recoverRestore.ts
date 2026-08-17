@@ -12,7 +12,10 @@ export interface RestoreRecoveryPlatform {
 }
 
 export class RestoreSafeStopError extends Error {
-  constructor(public readonly technicalCause: unknown) {
+  constructor(
+    public readonly phase: 'marker-read' | 'active-validation' | 'rollback-verify' | 'rollback-activate' | 'rollback-validation',
+    public readonly technicalCause: unknown,
+  ) {
     super('Restore recovery could not verify either database');
     this.name = 'RestoreSafeStopError';
   }
@@ -26,7 +29,7 @@ export async function recoverInterruptedRestore(
   try {
     marker = await atCheckpoint(checkpoint, 'recovery.marker-read', () => platform.readRestoreMarker());
   } catch (error) {
-    throw new RestoreSafeStopError(error);
+    throw new RestoreSafeStopError('marker-read', error);
   }
   if (!marker) return null;
 
@@ -45,15 +48,18 @@ export async function recoverInterruptedRestore(
     // Replacement was incomplete or invalid; recover the verified original below.
   }
 
+  let rollbackPhase: RestoreSafeStopError['phase'] = 'rollback-verify';
   try {
     const rollback = await atCheckpoint(checkpoint, 'recovery.rollback-verify', () => platform.verifyRollbackSnapshot(marker.rollback));
     requireMatchingInspection(rollback, original);
+    rollbackPhase = 'rollback-activate';
     await atCheckpoint(checkpoint, 'recovery.rollback-activate', () => platform.activateRollback());
+    rollbackPhase = 'rollback-validation';
     const active = await atCheckpoint(checkpoint, 'recovery.rollback-validation', () => platform.inspectActiveDatabase());
     requireMatchingInspection(active, rollback);
     return platform.cleanupRestoreCommit;
   } catch (error) {
-    throw new RestoreSafeStopError({ activeError, rollbackError: error });
+    throw new RestoreSafeStopError(rollbackPhase, { activeError, rollbackError: error });
   }
 }
 

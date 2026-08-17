@@ -89,6 +89,7 @@ test('enters safe stop and preserves artifacts when restore and rollback are inv
   jest.mocked(platform.activateRollback).mockRejectedValue(rollbackError);
 
   await expect(recoverInterruptedRestore(platform)).rejects.toMatchObject({
+    phase: 'rollback-activate',
     technicalCause: { activeError, rollbackError },
   });
   expect(platform.cleanupRestoreCommit).not.toHaveBeenCalled();
@@ -105,18 +106,20 @@ test('rejects restored data with matching counts but different semantic values',
 });
 
 test.each([
-  'recovery.marker-read',
-  'recovery.active-validation',
-  'recovery.rollback-verify',
-  'recovery.rollback-activate',
-  'recovery.rollback-validation',
-] as const)('enters safe stop without cleanup when failure is injected at %s', async (stage) => {
+  ['recovery.marker-read', 'marker-read'],
+  ['recovery.active-validation', 'rollback-validation'],
+  ['recovery.rollback-verify', 'rollback-verify'],
+  ['recovery.rollback-activate', 'rollback-activate'],
+  ['recovery.rollback-validation', 'rollback-validation'],
+] as const)('enters safe stop without cleanup when failure is injected at %s', async (stage, phase) => {
   const platform = fakePlatform(marker('replacement-started'));
   jest.mocked(platform.inspectActiveDatabase).mockRejectedValue(new Error('active invalid'));
 
   await expect(recoverInterruptedRestore(platform, async (current, timing) => {
     if (current === stage && timing === 'before') throw new Error(`injected:${stage}`);
-  })).rejects.toBeInstanceOf(RestoreSafeStopError);
+  })).rejects.toMatchObject({
+    phase,
+  });
 
   expect(platform.cleanupRestoreCommit).not.toHaveBeenCalled();
 });
