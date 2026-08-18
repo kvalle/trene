@@ -61,7 +61,8 @@ through an implementation skill, deliver the work through a pull request:
    for the before screenshots, switch back to the feature branch for the after
    screenshots, and commit the screenshots separately. Do not depend on another
    worktree where `main` may already be checked out. See
-   `docs/pr-screenshots/README.md`.
+   `docs/pr-screenshots/README.md`. Reassess this after implementation if the
+   scope changes; do not rely only on the initial classification.
 6. Commit only the intended changes, push the branch, and create a pull request
    against `main`. Write a concise description of what changed and why so the
    result is easy to review. Include `Closes #<number>` in the pull request body.
@@ -118,3 +119,18 @@ debug output under the ignored `.artifacts/maestro/` directory, and connects to
 ADB at `127.0.0.1:5037` so the same command works locally and in the cplt
 sandbox. Extend `.maestro/smoke/` when a new cross-runtime user journey needs
 coverage. The runner discovers its YAML files automatically.
+
+### Backup and restore interruptions
+
+Native backup and restore interruption tests require a rootable API 34 AOSP or
+Google APIs emulator. Google Play images do not support `adb root`. The bundled
+release smoke APK does not require Metro.
+
+Run interruption flows one at a time locally:
+
+```sh
+ANDROID_BACKUP_INTERRUPTION_FLOW=<flow> npm run smoke:android:backup
+```
+
+Supported flows are `export-cleanup`, `before-replacement`,
+`around-activation`, and `after-replacement`.
