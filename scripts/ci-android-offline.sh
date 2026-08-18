@@ -23,7 +23,7 @@ if [[ ! -f "$apk" ]]; then
   exit 1
 fi
 
-adb uninstall no.kvalle.trene >/dev/null 2>&1 || true
+adb uninstall com.kjetilvalle.trene >/dev/null 2>&1 || true
 adb root >/dev/null
 adb wait-for-device
 adb shell svc wifi disable
@@ -37,7 +37,7 @@ fi
 
 adb install "$apk"
 
-if adb shell dumpsys package no.kvalle.trene | grep -q 'DEBUGGABLE'; then
+if adb shell dumpsys package com.kjetilvalle.trene | grep -q 'DEBUGGABLE'; then
   echo 'The qualification APK must not be debuggable.' >&2
   exit 1
 fi

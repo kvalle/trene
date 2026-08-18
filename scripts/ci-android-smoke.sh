@@ -3,7 +3,7 @@
 set -euo pipefail
 
 apk="${ANDROID_SMOKE_APK:-.artifacts/android/app-debug.apk}"
-bundle_url='http://127.0.0.1:8081/.expo/.virtual-metro-entry.bundle?platform=android&dev=true&lazy=true&minify=false&app=no.kvalle.trene&modulesOnly=false&runModule=true&excludeSource=true&sourcePaths=url-server'
+bundle_url='http://127.0.0.1:8081/.expo/.virtual-metro-entry.bundle?platform=android&dev=true&lazy=true&minify=false&app=com.kjetilvalle.trene&modulesOnly=false&runModule=true&excludeSource=true&sourcePaths=url-server'
 
 mkdir -p .artifacts
 

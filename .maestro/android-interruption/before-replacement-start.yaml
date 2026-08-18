@@ -1,4 +1,4 @@
-appId: no.kvalle.trene
+appId: com.kjetilvalle.trene
 name: Interrupt Android restore before replacement
 ---
 - launchApp

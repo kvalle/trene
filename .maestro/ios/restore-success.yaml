@@ -1,4 +1,4 @@
-appId: no.kvalle.trene
+appId: com.kjetilvalle.trene
 name: Restore a synthetic backup on iOS
 tags:
   - ios

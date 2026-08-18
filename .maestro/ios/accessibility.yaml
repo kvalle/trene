@@ -1,4 +1,4 @@
-appId: no.kvalle.trene
+appId: com.kjetilvalle.trene
 name: Verify iOS restore accessibility journey
 tags:
   - ios

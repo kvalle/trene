@@ -6,7 +6,7 @@ artifacts="$PWD/.artifacts"
 android_artifacts="$artifacts/android"
 maestro_artifacts="$artifacts/maestro-android-backup"
 fixtures="$android_artifacts/fixtures"
-package=no.kvalle.trene
+package=com.kjetilvalle.trene
 documents="/data/user/0/$package/files"
 maestro_pid=""
 

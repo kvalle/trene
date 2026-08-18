@@ -28,7 +28,7 @@ fi
 for flow in .maestro/smoke/*.yaml; do
   # Clear data before Maestro launches the app. Combining clearState and launchApp
   # can race Android's delayed task cleanup, which may kill the new app process.
-  adb shell pm clear no.kvalle.trene >/dev/null
+  adb shell pm clear com.kjetilvalle.trene >/dev/null
   sleep 2
   # Separate invocations keep each flow's app lifecycle isolated.
   maestro test $debug_args "$flow"
