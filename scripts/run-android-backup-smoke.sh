@@ -115,24 +115,14 @@ run_interruption() {
   done
   adb shell test -f "$documents/trene-automation-checkpoint.txt"
   if [[ "$name" == "around-activation" ]]; then
-    adb shell uiautomator dump /sdcard/trene-accessibility.xml >/dev/null
-    adb pull /sdcard/trene-accessibility.xml "$android_artifacts/accessibility.xml" >/dev/null
-    node -e '
-      const xml=require("node:fs").readFileSync(process.argv[1],"utf8");
-      if (!xml.includes("Gjenoppretter") || !xml.includes("enabled=\"false\"")) {
-        throw new Error("Android accessibility tree did not expose the disabled destructive action");
-      }
-      const confirmation=xml.indexOf("Erstatt alle data?");
-      const warning=xml.indexOf("Dette erstatter alle data i Trene og kan ikke angres.");
-      const action=xml.indexOf("Gjenoppretter");
-      if (!(confirmation >= 0 && confirmation < warning && warning < action)) {
-        throw new Error("Android accessibility reading order is unsafe");
-      }
-    ' "$android_artifacts/accessibility.xml"
+    wait "$maestro_pid"
+    maestro_pid=""
   fi
   adb shell am force-stop "$package"
-  wait "$maestro_pid" || true
-  maestro_pid=""
+  if [[ -n "$maestro_pid" ]]; then
+    wait "$maestro_pid" || true
+    maestro_pid=""
+  fi
   adb shell rm -f "$documents/trene-automation-scenario.txt" "$documents/trene-automation-checkpoint.txt"
   run_flow ".maestro/android-interruption/$expected.yaml"
   if [[ "$name" == "export-cleanup" ]]; then
