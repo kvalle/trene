@@ -133,7 +133,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [standalone, interruptions]
+        suite: [standalone, export-cleanup, before-replacement, around-activation, after-replacement]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6

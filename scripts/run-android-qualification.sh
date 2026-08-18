@@ -19,14 +19,14 @@ fi
 
 qualification_suite="${ANDROID_QUALIFICATION_SUITE:-all}"
 case "$qualification_suite" in
-  all|standalone|interruptions) ;;
+  all|standalone|export-cleanup|before-replacement|around-activation|after-replacement) ;;
   *)
     echo "Unknown Android qualification suite: $qualification_suite" >&2
     exit 2
     ;;
 esac
 
-if [ "$qualification_suite" != interruptions ]; then
+if [ "$qualification_suite" = all ] || [ "$qualification_suite" = standalone ]; then
   for flow in .maestro/smoke/*.yaml .maestro/qualification/*.yaml; do
     adb shell pm clear no.kvalle.trene >/dev/null
     sleep 2
@@ -35,8 +35,10 @@ if [ "$qualification_suite" != interruptions ]; then
   ANDROID_BACKUP_INTERRUPTION_FLOW=none npm run smoke:android:backup
 fi
 
-if [ "$qualification_suite" != standalone ]; then
+if [ "$qualification_suite" = all ]; then
   for flow in export-cleanup before-replacement around-activation after-replacement; do
     ANDROID_BACKUP_INTERRUPTION_FLOW="$flow" npm run smoke:android:backup
   done
+elif [ "$qualification_suite" != standalone ]; then
+  ANDROID_BACKUP_INTERRUPTION_FLOW="$qualification_suite" npm run smoke:android:backup
 fi
