@@ -208,6 +208,11 @@ test('blocks rename, dialog cancellation, and navigation while deletion is pendi
 });
 
 test('keeps detail, closes confirmation, and offers focused retry after deletion failure', async () => {
+  let focusFrame: FrameRequestCallback | undefined;
+  const requestFrame = jest.spyOn(global, 'requestAnimationFrame').mockImplementation((callback) => {
+    focusFrame = callback;
+    return 1;
+  });
   const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   mockedDelete.mockRejectedValue(new Error('write failed'));
@@ -221,7 +226,10 @@ test('keeps detail, closes confirmation, and offers focused retry after deletion
   expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Lukk' })).toBeOnTheScreen();
   expect(announce).toHaveBeenCalledWith('Kunne ikke slette øvelsen. Prøv igjen.');
-  await waitFor(() => expect(focus).toHaveBeenCalled());
+  expect(focusFrame).toBeDefined();
+  act(() => focusFrame?.(0));
+  requestFrame.mockRestore();
+  expect(focus).toHaveBeenCalled();
 });
 
 test('dismisses deletion failure and returns focus to delete', async () => {
