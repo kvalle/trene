@@ -10,12 +10,12 @@
       "nb": "./locales/nb.json"
     },
     "ios": {
-      "bundleIdentifier": "no.kvalle.trene",
+      "bundleIdentifier": "com.kjetilvalle.trene",
       "deploymentTarget": "16.4",
       "supportsTablet": false
     },
     "android": {
-      "package": "no.kvalle.trene",
+      "package": "com.kjetilvalle.trene",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
         "backgroundColor": "#155e4b",

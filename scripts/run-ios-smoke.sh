@@ -55,12 +55,12 @@ fi
 for flow in "${flows[@]}"; do
   if [[ "$(basename "$flow")" == "select-backup-file.yaml" ]]; then continue; fi
   export scenario="$(basename "$flow" .yaml)"
-  xcrun simctl uninstall "$udid" no.kvalle.trene >/dev/null 2>&1 || true
+  xcrun simctl uninstall "$udid" com.kjetilvalle.trene >/dev/null 2>&1 || true
   xcrun simctl install "$udid" "$app"
-  xcrun simctl launch "$udid" no.kvalle.trene >/dev/null
+  xcrun simctl launch "$udid" com.kjetilvalle.trene >/dev/null
   sleep 2
-  xcrun simctl terminate "$udid" no.kvalle.trene >/dev/null 2>&1 || true
-  container="$(xcrun simctl get_app_container "$udid" no.kvalle.trene data)"
+  xcrun simctl terminate "$udid" com.kjetilvalle.trene >/dev/null 2>&1 || true
+  container="$(xcrun simctl get_app_container "$udid" com.kjetilvalle.trene data)"
   cp "$fixtures"/*.trene-backup "$container/Documents/"
   fault_scenario=""
   case "$(basename "$flow")" in

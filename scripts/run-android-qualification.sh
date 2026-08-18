@@ -28,7 +28,7 @@ esac
 
 if [ "$qualification_suite" = all ] || [ "$qualification_suite" = standalone ]; then
   for flow in .maestro/smoke/*.yaml .maestro/qualification/*.yaml; do
-    adb shell pm clear no.kvalle.trene >/dev/null
+    adb shell pm clear com.kjetilvalle.trene >/dev/null
     sleep 2
     maestro test --debug-output "$artifacts/debug" "$flow"
   done
