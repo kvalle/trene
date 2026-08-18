@@ -11,6 +11,7 @@
     "build:ios:smoke": "bash scripts/build-ios-smoke-app.sh",
     "smoke:ios": "bash scripts/run-ios-smoke.sh",
     "smoke:android": "sh scripts/run-android-smoke.sh",
+    "smoke:android:backup": "bash scripts/run-android-backup-smoke.sh",
     "qualify:android": "sh scripts/run-android-qualification.sh",
     "test": "jest --runInBand",
     "typecheck": "tsc --noEmit",

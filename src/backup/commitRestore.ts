@@ -77,13 +77,14 @@ export async function commitPreparedRestore(
           platform.writeRestoreMarker('replacement-started', rollback, expected)
         ));
         await atCheckpoint(checkpoint, 'restore.replacement', () => (
-          maintenance.replace(() => platform.activateDatabase(stagedDatabase))
+          maintenance.replace(() => platform.activateDatabase(stagedDatabase), false)
         ));
         const active = await atCheckpoint(checkpoint, 'restore.active-validation', () => maintenance.run(inspectDatabase));
         requireMatchingInspection(active, expected);
         await atCheckpoint(checkpoint, 'restore.marker-replacement-verified', () => (
           platform.writeRestoreMarker('replacement-verified', rollback, expected)
         ));
+        await maintenance.publishGeneration();
         replacementVerified = true;
         return active;
       } catch (error) {
@@ -143,8 +144,12 @@ export function digestBytes(bytes: Uint8Array): string {
 export function requireMatchingInspection(actual: DatabaseInspection, expected: DatabaseInspection): void {
   if (
     actual.schemaVersion !== expected.schemaVersion
-    || JSON.stringify(actual.tableCounts) !== JSON.stringify(expected.tableCounts)
-    || JSON.stringify(actual.previewCounts) !== JSON.stringify(expected.previewCounts)
+    || actual.tableCounts.exercises !== expected.tableCounts.exercises
+    || actual.tableCounts.workouts !== expected.tableCounts.workouts
+    || actual.tableCounts.workout_exercises !== expected.tableCounts.workout_exercises
+    || actual.tableCounts.workout_sets !== expected.tableCounts.workout_sets
+    || actual.previewCounts.exercises !== expected.previewCounts.exercises
+    || actual.previewCounts.workouts !== expected.previewCounts.workouts
     || actual.semanticDigest !== expected.semanticDigest
   ) {
     throw new Error('Restored database differs from the validated preparation');

@@ -10,10 +10,6 @@ cleanup() {
   adb shell ip link set eth0 up >/dev/null 2>&1 || true
   adb shell svc wifi enable >/dev/null 2>&1 || true
   adb shell svc data enable >/dev/null 2>&1 || true
-  adb logcat -d > .artifacts/logcat.txt 2>&1 || true
-  timeout 15s adb shell dumpsys activity processes > .artifacts/activity-processes.txt 2>&1 || true
-  timeout 15s adb shell dumpsys meminfo > .artifacts/meminfo.txt 2>&1 || true
-  timeout 15s adb shell dumpsys window > .artifacts/window.txt 2>&1 || true
   df -h > .artifacts/runner-disk.txt 2>&1 || true
   free -h > .artifacts/runner-memory.txt 2>&1 || true
   if [[ -d .artifacts/maestro/debug/.maestro ]]; then

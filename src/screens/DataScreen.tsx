@@ -8,7 +8,7 @@ import { createNativeBackupPlatform } from '../backup/nativeBackupPlatform';
 import { createNativeRestorePlatform } from '../backup/nativeRestorePlatform';
 import { prepareRestore, RestorePreparationError, type PreparedRestore } from '../backup/prepareRestore';
 import { RestoreCommitError } from '../backup/commitRestore';
-import { nativeRestoreFaultCheckpoint } from '../backup/nativeRestoreAutomation';
+import { nativeBackupRestoreFaultCheckpoint } from '../backup/nativeRestoreAutomation';
 import { useDatabaseRuntime } from '../database/DatabaseContext';
 import { formatDateTime } from '../locale';
 
@@ -17,6 +17,7 @@ export function DataScreen() {
   const { colors } = useTheme();
   const [operation, setOperation] = useState<'idle' | 'backup' | 'restore' | 'commit'>('idle');
   const [failure, setFailure] = useState<string | null>(null);
+  const [safeStop, setSafeStop] = useState(false);
   const [restore, setRestore] = useState<PreparedRestore | null>(null);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [currentCounts, setCurrentCounts] = useState<PreparedRestore['previewCounts'] | null>(null);
@@ -33,6 +34,7 @@ export function DataScreen() {
     try {
       await createAndShareBackup(runtime, createNativeBackupPlatform(), {
         appVersion: Constants.expoConfig?.version ?? 'unknown',
+        checkpoint: nativeBackupRestoreFaultCheckpoint,
       });
     } catch {
       setFailure('Kunne ikke lage sikkerhetskopien. Dataene dine er ikke endret.');
@@ -44,8 +46,9 @@ export function DataScreen() {
   async function selectRestore() {
     setOperation('restore');
     setFailure(null);
+    setSafeStop(false);
     try {
-      const result = await prepareRestore(createNativeRestorePlatform(), nativeRestoreFaultCheckpoint);
+      const result = await prepareRestore(createNativeRestorePlatform(), nativeBackupRestoreFaultCheckpoint);
       if (result.status === 'ready') setRestore(result.restore);
     } catch (error) {
       const message = error instanceof RestorePreparationError && error.code === 'update-required'
@@ -98,7 +101,11 @@ export function DataScreen() {
       const message = error instanceof RestoreCommitError && error.code === 'unrecoverable'
         ? 'Gjenopprettingen kunne ikke fullføres trygt. Lukk Trene og behold appdataene for å kunne gjenopprette dem senere.'
         : 'Gjenopprettingen mislyktes. De opprinnelige dataene er kontrollert og gjenopprettet.';
-      if (!(error instanceof RestoreCommitError) || error.code === 'unchanged') {
+      if (error instanceof RestoreCommitError && error.code === 'unrecoverable') {
+        setSafeStop(true);
+        setConfirmationOpen(false);
+        setCurrentCounts(null);
+      } else {
         restore.cancel();
         setRestore(null);
         setConfirmationOpen(false);
@@ -142,34 +149,38 @@ export function DataScreen() {
         {operation === 'restore' && <ActivityIndicator color={colors.primary} />}
         <Text style={[styles.actionText, { color: colors.primary }]}>{operation === 'restore' ? 'Kontrollerer sikkerhetskopi' : 'Gjenopprett fra fil'}</Text>
       </Pressable>
-      {failure && <Text accessibilityRole="alert" testID="data-error" style={[styles.error, { color: colors.notification }]}>{failure}</Text>}
-      <Modal animationType="none" onRequestClose={closePreview} onShow={() => focus(previewRef)} transparent visible={restore !== null}>
+      {failure && !safeStop && <Text accessibilityRole="alert" testID="data-error" style={[styles.error, { color: colors.notification }]}>{failure}</Text>}
+      <Modal animationType="none" onRequestClose={() => { if (!safeStop) closePreview(); }} onShow={() => focus(previewRef)} transparent visible={restore !== null}>
         <View accessibilityViewIsModal style={styles.modalBackdrop}>
           {restore && <View style={[styles.dialog, { backgroundColor: colors.card }]}>
-            <Text accessibilityRole="header" ref={previewRef} testID={confirmationOpen ? 'restore-confirmation' : 'restore-preview'} style={[styles.dialogTitle, { color: colors.text }]}>{confirmationOpen ? 'Erstatt alle data?' : 'Kontroller sikkerhetskopien'}</Text>
-            {!confirmationOpen && <>
-              <Text style={[styles.previewText, { color: colors.text }]}>Opprettet {formatDateTime(new Date(restore.createdAt))}</Text>
-              <Text style={[styles.previewCount, { color: colors.text }]}>{restore.previewCounts.workouts} treningsøkter</Text>
-              <Text style={[styles.previewCount, { color: colors.text }]}>{restore.previewCounts.exercises} øvelser</Text>
-              <Text style={[styles.previewText, { color: colors.text }]}>Ingenting er gjenopprettet ennå.</Text>
+            {safeStop ? (
+              <Text accessibilityRole="alert" style={[styles.error, { color: colors.notification }]}>{failure}</Text>
+            ) : <>
+              <Text accessibilityRole="header" ref={previewRef} testID={confirmationOpen ? 'restore-confirmation' : 'restore-preview'} style={[styles.dialogTitle, { color: colors.text }]}>{confirmationOpen ? 'Erstatt alle data?' : 'Kontroller sikkerhetskopien'}</Text>
+              {!confirmationOpen && <>
+                <Text style={[styles.previewText, { color: colors.text }]}>Opprettet {formatDateTime(new Date(restore.createdAt))}</Text>
+                <Text style={[styles.previewCount, { color: colors.text }]}>{restore.previewCounts.workouts} treningsøkter</Text>
+                <Text style={[styles.previewCount, { color: colors.text }]}>{restore.previewCounts.exercises} øvelser</Text>
+                <Text style={[styles.previewText, { color: colors.text }]}>Ingenting er gjenopprettet ennå.</Text>
+              </>}
+              {confirmationOpen && currentCounts && <>
+                <Text style={[styles.previewText, { color: colors.text }]}>Nåværende data som blir erstattet:</Text>
+                <Text style={[styles.previewCount, { color: colors.text }]}>{currentCounts.workouts} treningsøkter og {currentCounts.exercises} øvelser</Text>
+                <Text style={[styles.previewText, { color: colors.text }]}>Sikkerhetskopien som gjenopprettes:</Text>
+                <Text style={[styles.previewCount, { color: colors.text }]}>{restore.previewCounts.workouts} treningsøkter og {restore.previewCounts.exercises} øvelser</Text>
+                <Text style={[styles.warning, { color: colors.notification }]}>Dette erstatter alle data i Trene og kan ikke angres.</Text>
+              </>}
+              <Pressable accessibilityRole="button" accessibilityState={{ disabled: operation === 'commit' }} disabled={operation === 'commit'} onPress={closePreview} testID="cancel-restore" style={[styles.secondaryAction, { borderColor: colors.primary }, operation === 'commit' && styles.disabled]}>
+                <Text style={[styles.actionText, { color: colors.primary }]}>Avbryt</Text>
+              </Pressable>
+              {!confirmationOpen && <Pressable accessibilityRole="button" accessibilityHint="Åpner neste steg uten å endre data" accessibilityState={{ disabled: busy }} disabled={busy} onPress={() => void continueRestore()} testID="continue-restore" style={[styles.action, { backgroundColor: colors.primary }, busy && styles.disabled]}>
+                <Text style={[styles.actionText, { color: colors.background }]}>{operation === 'restore' ? 'Kontrollerer nåværende data' : 'Fortsett'}</Text>
+              </Pressable>}
+              {confirmationOpen && <Pressable accessibilityRole="button" accessibilityHint="Erstatter alle data i Trene og kan ikke angres" accessibilityState={{ disabled: operation === 'commit', busy: operation === 'commit' }} disabled={operation === 'commit'} onPress={() => void commitRestore()} testID="confirm-restore" style={[styles.destructiveAction, { backgroundColor: colors.notification }, operation === 'commit' && styles.disabled]}>
+                {operation === 'commit' && <ActivityIndicator color={colors.background} />}
+                <Text style={[styles.actionText, { color: colors.background }]}>{operation === 'commit' ? 'Gjenoppretter' : 'Erstatt og gjenopprett'}</Text>
+              </Pressable>}
             </>}
-            {confirmationOpen && currentCounts && <>
-              <Text style={[styles.previewText, { color: colors.text }]}>Nåværende data som blir erstattet:</Text>
-              <Text style={[styles.previewCount, { color: colors.text }]}>{currentCounts.workouts} treningsøkter og {currentCounts.exercises} øvelser</Text>
-              <Text style={[styles.previewText, { color: colors.text }]}>Sikkerhetskopien som gjenopprettes:</Text>
-              <Text style={[styles.previewCount, { color: colors.text }]}>{restore.previewCounts.workouts} treningsøkter og {restore.previewCounts.exercises} øvelser</Text>
-              <Text style={[styles.warning, { color: colors.notification }]}>Dette erstatter alle data i Trene og kan ikke angres.</Text>
-            </>}
-            <Pressable accessibilityRole="button" accessibilityState={{ disabled: operation === 'commit' }} disabled={operation === 'commit'} onPress={closePreview} testID="cancel-restore" style={[styles.secondaryAction, { borderColor: colors.primary }, operation === 'commit' && styles.disabled]}>
-              <Text style={[styles.actionText, { color: colors.primary }]}>Avbryt</Text>
-            </Pressable>
-            {!confirmationOpen && <Pressable accessibilityRole="button" accessibilityHint="Åpner neste steg uten å endre data" accessibilityState={{ disabled: busy }} disabled={busy} onPress={() => void continueRestore()} testID="continue-restore" style={[styles.action, { backgroundColor: colors.primary }, busy && styles.disabled]}>
-              <Text style={[styles.actionText, { color: colors.background }]}>{operation === 'restore' ? 'Kontrollerer nåværende data' : 'Fortsett'}</Text>
-            </Pressable>}
-            {confirmationOpen && <Pressable accessibilityRole="button" accessibilityHint="Erstatter alle data i Trene og kan ikke angres" accessibilityState={{ disabled: operation === 'commit', busy: operation === 'commit' }} disabled={operation === 'commit'} onPress={() => void commitRestore()} testID="confirm-restore" style={[styles.destructiveAction, { backgroundColor: colors.notification }, operation === 'commit' && styles.disabled]}>
-              {operation === 'commit' && <ActivityIndicator color={colors.background} />}
-              <Text style={[styles.actionText, { color: colors.background }]}>{operation === 'commit' ? 'Gjenoppretter' : 'Erstatt og gjenopprett'}</Text>
-            </Pressable>}
           </View>}
         </View>
       </Modal>

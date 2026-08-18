@@ -178,14 +178,19 @@ function isTableCounts(value: unknown): value is DatabaseInspection['tableCounts
 }
 
 async function activate(source: File): Promise<void> {
-  const live = new File(defaultDatabaseDirectory, DATABASE_NAME);
-  const pending = new File(defaultDatabaseDirectory, `${DATABASE_NAME}.restore`);
+  const databaseDirectoryUri = asFileUri(defaultDatabaseDirectory);
+  const live = new File(databaseDirectoryUri, DATABASE_NAME);
+  const pending = new File(databaseDirectoryUri, `${DATABASE_NAME}.restore`);
   await source.copy(pending, { overwrite: true });
   for (const suffix of ['-wal', '-shm']) {
-    const sidecar = new File(defaultDatabaseDirectory, `${DATABASE_NAME}${suffix}`);
+    const sidecar = new File(databaseDirectoryUri, `${DATABASE_NAME}${suffix}`);
     if (sidecar.exists) sidecar.delete();
   }
   await pending.move(live, { overwrite: true });
+}
+
+export function asFileUri(path: string): string {
+  return path.startsWith('file://') ? path : `file://${path}`;
 }
 
 function createFileArtifact(name: string): BackupArtifact {

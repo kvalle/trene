@@ -115,7 +115,10 @@ test('adds restart guidance after persistent failure', async () => {
 });
 
 test('shows a non-retry safe stop without opening the database', async () => {
-  mockedRecovery.mockRejectedValueOnce(new RestoreSafeStopError(new Error('both invalid')));
+  mockedRecovery.mockRejectedValueOnce(new RestoreSafeStopError(
+    'rollback-validation',
+    new Error('both invalid'),
+  ));
   const openDatabase = jest.fn(async () => database);
 
   render(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);

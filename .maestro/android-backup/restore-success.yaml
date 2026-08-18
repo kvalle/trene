@@ -1,0 +1,51 @@
+appId: no.kvalle.trene
+name: Restore a synthetic backup on Android
+---
+- launchApp
+- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
+- tapOn: "Øvelser"
+- tapOn: "Opprett første øvelse"
+- tapOn: { id: "exercise-name-input" }
+- inputText: "Utdatert"
+- tapOn: { id: "create-exercise-submit" }
+- back
+- back
+- tapOn: "Innstillinger"
+- tapOn: { id: "settings-data" }
+- tapOn: { id: "create-backup" }
+- extendedWaitUntil: { notVisible: { id: "create-backup" }, timeout: 30000 }
+- pressKey: BACK
+- assertVisible: { id: "create-backup" }
+- tapOn: { id: "restore-from-file" }
+- runFlow:
+    file: select-backup-file.yaml
+    env: { BACKUP_FILE: "representative.trene-backup" }
+- extendedWaitUntil: { visible: { id: "restore-preview" }, timeout: 30000 }
+- assertVisible: "1 treningsøkter"
+- assertVisible: "2 øvelser"
+- assertVisible: "Ingenting er gjenopprettet ennå."
+- tapOn: { id: "continue-restore" }
+- assertVisible: { id: "restore-confirmation" }
+- assertVisible: "Dette erstatter alle data i Trene og kan ikke angres."
+- tapOn: { id: "confirm-restore" }
+- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 30000 }
+- tapOn: "Øvelser"
+- assertVisible: "Knebøy"
+- assertVisible: "Markløft"
+- assertNotVisible: "Utdatert"
+- tapOn: "Knebøy"
+- assertVisible: "80 kg · 5 repetisjoner"
+- back
+- tapOn: "Markløft"
+- assertVisible: "100 kg · 3 repetisjoner"
+- back
+- back
+- tapOn: "Tidligere økter"
+- assertVisible: "2 øvelser"
+- stopApp
+- launchApp
+- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 30000 }
+- tapOn: "Øvelser"
+- assertVisible: "Knebøy"
+- assertVisible: "Markløft"
+- assertNotVisible: "Utdatert"

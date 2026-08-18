@@ -1,0 +1,12 @@
+appId: no.kvalle.trene
+name: Cancel Android backup selection
+---
+- launchApp
+- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
+- tapOn: "Innstillinger"
+- tapOn: { id: "settings-data" }
+- tapOn: { id: "restore-from-file" }
+- assertVisible: "Show roots"
+- pressKey: BACK
+- assertVisible: { id: "restore-from-file" }
+- assertNotVisible: { id: "data-error" }

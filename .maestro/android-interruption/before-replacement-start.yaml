@@ -1,0 +1,21 @@
+appId: no.kvalle.trene
+name: Interrupt Android restore before replacement
+---
+- launchApp
+- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
+- tapOn: "Øvelser"
+- tapOn: "Opprett første øvelse"
+- tapOn: { id: "exercise-name-input" }
+- inputText: "Beholdes"
+- tapOn: { id: "create-exercise-submit" }
+- back
+- back
+- tapOn: "Innstillinger"
+- tapOn: { id: "settings-data" }
+- tapOn: { id: "restore-from-file" }
+- runFlow:
+    file: ../android-backup/select-backup-file.yaml
+    env: { BACKUP_FILE: "representative.trene-backup" }
+- extendedWaitUntil: { visible: { id: "restore-preview" }, timeout: 30000 }
+- tapOn: { id: "continue-restore" }
+- tapOn: { id: "confirm-restore" }

@@ -2,7 +2,7 @@ import { File } from 'expo-file-system';
 
 import {
   nativeRestoreAvailableBytes,
-  nativeRestoreFaultCheckpoint,
+  nativeBackupRestoreFaultCheckpoint,
 } from '../nativeRestoreAutomation';
 
 jest.mock('expo-file-system', () => ({
@@ -22,7 +22,7 @@ test('does not read or inject automation scenarios in normal builds', async () =
   delete process.env.EXPO_PUBLIC_BACKUP_RESTORE_AUTOMATION;
 
   expect(nativeRestoreAvailableBytes(123)).toBe(123);
-  await expect(nativeRestoreFaultCheckpoint('restore.active-validation', 'before')).resolves.toBeUndefined();
+  await expect(nativeBackupRestoreFaultCheckpoint('restore.active-validation', 'before')).resolves.toBeUndefined();
   expect(mockedFile).not.toHaveBeenCalled();
 });
 
@@ -35,12 +35,27 @@ test.each([
   mockedFile.mockImplementation(() => ({
     exists: true,
     textSync: () => scenario,
-  }) as File);
+  }) as unknown as File);
 
   expect(nativeRestoreAvailableBytes(123)).toBe(bytes);
   if (failingStage) {
-    await expect(nativeRestoreFaultCheckpoint(failingStage, 'before')).rejects.toThrow(/Injected simulator/u);
+    await expect(nativeBackupRestoreFaultCheckpoint(failingStage, 'before')).rejects.toThrow(/Injected simulator/u);
   }
-  await expect(nativeRestoreFaultCheckpoint('restore.package-validation', 'before')).resolves.toBeUndefined();
-  await expect(nativeRestoreFaultCheckpoint('restore.active-validation', 'after')).resolves.toBeUndefined();
+  await expect(nativeBackupRestoreFaultCheckpoint('restore.package-validation', 'before')).resolves.toBeUndefined();
+  await expect(nativeBackupRestoreFaultCheckpoint('restore.active-validation', 'after')).resolves.toBeUndefined();
+});
+
+test('publishes a deterministic interruption checkpoint', async () => {
+  process.env.EXPO_PUBLIC_BACKUP_RESTORE_AUTOMATION = '1';
+  const write = jest.fn();
+  mockedFile.mockImplementation((_parent, name) => ({
+    exists: name === 'trene-automation-scenario.txt',
+    textSync: () => 'interrupt:restore.replacement:before',
+    write,
+  }) as unknown as File);
+
+  void nativeBackupRestoreFaultCheckpoint('restore.replacement', 'before');
+  await Promise.resolve();
+
+  expect(write).toHaveBeenCalledWith('restore.replacement:before');
 });

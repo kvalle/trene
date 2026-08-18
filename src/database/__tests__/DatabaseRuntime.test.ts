@@ -176,6 +176,26 @@ test('closes before replacement and publishes only the final replacement generat
   expect(runtime.getGeneration()).toBe(0);
 });
 
+test('publishes a deferred replacement only when explicitly requested', async () => {
+  const open = jest.fn<Promise<Database>, []>()
+    .mockResolvedValueOnce(fakeDatabase())
+    .mockResolvedValueOnce(fakeDatabase());
+  const runtime = new DatabaseRuntime(open);
+  const listener = jest.fn();
+  runtime.subscribe(listener);
+  await runtime.start();
+
+  await runtime.runExclusive(async (maintenance) => {
+    await maintenance.replace(async () => undefined, false);
+    expect(runtime.getGeneration()).toBe(0);
+    expect(listener).not.toHaveBeenCalled();
+    await maintenance.publishGeneration();
+  });
+
+  expect(runtime.getGeneration()).toBe(1);
+  expect(listener).toHaveBeenCalledTimes(1);
+});
+
 test('waits until the published generation has been mounted', async () => {
   const runtime = new DatabaseRuntime(async () => fakeDatabase());
   await runtime.start();
