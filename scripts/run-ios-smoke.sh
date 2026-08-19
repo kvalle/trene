@@ -16,16 +16,14 @@ export MAESTRO_CLI_NO_ANALYTICS=true
 export MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true
 export MAESTRO_DISABLE_UPDATE_CHECK=true
 
-udid="${IOS_SIMULATOR_UDID:-$(xcrun simctl list devices available -j | jq -r '[.devices[][] | select(.name | startswith("iPhone"))][0].udid')}"
-test -n "$udid"
-xcrun simctl boot "$udid" >/dev/null 2>&1 || true
-xcrun simctl bootstatus "$udid" -b
-node scripts/create-ios-smoke-fixtures.mjs "$fixtures"
-
+created_simulator=false
+udid=""
 cleanup() {
-  xcrun simctl spawn "$udid" log show --last 20m --style compact \
-    --predicate 'process == "Trene"' > "$ios_artifacts/simulator.log" 2>&1 || true
-  xcrun simctl io "$udid" screenshot "$maestro_artifacts/screenshots/final.png" >/dev/null 2>&1 || true
+  if [[ -n "$udid" ]]; then
+    xcrun simctl spawn "$udid" log show --last 20m --style compact \
+      --predicate 'process == "Trene"' > "$ios_artifacts/simulator.log" 2>&1 || true
+    xcrun simctl io "$udid" screenshot "$maestro_artifacts/screenshots/final.png" >/dev/null 2>&1 || true
+  fi
   xcrun simctl list devices > "$ios_artifacts/simulator-devices.txt" 2>&1 || true
   for directory in "$maestro_artifacts"/debug/*/.maestro; do
     if [[ -d "$directory" ]]; then
@@ -33,28 +31,61 @@ cleanup() {
     fi
   done
   node -e 'const fs=require("node:fs"); const p=process.argv[1]; if (!fs.existsSync(p)) { const value={appVersion:"0.1.0",formatVersion:1,schemaVersion:1,platform:"iOS Simulator",scenario:process.env.scenario||"unknown"}; fs.writeFileSync(p, JSON.stringify(value,null,2)+"\n"); }' "$ios_artifacts/runtime-metadata.json" || true
+  if [[ "$created_simulator" == true ]]; then
+    xcrun simctl shutdown "$udid" >/dev/null 2>&1 || true
+    xcrun simctl delete "$udid" >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup EXIT
 
-requested_flow="${IOS_SMOKE_FLOW:-all}"
-if [[ ! "$requested_flow" =~ ^[A-Za-z0-9_-]+$ ]]; then
-  echo "Invalid iOS smoke flow name: $requested_flow" >&2
-  exit 1
+if [[ -n "${IOS_SIMULATOR_UDID:-}" ]]; then
+  udid="$IOS_SIMULATOR_UDID"
+else
+  device_name="${IOS_SIMULATOR_DEVICE:-iPhone 16}"
+  runtime_version="${IOS_SIMULATOR_RUNTIME:-26}"
+  device_type="$(xcrun simctl list devicetypes -j | jq -er --arg name "$device_name" '.devicetypes[] | select(.name == $name) | .identifier')"
+  runtime_details="$(xcrun simctl list runtimes available -j | jq -cer --arg version "$runtime_version" '[.runtimes[] | select(.platform == "iOS" and (.version == $version or (.version | startswith($version + "."))))] | sort_by(.version | split(".") | map(tonumber)) | last')"
+  runtime="$(jq -r '.identifier' <<< "$runtime_details")"
+  resolved_runtime_version="$(jq -r '.version' <<< "$runtime_details")"
+  simulator_name="Trene iOS smoke ${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}-${IOS_SMOKE_SHARD:-focused}"
+  udid="$(xcrun simctl create "$simulator_name" "$device_type" "$runtime")"
+  created_simulator=true
 fi
-if [[ "$requested_flow" == "all" ]]; then
+
+xcrun simctl list devices > "$ios_artifacts/simulator-devices.txt"
+jq -n \
+  --arg udid "$udid" \
+  --arg device "${device_name:-provided by IOS_SIMULATOR_UDID}" \
+  --arg runtime "${resolved_runtime_version:-provided by IOS_SIMULATOR_UDID}" \
+  '{simulatorUdid:$udid,device:$device,runtime:$runtime}' > "$ios_artifacts/simulator-selection.json"
+xcrun simctl boot "$udid" >/dev/null 2>&1 || true
+xcrun simctl bootstatus "$udid" -b
+node scripts/create-ios-smoke-fixtures.mjs "$fixtures"
+
+requested_flows="${IOS_SMOKE_FLOWS:-${IOS_SMOKE_FLOW:-all}}"
+if [[ "$requested_flows" == "all" ]]; then
   flows=(.maestro/ios/*.yaml)
 else
-  flow_path=".maestro/ios/$requested_flow.yaml"
-  if [[ ! -f "$flow_path" || "$requested_flow" == "select-backup-file" ]]; then
-    echo "Unknown standalone iOS smoke flow: $requested_flow" >&2
-    exit 1
-  fi
-  flows=("$flow_path")
+  IFS=',' read -r -a requested_flow_names <<< "$requested_flows"
+  flows=()
+  for requested_flow in "${requested_flow_names[@]}"; do
+    if [[ ! "$requested_flow" =~ ^[A-Za-z0-9_-]+$ ]]; then
+      echo "Invalid iOS smoke flow name: $requested_flow" >&2
+      exit 1
+    fi
+    flow_path=".maestro/ios/$requested_flow.yaml"
+    if [[ ! -f "$flow_path" || "$requested_flow" == "select-backup-file" ]]; then
+      echo "Unknown standalone iOS smoke flow: $requested_flow" >&2
+      exit 1
+    fi
+    flows+=("$flow_path")
+  done
 fi
 
 for flow in "${flows[@]}"; do
   if [[ "$(basename "$flow")" == "select-backup-file.yaml" ]]; then continue; fi
-  export scenario="$(basename "$flow" .yaml)"
+  scenario="$(basename "$flow" .yaml)"
+  export scenario
   xcrun simctl uninstall "$udid" com.kjetilvalle.trene >/dev/null 2>&1 || true
   xcrun simctl install "$udid" "$app"
   xcrun simctl launch "$udid" com.kjetilvalle.trene >/dev/null

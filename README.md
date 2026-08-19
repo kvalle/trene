@@ -35,6 +35,21 @@ npx expo-doctor
 `npm run verify` runs all three checks. CI also compiles an iOS release build for
 the simulator and runs the Android qualification described below.
 
+### iOS runtime-verifisering
+
+Ved relevante pull requests bygger CI simulatorappen og kjører den representative
+`restore-success`-flyten som en rask, påkrevd gate. Push til `main` og publiserte
+GitHub-releaser kjører hele iOS-suiten fordelt på tre parallelle shards. Hver
+shard bruker en ny iPhone 16-simulator med nyeste tilgjengelige iOS 26.x, slik
+at tilstand fra blant annet Files-velgeren ikke kan lekke mellom shards.
+
+Workflowen kan også startes manuelt med én navngitt flyt eller hele suiten. Den
+har ingen tidsstyrte kjøringer. Native Maestro-flyter dekker plattformgrensene,
+som Files-velgeren, delingsarket, databasebytte, prosessrestart, rollback og
+safe-stop; skjermtilstand og tekst som ikke krever native integrasjon testes i
+Jest. Ved feil lastes bare logger, skjermbilder og trygg metadata opp, aldri
+sikkerhetskopier, SQLite-databaser, appcontainere eller brukerdata.
+
 ### Android smoke-test med Maestro
 
 Maestro kjører appen som en bruker gjennom native tilgjengelighetstreet. Flyten i
