@@ -18,6 +18,21 @@ on:
       - 'scripts/create-ios-smoke-fixtures.mjs'
       - 'scripts/run-ios-smoke.sh'
       - '.github/workflows/**'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'app.json'
+      - 'app.config.*'
+      - 'eas.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'plugins/**'
+      - 'ios/**'
+      - '.maestro/ios/**'
+      - 'scripts/build-ios-smoke-app.sh'
+      - 'scripts/create-ios-smoke-fixtures.mjs'
+      - 'scripts/run-ios-smoke.sh'
+      - '.github/workflows/**'
   release:
     types:
       - published
@@ -37,10 +52,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  plan:
+    name: Plan iOS runtime coverage
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: matrix
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_FLOW: ${{ inputs.flow }}
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            matrix='[{"shard":"pr","flows":"restore-success"}]'
+          elif [[ "$EVENT_NAME" == "workflow_dispatch" && "$REQUESTED_FLOW" != "all" ]]; then
+            matrix="$(jq -cn --arg flow "$REQUESTED_FLOW" '[{shard:"focused",flows:$flow}]')"
+          else
+            matrix='[{"shard":"restore","flows":"restore-success,damaged-backup,picker-cancellation"},{"shard":"recovery","flows":"restore-failure,newer-backup"},{"shard":"fail-safe","flows":"rollback-failure,storage-failure,share-cancellation"}]'
+            expected="$(find .maestro/ios -name '*.yaml' ! -name 'select-backup-file.yaml' -exec basename {} .yaml \; | sort)"
+            actual="$(jq -r '.[].flows | split(",")[]' <<< "$matrix" | sort)"
+            if [[ "$actual" != "$expected" ]]; then
+              echo "iOS shard matrix does not cover every standalone flow exactly once" >&2
+              diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") || true
+              exit 1
+            fi
+          fi
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
   ios-runtime:
-    name: iOS backup and restore runtime
+    name: iOS backup and restore runtime (${{ matrix.shard }})
+    needs: plan
     runs-on: macos-26
     timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -58,17 +106,22 @@ jobs:
         run: npm run build:ios:smoke
       - name: Run native backup and restore journeys
         env:
-          IOS_SMOKE_FLOW: ${{ github.event_name == 'workflow_dispatch' && inputs.flow || 'all' }}
+          IOS_SIMULATOR_DEVICE: iPhone 16
+          IOS_SIMULATOR_RUNTIME: '26'
+          IOS_SMOKE_FLOWS: ${{ matrix.flows }}
+          IOS_SMOKE_SHARD: ${{ matrix.shard }}
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
         run: npm run smoke:ios
       - name: Upload safe iOS diagnostics
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v6
         with:
-          name: ios-runtime-diagnostics
+          name: ios-runtime-diagnostics-${{ matrix.shard }}
           path: |
             .artifacts/ios/xcodebuild.log
             .artifacts/ios/simulator.log
             .artifacts/ios/simulator-devices.txt
+            .artifacts/ios/simulator-selection.json
             .artifacts/ios/runtime-metadata.json
             .artifacts/maestro-ios/debug/
             .artifacts/maestro-ios/screenshots/
