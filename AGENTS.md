@@ -80,6 +80,44 @@ During ticket preflight, decide whether Android runtime verification is required
 and verify that the emulator, ADB, Maestro, Metro when needed, and required test
 fixtures are available before implementation starts. If a required local
 prerequisite is unavailable, notify the user and resolve it before continuing.
+If implementing the ticket may require building an APK, also verify that the
+Android build broker is running before implementation:
+
+```sh
+python3 scripts/request-android-build.py --broker-status
+```
+
+This status check does not queue a build. If it fails because the broker is not
+running or its heartbeat is stale, tell the user that they must start the broker
+outside the sandbox and wait before proceeding.
+
+### Android build broker
+
+The user can explicitly start an Android build broker outside the cplt sandbox.
+When it is running, use it instead of trying to run the native APK build inside
+the sandbox:
+
+```sh
+python3 scripts/request-android-build.py
+```
+
+Run the command from this repository. The client validates that the broker has a
+fresh heartbeat for this exact repository, records the current Git `HEAD` and a
+digest of all tracked and non-ignored worktree files, queues one build, and
+prints JSON containing a `requestId` and repository-relative `statusPath`. A
+missing or stale heartbeat means the broker is not available; ask the user to
+start it outside the sandbox rather than trying to start it yourself.
+
+Poll the printed `statusPath` until it reaches a terminal state. Its directory
+also contains `build.log`; on success, `status.json` has `state: "passed"` and an
+`artifactPath` relative to that directory, normally `app-smoke.apk`, together
+with its SHA-256 and byte size. On failure or rejection, report the status,
+`errorCode` when present, and the relevant end of `build.log`.
+
+Build requests are tied to the source identity captured by the client. Avoid
+changing tracked or non-ignored files while a request is being accepted or
+built, and submit a new request after any source change. Broker runtime files,
+logs, and APKs live under the ignored `.artifacts/android/` directory.
 
 For Android native, file-flow, database-lifecycle, or Maestro changes, test
 locally before pushing. Run the narrowest affected Maestro flow while iterating,
