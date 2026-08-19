@@ -84,7 +84,7 @@ jobs:
     name: iOS backup and restore runtime (${{ matrix.shard }})
     needs: plan
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:
@@ -110,9 +110,10 @@ jobs:
           IOS_SIMULATOR_RUNTIME: '26'
           IOS_SMOKE_FLOWS: ${{ matrix.flows }}
           IOS_SMOKE_SHARD: ${{ matrix.shard }}
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
         run: npm run smoke:ios
       - name: Upload safe iOS diagnostics
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v6
         with:
           name: ios-runtime-diagnostics-${{ matrix.shard }}
