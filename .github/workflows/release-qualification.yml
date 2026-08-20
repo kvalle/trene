@@ -20,9 +20,12 @@ on:
       - 'ios/**'
       - '.maestro/android-backup/**'
       - '.maestro/ios/**'
+      - 'docs/specs/manual-backup-and-restore-qualification.*'
       - 'scripts/**android**'
       - 'scripts/**ios**'
       - 'scripts/verify-cross-platform-backup.mjs'
+      - 'scripts/create-backup-performance-fixture.mjs'
+      - 'scripts/validate-backup-qualification.mjs'
       - '.github/workflows/**'
   workflow_dispatch:
 
@@ -39,6 +42,50 @@ env:
   MAESTRO_VERSION: 2.8.0
 
 jobs:
+  evidence:
+    name: Validate release evidence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Validate qualification record
+        env:
+          RELEASE_MODE: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          if [[ "$RELEASE_MODE" == "true" ]]; then
+            npm run qualify:backup:record -- --release
+            target_commit="$(jq -r .release.targetCommit docs/specs/manual-backup-and-restore-qualification.json)"
+            git merge-base --is-ancestor "$target_commit" "$GITHUB_SHA"
+            git diff --quiet "$target_commit" "$GITHUB_SHA" -- . \
+              ':(exclude)docs/specs/manual-backup-and-restore-qualification.json' \
+              ':(exclude)docs/qualification-evidence/**'
+            run_url="$(jq -r .automated.workflowUrl docs/specs/manual-backup-and-restore-qualification.json)"
+            run_id="${run_url##*/}"
+            run="$(gh api "/repos/kvalle/trene/actions/runs/$run_id")"
+            jq -e --arg commit "$target_commit" \
+              '.name == "Backup release qualification" and .head_sha == $commit and .status == "completed" and .conclusion == "success"' \
+              <<< "$run"
+          else
+            npm run qualify:backup:record
+          fi
+
+  portable-tests:
+    name: Portable backup qualification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test -- --ci
+
   android-apk:
     name: Build cross-platform Android app
     runs-on: ubuntu-latest
@@ -131,6 +178,64 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  android-native-qualification:
+    name: Android native backup qualification
+    needs: android-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - name: Install Maestro
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/download-artifact@v7
+        with:
+          name: cross-platform-android-apk
+          path: .artifacts/android
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_2
+          disk-size: 4096M
+          script: adb install "${{ env.ANDROID_SMOKE_APK }}" && npm run qualify:android
+      - name: Upload safe native diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-native-qualification-diagnostics
+          path: |
+            .artifacts/android/*metadata.json
+            .artifacts/android/backup-restore-trace.jsonl
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload native failure diagnostics
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-native-qualification-failure-diagnostics
+          path: |
+            .artifacts/maestro/debug/
+            .artifacts/maestro-android-backup/debug/
+            .artifacts/maestro-android-backup/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
   ios-os-matrix:
     name: iOS supported OS (${{ matrix.runtime }})
     runs-on: macos-26
@@ -245,3 +350,33 @@ jobs:
       input-artifact: ios-android-ios-2
       output-artifact: ios-android-ios-3
       expected-metadata-artifact: ios-android-ios-2-metadata
+
+  acceptance:
+    name: Accept backup-enabled release
+    if: always() && github.event_name == 'workflow_dispatch'
+    needs:
+      - evidence
+      - portable-tests
+      - android-apk
+      - android-native-qualification
+      - android-os-matrix
+      - ios-os-matrix
+      - android-last
+      - ios-last
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          name: cross-platform-android-apk
+          path: .artifacts/android
+      - name: Require qualified Android APK
+        run: |
+          expected="$(jq -r .androidPhysical.environment.apkSha256 docs/specs/manual-backup-and-restore-qualification.json)"
+          actual="$(sha256sum "${{ env.ANDROID_SMOKE_APK }}" | cut -d ' ' -f 1)"
+          test "$actual" = "$expected"
+      - name: Require every qualification gate
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -e 'all(.[]; .result == "success")' <<< "$NEEDS"
