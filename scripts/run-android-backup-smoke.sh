@@ -76,13 +76,15 @@ if [[ -n "$cross_platform_input" || -n "$cross_platform_output" ]]; then
     echo 'CROSS_PLATFORM_BACKUP_INPUT and CROSS_PLATFORM_BACKUP_OUTPUT must identify input and output files' >&2
     exit 1
   fi
-  adb push "$cross_platform_input" /sdcard/Download/representative.trene-backup >/dev/null
+  adb push "$cross_platform_input" /sdcard/Download/representative.zip >/dev/null
   adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
-    -d file:///sdcard/Download/representative.trene-backup >/dev/null
+    -d file:///sdcard/Download/representative.zip >/dev/null
   reset_app
   export scenario=cross-platform-round-trip
   run_flow .maestro/android-backup/cross-platform-round-trip.yaml
   mkdir -p "$(dirname "$cross_platform_output")"
+  adb root >/dev/null
+  adb wait-for-device
   adb pull "$documents/trene-automation-export.trene-backup" "$cross_platform_output" >/dev/null
   export QUALIFICATION_PLATFORM="Android API ${ANDROID_API_LEVEL:-unknown}"
   export QUALIFICATION_SCENARIO=cross-platform-round-trip

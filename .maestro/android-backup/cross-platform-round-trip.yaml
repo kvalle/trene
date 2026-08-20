@@ -8,7 +8,7 @@ name: Restore and re-export a cross-platform backup on Android
 - tapOn: { id: "restore-from-file" }
 - runFlow:
     file: select-backup-file.yaml
-    env: { BACKUP_FILE: "representative.trene-backup" }
+    env: { BACKUP_FILE: "representative.zip" }
 - extendedWaitUntil: { visible: { id: "restore-preview" }, timeout: 30000 }
 - assertVisible: "1 treningsøkter"
 - assertVisible: "2 øvelser"
