@@ -69,8 +69,11 @@ const metadata = {
   semanticDigest: digest(Buffer.from(JSON.stringify(rows))),
 };
 if (expectedMetadataPath) {
-  const expected = JSON.parse(readFileSync(expectedMetadataPath, 'utf8'));
-  if ((comparisonMode !== '--semantic-only' && metadata.packageSha256 !== expected.packageSha256)
+  const expected = comparisonMode === '--expected-package'
+    ? inspectExpectedPackage(expectedMetadataPath)
+    : JSON.parse(readFileSync(expectedMetadataPath, 'utf8'));
+  if ((!['--semantic-only', '--expected-package'].includes(comparisonMode)
+      && metadata.packageSha256 !== expected.packageSha256)
     || metadata.formatVersion !== expected.formatVersion
     || metadata.schemaVersion !== expected.schemaVersion
     || JSON.stringify(metadata.tableCounts) !== JSON.stringify(expected.tableCounts)
@@ -83,4 +86,33 @@ console.log(JSON.stringify(metadata));
 
 function digest(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
+}
+
+function inspectExpectedPackage(path) {
+  const expectedEntries = unzipSync(readFileSync(path));
+  const expectedManifest = JSON.parse(new TextDecoder().decode(expectedEntries['manifest.json']));
+  const directory = mkdtempSync(join(tmpdir(), 'trene-expected-backup-'));
+  const expectedDatabasePath = join(directory, 'database.sqlite');
+  writeFileSync(expectedDatabasePath, expectedEntries['database.sqlite']);
+  try {
+    const expectedDatabase = new DatabaseSync(expectedDatabasePath, { readOnly: true });
+    try {
+      const expectedRows = {
+        exercises: expectedDatabase.prepare('SELECT id, name, name_key, created_at FROM exercises ORDER BY id').all(),
+        workouts: expectedDatabase.prepare('SELECT id, status, started_at, completed_at FROM workouts ORDER BY id').all(),
+        memberships: expectedDatabase.prepare('SELECT id, workout_id, exercise_id, position FROM workout_exercises ORDER BY workout_id, position').all(),
+        sets: expectedDatabase.prepare('SELECT id, workout_exercise_id, load_kg, repetitions, confirmed_at FROM workout_sets ORDER BY id').all(),
+      };
+      return {
+        formatVersion: expectedManifest.formatVersion,
+        schemaVersion: expectedManifest.schemaVersion,
+        tableCounts: expectedManifest.tableCounts,
+        semanticDigest: digest(Buffer.from(JSON.stringify(expectedRows))),
+      };
+    } finally {
+      expectedDatabase.close();
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 }

@@ -27,10 +27,11 @@ tags:
 - tapOn: "Øvelser"
 - assertVisible: "Knebøy.*"
 - assertVisible: "Markløft.*"
-- back
-- tapOn: "Tidligere økter"
-- assertVisible: "2 øvelser"
-- back
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 - tapOn: "Innstillinger"
 - tapOn: { id: "settings-data" }
 - tapOn: { id: "create-backup" }
