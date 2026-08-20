@@ -79,6 +79,7 @@ if [[ -n "$cross_platform_input" || -n "$cross_platform_output" ]]; then
   adb push "$cross_platform_input" /sdcard/Download/representative.zip >/dev/null
   adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
     -d file:///sdcard/Download/representative.zip >/dev/null
+  adb shell am force-stop com.google.android.documentsui >/dev/null 2>&1 || true
   reset_app
   export scenario=cross-platform-round-trip
   run_flow .maestro/android-backup/cross-platform-round-trip.yaml

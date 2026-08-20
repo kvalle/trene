@@ -1,6 +1,10 @@
 appId: com.kjetilvalle.trene
 ---
-- tapOn: "Browse"
+- runFlow:
+    when:
+      visible: "Browse"
+    commands:
+      - tapOn: "Browse"
 - extendedWaitUntil:
     visible: "(${BACKUP_FILE}|On My iPhone)"
     timeout: 30000
