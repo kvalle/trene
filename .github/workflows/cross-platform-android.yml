@@ -1,0 +1,108 @@
+name: Cross-platform Android hop
+
+on:
+  workflow_call:
+    inputs:
+      input-artifact:
+        required: true
+        type: string
+      output-artifact:
+        required: true
+        type: string
+      expected-metadata-artifact:
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  hop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - name: Install Maestro
+        env:
+          MAESTRO_VERSION: 2.8.0
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/download-artifact@v7
+        with:
+          name: cross-platform-android-apk
+          path: .artifacts/android
+      - name: Download incoming runtime package
+        if: inputs.input-artifact != ''
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.input-artifact }}
+          path: .artifacts/cross-platform/input
+      - name: Create deterministic seed package
+        if: inputs.input-artifact == ''
+        run: |
+          node scripts/create-ios-smoke-fixtures.mjs .artifacts/cross-platform/input
+          mv .artifacts/cross-platform/input/representative.trene-backup .artifacts/cross-platform/input/package.trene-backup
+      - name: Download expected semantic metadata
+        if: inputs.expected-metadata-artifact != ''
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.expected-metadata-artifact }}
+          path: .artifacts/cross-platform/expected
+      - name: Verify incoming SHA-256 and semantics
+        env:
+          EXPECTED_METADATA: ${{ inputs.expected-metadata-artifact != '' && '.artifacts/cross-platform/expected/metadata.json' || '' }}
+        run: node scripts/verify-cross-platform-backup.mjs .artifacts/cross-platform/input/package.trene-backup .artifacts/cross-platform/input-metadata.json "$EXPECTED_METADATA"
+      - name: Restore and export on Android
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ANDROID_API_LEVEL: '34'
+          CROSS_PLATFORM_BACKUP_INPUT: .artifacts/cross-platform/input/package.trene-backup
+          CROSS_PLATFORM_BACKUP_OUTPUT: .artifacts/cross-platform/output/package.trene-backup
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_2
+          disk-size: 4096M
+          script: adb install .artifacts/android/trene.apk && npm run smoke:android:backup
+      - name: Verify exported SHA-256 and every authoritative row
+        run: node scripts/verify-cross-platform-backup.mjs .artifacts/cross-platform/output/package.trene-backup .artifacts/cross-platform/output/metadata.json .artifacts/cross-platform/input-metadata.json --semantic-only
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.output-artifact }}
+          path: .artifacts/cross-platform/output/package.trene-backup
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.output-artifact }}-metadata
+          path: .artifacts/cross-platform/output/metadata.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload safe failure diagnostics
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.output-artifact }}-android-diagnostics
+          path: |
+            .artifacts/cross-platform/*-metadata.json
+            .artifacts/android/runtime-metadata.json
+            .artifacts/maestro-android-backup/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7

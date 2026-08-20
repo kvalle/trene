@@ -1,0 +1,93 @@
+name: Cross-platform iOS hop
+
+on:
+  workflow_call:
+    inputs:
+      input-artifact:
+        required: true
+        type: string
+      output-artifact:
+        required: true
+        type: string
+      expected-metadata-artifact:
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  hop:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Install Maestro
+        env:
+          MAESTRO_VERSION: 2.8.0
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - run: npm run build:ios:smoke
+      - name: Download incoming runtime package
+        if: inputs.input-artifact != ''
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.input-artifact }}
+          path: .artifacts/cross-platform/input
+      - name: Create deterministic seed package
+        if: inputs.input-artifact == ''
+        run: |
+          node scripts/create-ios-smoke-fixtures.mjs .artifacts/cross-platform/input
+          mv .artifacts/cross-platform/input/representative.trene-backup .artifacts/cross-platform/input/package.trene-backup
+      - name: Download expected semantic metadata
+        if: inputs.expected-metadata-artifact != ''
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.expected-metadata-artifact }}
+          path: .artifacts/cross-platform/expected
+      - name: Verify incoming SHA-256 and semantics
+        env:
+          EXPECTED_METADATA: ${{ inputs.expected-metadata-artifact != '' && '.artifacts/cross-platform/expected/metadata.json' || '' }}
+        run: node scripts/verify-cross-platform-backup.mjs .artifacts/cross-platform/input/package.trene-backup .artifacts/cross-platform/input-metadata.json "$EXPECTED_METADATA"
+      - name: Restore and export on iOS
+        env:
+          CROSS_PLATFORM_BACKUP_INPUT: .artifacts/cross-platform/input/package.trene-backup
+          CROSS_PLATFORM_BACKUP_OUTPUT: .artifacts/cross-platform/output/package.trene-backup
+          IOS_SIMULATOR_DEVICE: iPhone 16
+          IOS_SIMULATOR_RUNTIME: '26'
+          IOS_SMOKE_SHARD: cross-platform
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
+        run: npm run smoke:ios
+      - name: Verify exported SHA-256 and every authoritative row
+        run: node scripts/verify-cross-platform-backup.mjs .artifacts/cross-platform/output/package.trene-backup .artifacts/cross-platform/output/metadata.json .artifacts/cross-platform/input-metadata.json --semantic-only
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.output-artifact }}
+          path: .artifacts/cross-platform/output/package.trene-backup
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.output-artifact }}-metadata
+          path: .artifacts/cross-platform/output/metadata.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload safe failure diagnostics
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.output-artifact }}-ios-diagnostics
+          path: |
+            .artifacts/cross-platform/*-metadata.json
+            .artifacts/ios/*.json
+            .artifacts/ios/*.log
+            .artifacts/maestro-ios/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7

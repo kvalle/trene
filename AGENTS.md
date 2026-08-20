@@ -1,5 +1,11 @@
 # Project Instructions
 
+## Git commits in the sandbox
+
+The sandbox cannot access the 1Password signing agent. If a commit fails because
+the signing socket is unavailable, create the commit unsigned with
+`git -c commit.gpgsign=false commit ...`.
+
 ## Wayfinder on GitHub
 
 The cplt sandbox blocks `gh api graphql`. Use the GitHub REST API to inspect

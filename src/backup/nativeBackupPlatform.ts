@@ -4,6 +4,7 @@ import { openDatabaseAsync } from 'expo-sqlite';
 import { inspectDatabase } from '../database/inspectDatabase';
 import type { Database } from '../database/types';
 import type { BackupArtifact, BackupPlatform } from './createBackup';
+import { preserveAutomationBackup } from './nativeRestoreAutomation';
 import type { BackupByteSink } from './types';
 
 const EXPORT_DIRECTORY = 'trene-exports';
@@ -41,6 +42,7 @@ export function createNativeBackupPlatform(): BackupPlatform {
     share: async (uri) => {
       const Sharing = require('expo-sharing') as typeof import('expo-sharing');
       if (!await Sharing.isAvailableAsync()) throw new Error('File sharing is unavailable');
+      await preserveAutomationBackup(uri);
       await Sharing.shareAsync(uri, {
         dialogTitle: 'Del sikkerhetskopi',
         mimeType: 'application/zip',
