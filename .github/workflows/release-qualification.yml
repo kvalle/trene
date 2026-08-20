@@ -1,0 +1,247 @@
+name: Backup release qualification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/backup/**'
+      - 'src/database/**'
+      - 'src/domain/**'
+      - 'src/repositories/**'
+      - 'src/screens/DataScreen.tsx'
+      - 'src/StartupGate.tsx'
+      - 'app.json'
+      - 'app.config.*'
+      - 'eas.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'plugins/**'
+      - 'android/**'
+      - 'ios/**'
+      - '.maestro/android-backup/**'
+      - '.maestro/ios/**'
+      - 'scripts/**android**'
+      - 'scripts/**ios**'
+      - 'scripts/verify-cross-platform-backup.mjs'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-release-qualification-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  ANDROID_SMOKE_APK: .artifacts/android/trene.apk
+  JAVA_VERSION: '17'
+  MAESTRO_VERSION: 2.8.0
+
+jobs:
+  android-apk:
+    name: Build cross-platform Android app
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'cmake;3.22.1' 'ndk;27.1.12297006'
+      - run: bash scripts/build-android-smoke-apk.sh
+      - uses: actions/upload-artifact@v6
+        with:
+          name: cross-platform-android-apk
+          path: ${{ env.ANDROID_SMOKE_APK }}
+          if-no-files-found: error
+          retention-days: 1
+
+  android-os-matrix:
+    name: Android supported OS (API ${{ matrix.api }})
+    needs: android-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [24, 36]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - name: Install Maestro
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/download-artifact@v7
+        with:
+          name: cross-platform-android-apk
+          path: .artifacts/android
+      - name: Create deterministic input package
+        run: node scripts/create-ios-smoke-fixtures.mjs .artifacts/supported-os/input
+      - uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ANDROID_API_LEVEL: ${{ matrix.api }}
+          CROSS_PLATFORM_BACKUP_INPUT: .artifacts/supported-os/input/representative.trene-backup
+          CROSS_PLATFORM_BACKUP_OUTPUT: .artifacts/supported-os/output/package.trene-backup
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          profile: pixel_2
+          disk-size: 4096M
+          script: adb install "${{ env.ANDROID_SMOKE_APK }}" && npm run smoke:android:backup
+      - name: Upload safe Android diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-supported-os-${{ matrix.api }}-diagnostics
+          path: |
+            .artifacts/android/runtime-metadata.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload Android failure diagnostics
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-supported-os-${{ matrix.api }}-failure-diagnostics
+          path: |
+            .artifacts/maestro-android-backup/debug/
+            .artifacts/maestro-android-backup/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  ios-os-matrix:
+    name: iOS supported OS (${{ matrix.runtime }})
+    runs-on: macos-26
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runtime: '16.4'
+            device: iPhone 14
+          - runtime: '26'
+            device: iPhone 16
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Install missing simulator runtime
+        env:
+          RUNTIME: ${{ matrix.runtime }}
+        run: |
+          if ! xcrun simctl list runtimes available -j | jq -e --arg runtime "$RUNTIME" '.runtimes[] | select(.platform == "iOS" and (.version == $runtime or (.version | startswith($runtime + "."))))' >/dev/null; then
+            xcodebuild -downloadPlatform iOS -buildVersion "$RUNTIME"
+          fi
+      - name: Install Maestro
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - run: npm run build:ios:smoke
+      - name: Create deterministic input package
+        run: node scripts/create-ios-smoke-fixtures.mjs .artifacts/supported-os/input
+      - name: Run restore on supported iOS
+        env:
+          CROSS_PLATFORM_BACKUP_INPUT: .artifacts/supported-os/input/representative.trene-backup
+          CROSS_PLATFORM_BACKUP_OUTPUT: .artifacts/supported-os/output/package.trene-backup
+          IOS_SIMULATOR_DEVICE: ${{ matrix.device }}
+          IOS_SIMULATOR_RUNTIME: ${{ matrix.runtime }}
+          IOS_SMOKE_SHARD: supported-os-${{ matrix.runtime }}
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
+        run: npm run smoke:ios
+      - name: Upload safe iOS diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ios-supported-os-${{ matrix.runtime }}-diagnostics
+          path: |
+            .artifacts/ios/runtime-metadata.json
+            .artifacts/ios/simulator-selection.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload iOS failure diagnostics
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ios-supported-os-${{ matrix.runtime }}-failure-diagnostics
+          path: |
+            .artifacts/ios/*.log
+            .artifacts/maestro-ios/debug/
+            .artifacts/maestro-ios/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  android-first:
+    name: Android produces A-I-A package
+    needs: android-apk
+    uses: ./.github/workflows/cross-platform-android.yml
+    with:
+      input-artifact: ''
+      output-artifact: android-ios-android-1
+
+  ios-middle:
+    name: iOS restores A-I-A package
+    needs: android-first
+    uses: ./.github/workflows/cross-platform-ios.yml
+    with:
+      input-artifact: android-ios-android-1
+      output-artifact: android-ios-android-2
+      expected-metadata-artifact: android-ios-android-1-metadata
+
+  android-last:
+    name: Android completes A-I-A cycle
+    needs: ios-middle
+    uses: ./.github/workflows/cross-platform-android.yml
+    with:
+      input-artifact: android-ios-android-2
+      output-artifact: android-ios-android-3
+      expected-metadata-artifact: android-ios-android-2-metadata
+
+  ios-first:
+    name: iOS produces I-A-I package
+    uses: ./.github/workflows/cross-platform-ios.yml
+    with:
+      input-artifact: ''
+      output-artifact: ios-android-ios-1
+
+  android-middle:
+    name: Android restores I-A-I package
+    needs: [android-apk, ios-first]
+    uses: ./.github/workflows/cross-platform-android.yml
+    with:
+      input-artifact: ios-android-ios-1
+      output-artifact: ios-android-ios-2
+      expected-metadata-artifact: ios-android-ios-1-metadata
+
+  ios-last:
+    name: iOS completes I-A-I cycle
+    needs: android-middle
+    uses: ./.github/workflows/cross-platform-ios.yml
+    with:
+      input-artifact: ios-android-ios-2
+      output-artifact: ios-android-ios-3
+      expected-metadata-artifact: ios-android-ios-2-metadata

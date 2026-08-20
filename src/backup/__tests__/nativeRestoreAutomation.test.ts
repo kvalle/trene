@@ -3,6 +3,7 @@ import { File } from 'expo-file-system';
 import {
   nativeRestoreAvailableBytes,
   nativeBackupRestoreFaultCheckpoint,
+  preserveAutomationBackup,
 } from '../nativeRestoreAutomation';
 
 jest.mock('expo-file-system', () => ({
@@ -24,6 +25,22 @@ test('does not read or inject automation scenarios in normal builds', async () =
   expect(nativeRestoreAvailableBytes(123)).toBe(123);
   await expect(nativeBackupRestoreFaultCheckpoint('restore.active-validation', 'before')).resolves.toBeUndefined();
   expect(mockedFile).not.toHaveBeenCalled();
+});
+
+test('preserves a runtime-created backup only in automation builds', async () => {
+  const copy = jest.fn();
+  mockedFile.mockImplementation((...parts: unknown[]) => ({ copy, parts }) as unknown as File);
+
+  delete process.env.EXPO_PUBLIC_BACKUP_RESTORE_AUTOMATION;
+  await preserveAutomationBackup('file:///cache/export.trene-backup');
+  expect(copy).not.toHaveBeenCalled();
+
+  process.env.EXPO_PUBLIC_BACKUP_RESTORE_AUTOMATION = '1';
+  await preserveAutomationBackup('file:///cache/export.trene-backup');
+  expect(copy).toHaveBeenCalledWith(
+    expect.objectContaining({ parts: ['file:///documents', 'trene-automation-export.trene-backup'] }),
+    { overwrite: true },
+  );
 });
 
 test.each([

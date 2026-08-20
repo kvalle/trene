@@ -11,6 +11,12 @@ type AutomationScenario = 'storage-failure' | 'restore-failure' | 'rollback-fail
 
 const SCENARIO_FILE = 'trene-automation-scenario.txt';
 const CHECKPOINT_FILE = 'trene-automation-checkpoint.txt';
+const EXPORTED_BACKUP_FILE = 'trene-automation-export.trene-backup';
+
+export async function preserveAutomationBackup(uri: string): Promise<void> {
+  if (process.env.EXPO_PUBLIC_BACKUP_RESTORE_AUTOMATION !== '1') return;
+  await new File(uri).copy(new File(Paths.document, EXPORTED_BACKUP_FILE), { overwrite: true });
+}
 
 export function nativeRestoreAvailableBytes(availableBytes: number): number {
   return readScenario() === 'storage-failure' ? 0 : availableBytes;

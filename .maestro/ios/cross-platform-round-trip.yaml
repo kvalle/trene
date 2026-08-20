@@ -1,0 +1,47 @@
+appId: com.kjetilvalle.trene
+name: Restore and re-export a cross-platform backup on iOS
+tags:
+  - ios
+  - backup-restore
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Innstillinger"
+- tapOn: { id: "settings-data" }
+- tapOn: { id: "restore-from-file" }
+- runFlow:
+    file: select-backup-file.yaml
+    env: { BACKUP_FILE: representative.trene-backup }
+- extendedWaitUntil:
+    visible: { id: "restore-preview" }
+    timeout: 30000
+- assertVisible: "1 treningsøkter"
+- assertVisible: "2 øvelser"
+- tapOn: { id: "continue-restore" }
+- tapOn: { id: "confirm-restore" }
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
+- tapOn: "Øvelser"
+- assertVisible: "Knebøy.*"
+- assertVisible: "Markløft.*"
+- tapOn: "Knebøy.*"
+- assertVisible: "80 kg · 5 repetisjoner"
+- back
+- tapOn: "Markløft.*"
+- assertVisible: "100 kg · 3 repetisjoner"
+- back
+- back
+- tapOn: "Tidligere økter"
+- assertVisible: "2 øvelser"
+- back
+- tapOn: "Innstillinger"
+- tapOn: { id: "settings-data" }
+- tapOn: { id: "create-backup" }
+- extendedWaitUntil:
+    visible: "Copy"
+    timeout: 60000
+- tapOn: { id: "PopoverDismissRegion" }
+- assertVisible: { id: "create-backup" }

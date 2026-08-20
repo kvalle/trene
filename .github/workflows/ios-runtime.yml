@@ -70,7 +70,7 @@ jobs:
             matrix="$(jq -cn --arg flow "$REQUESTED_FLOW" '[{shard:"focused",flows:$flow}]')"
           else
             matrix='[{"shard":"restore","flows":"restore-success,damaged-backup,picker-cancellation"},{"shard":"recovery","flows":"restore-failure,newer-backup"},{"shard":"fail-safe","flows":"rollback-failure,storage-failure,share-cancellation"}]'
-            expected="$(find .maestro/ios -name '*.yaml' ! -name 'select-backup-file.yaml' -exec basename {} .yaml \; | sort)"
+            expected="$(find .maestro/ios -name '*.yaml' ! -name 'select-backup-file.yaml' ! -name 'cross-platform-round-trip.yaml' -exec basename {} .yaml \; | sort)"
             actual="$(jq -r '.[].flows | split(",")[]' <<< "$matrix" | sort)"
             if [[ "$actual" != "$expected" ]]; then
               echo "iOS shard matrix does not cover every standalone flow exactly once" >&2
