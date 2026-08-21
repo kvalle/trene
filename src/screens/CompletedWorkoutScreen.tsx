@@ -52,6 +52,10 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
     if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
   }, [state.status]);
 
+  useEffect(() => {
+    if (deleteFailed) focus(retryRef);
+  }, [deleteFailed]);
+
   function focus(target: React.RefObject<View | null>) {
     const handle = findNodeHandle(target.current);
     if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
@@ -78,7 +82,6 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
       setDeleteDialogOpen(false);
       setDeleteFailed(true);
       AccessibilityInfo.announceForAccessibility('Kunne ikke slette økten. Prøv igjen.');
-      requestAnimationFrame(() => focus(retryRef));
     } finally {
       setDeleting(false);
     }
