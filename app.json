@@ -28,7 +28,7 @@
         "expo-build-properties",
         {
           "android": {
-            "minSdkVersion": 24,
+            "minSdkVersion": 34,
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,
             "useDayNightTheme": true

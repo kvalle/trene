@@ -1,5 +1,8 @@
 appId: com.kjetilvalle.trene
 ---
+- extendedWaitUntil:
+    visible: "(Browse|${BACKUP_FILE}|On My iPhone)"
+    timeout: 30000
 - runFlow:
     when:
       visible: "Browse"
@@ -46,3 +49,10 @@ appId: com.kjetilvalle.trene
     timeout: 30000
 - tapOn:
     id: "${BACKUP_FILE}, trene-backup"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${BACKUP_FILE}"
+    commands:
+      - tapOn:
+          id: "${BACKUP_FILE}, trene-backup"

@@ -72,7 +72,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [24, 36]
+        api: [34, 36]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
