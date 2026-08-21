@@ -139,8 +139,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runtime: '16.4'
-            device: iPhone 14
+          - runtime: '18'
+            device: iPhone 16
           - runtime: '26'
             device: iPhone 16
     steps:

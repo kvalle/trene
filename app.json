@@ -11,7 +11,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.kjetilvalle.trene",
-      "deploymentTarget": "16.4",
+      "deploymentTarget": "18.0",
       "supportsTablet": false
     },
     "android": {
@@ -34,7 +34,7 @@
             "useDayNightTheme": true
           },
           "ios": {
-            "deploymentTarget": "16.4"
+            "deploymentTarget": "18.0"
           }
         }
       ]
