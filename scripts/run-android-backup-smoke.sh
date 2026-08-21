@@ -21,9 +21,12 @@ export ADB_SERVER_SOCKET=tcp:127.0.0.1:5037
 
 if adb shell run-as "$package" id >/dev/null 2>&1; then
   private_access=run-as
-elif ! adb shell test -d "/data/user/0/$package" >/dev/null 2>&1; then
-  echo 'App-private qualification access requires a debuggable APK or a rootable emulator.' >&2
-  exit 1
+else
+  if adb root >/dev/null 2>&1; then adb wait-for-device; fi
+  if ! adb shell test -d "/data/user/0/$package" >/dev/null 2>&1; then
+    echo 'App-private qualification access requires a debuggable APK or a rootable emulator.' >&2
+    exit 1
+  fi
 fi
 
 cleanup() {
@@ -129,8 +132,6 @@ if [[ -n "$cross_platform_input" || -n "$cross_platform_output" ]]; then
     -e "EXPECTED_WORKOUTS=${CROSS_PLATFORM_EXPECTED_WORKOUTS:-1}" \
     -e "EXPECTED_EXERCISES=${CROSS_PLATFORM_EXPECTED_EXERCISES:-2}"
   mkdir -p "$(dirname "$cross_platform_output")"
-  adb root >/dev/null
-  adb wait-for-device
   pull_private_file "$documents/trene-automation-export.trene-backup" "$cross_platform_output"
   export QUALIFICATION_PLATFORM="Android API ${ANDROID_API_LEVEL:-unknown}"
   export QUALIFICATION_SCENARIO=cross-platform-round-trip
