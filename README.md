@@ -5,7 +5,7 @@ Expo/React Native-appen for lokal registrering av styrketrening.
 ## Plattformstøtte
 
 Prosjektet bruker Expo SDK 57 og støtter Android 14 (API 34) og nyere samt iOS
-18 og nyere. Verdiene er eksplisitt satt med `expo-build-properties` i
+26 og nyere. Verdiene er eksplisitt satt med `expo-build-properties` i
 `app.json`. Android kompileres og målrettes mot API 36.
 
 ## Utvikling

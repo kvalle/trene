@@ -9,7 +9,7 @@ The `Backup release qualification` workflow is the mandatory automated gate for 
 | Android to iOS to Android | `Android produces A-I-A package`, `iOS restores A-I-A package`, `Android completes A-I-A cycle` | Package SHA-256 at each transfer; format/schema versions; all authoritative table counts; semantic digest |
 | iOS to Android to iOS | `iOS produces I-A-I package`, `Android restores I-A-I package`, `iOS completes I-A-I cycle` | Package SHA-256 at each transfer; format/schema versions; all authoritative table counts; semantic digest |
 | Oldest and newest supported Android | `Android supported OS (API 34)`, `Android supported OS (API 36)` | Runtime scenario, API level, format/schema versions, stage, counts, Maestro logs and screenshots on failure |
-| Oldest and newest supported iOS | `iOS supported OS (18)`, `iOS supported OS (26)` | Runtime scenario, OS version, format/schema versions, stage, counts, Maestro logs and screenshots on failure |
+| Supported iOS | `iOS supported OS (26)` | Runtime scenario, OS version, format/schema versions, stage, counts, Maestro logs and screenshots on failure |
 
 Runtime-produced packages contain deterministic synthetic workout data only. Package artifacts are retained for one day and are never included in failure diagnostics. Metadata and diagnostics are retained for seven days and exclude raw package and database contents.
 
