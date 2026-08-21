@@ -84,7 +84,8 @@ if [[ -n "$cross_platform_input" || -n "$cross_platform_output" ]]; then
   cp "$container/Documents/trene-automation-export.trene-backup" "$cross_platform_output"
   export QUALIFICATION_PLATFORM="iOS ${IOS_SIMULATOR_RUNTIME:-unknown} Simulator"
   export QUALIFICATION_SCENARIO=cross-platform-round-trip
-  node scripts/verify-cross-platform-backup.mjs "$cross_platform_output" "$ios_artifacts/runtime-metadata.json"
+  node scripts/verify-cross-platform-backup.mjs "$cross_platform_output" \
+    "$ios_artifacts/runtime-metadata.json" "$cross_platform_input" --expected-package
   exit 0
 fi
 

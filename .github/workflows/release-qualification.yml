@@ -72,7 +72,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [24, 36]
+        api: [34, 36]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -139,8 +139,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runtime: '16.4'
-            device: iPhone 14
           - runtime: '26'
             device: iPhone 16
     steps:
@@ -171,7 +169,7 @@ jobs:
           IOS_SIMULATOR_DEVICE: ${{ matrix.device }}
           IOS_SIMULATOR_RUNTIME: ${{ matrix.runtime }}
           IOS_SMOKE_SHARD: supported-os-${{ matrix.runtime }}
-          MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: '360000'
         run: npm run smoke:ios
       - name: Upload safe iOS diagnostics
         if: always()

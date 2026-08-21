@@ -11,7 +11,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.kjetilvalle.trene",
-      "deploymentTarget": "16.4",
+      "deploymentTarget": "26.0",
       "supportsTablet": false
     },
     "android": {
@@ -28,13 +28,13 @@
         "expo-build-properties",
         {
           "android": {
-            "minSdkVersion": 24,
+            "minSdkVersion": 34,
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,
             "useDayNightTheme": true
           },
           "ios": {
-            "deploymentTarget": "16.4"
+            "deploymentTarget": "26.0"
           }
         }
       ]

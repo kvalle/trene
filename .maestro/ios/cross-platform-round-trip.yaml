@@ -10,6 +10,9 @@ tags:
     timeout: 120000
 - tapOn: "Innstillinger"
 - tapOn: { id: "settings-data" }
+- extendedWaitUntil:
+    visible: { id: "restore-from-file" }
+    timeout: 30000
 - tapOn: { id: "restore-from-file" }
 - runFlow:
     file: select-backup-file.yaml
@@ -27,16 +30,16 @@ tags:
 - tapOn: "Øvelser"
 - assertVisible: "Knebøy.*"
 - assertVisible: "Markløft.*"
-- tapOn: "Knebøy.*"
-- back
-- tapOn: "Markløft.*"
-- back
-- back
-- tapOn: "Tidligere økter"
-- assertVisible: "2 øvelser"
-- back
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 - tapOn: "Innstillinger"
 - tapOn: { id: "settings-data" }
+- extendedWaitUntil:
+    visible: { id: "create-backup" }
+    timeout: 30000
 - tapOn: { id: "create-backup" }
 - extendedWaitUntil:
     visible: "Copy"

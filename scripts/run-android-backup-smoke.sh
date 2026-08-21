@@ -79,6 +79,8 @@ if [[ -n "$cross_platform_input" || -n "$cross_platform_output" ]]; then
   adb push "$cross_platform_input" /sdcard/Download/representative.zip >/dev/null
   adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
     -d file:///sdcard/Download/representative.zip >/dev/null
+  adb shell am force-stop com.android.documentsui >/dev/null 2>&1 || true
+  adb shell am force-stop com.google.android.documentsui >/dev/null 2>&1 || true
   reset_app
   export scenario=cross-platform-round-trip
   run_flow .maestro/android-backup/cross-platform-round-trip.yaml
@@ -88,7 +90,8 @@ if [[ -n "$cross_platform_input" || -n "$cross_platform_output" ]]; then
   adb pull "$documents/trene-automation-export.trene-backup" "$cross_platform_output" >/dev/null
   export QUALIFICATION_PLATFORM="Android API ${ANDROID_API_LEVEL:-unknown}"
   export QUALIFICATION_SCENARIO=cross-platform-round-trip
-  node scripts/verify-cross-platform-backup.mjs "$cross_platform_output" "$android_artifacts/runtime-metadata.json"
+  node scripts/verify-cross-platform-backup.mjs "$cross_platform_output" \
+    "$android_artifacts/runtime-metadata.json" "$cross_platform_input" --expected-package
   exit 0
 fi
 
