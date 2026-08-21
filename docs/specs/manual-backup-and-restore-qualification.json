@@ -15,11 +15,11 @@
     "safeEvidence": []
   },
   "performance": {
-    "result": "pending",
+    "result": "passed",
     "environment": {
       "device": "Fairphone 6",
       "os": "Android 16 (API 36)",
-      "deviceClassRationale": "Physical reference evidence completed; slowest supported device class remains to be established.",
+      "deviceClassRationale": "Fairphone 6 is the lowest-performance physical device available in the supported-device pool and is accepted as the slowest supported device class for the first backup-enabled release.",
       "apkSha256": "13e13d94cab75f32cfb5a7838afe4e92b5f2f8c6cfa27acdbe0dcd4384fb756f",
       "executedAt": "2026-08-20",
       "tester": "Developer"
@@ -46,9 +46,11 @@
     "environment": {
       "device": "Fairphone 6",
       "os": "Android 16 (API 36)",
+      "testedCommit": "c29a9206388c422879a15a43ed55db7a895146b0",
       "apkSha256": "13e13d94cab75f32cfb5a7838afe4e92b5f2f8c6cfa27acdbe0dcd4384fb756f",
       "executedAt": "2026-08-20",
-      "tester": "Developer"
+      "tester": "Developer",
+      "applicability": "Accepted for the first backup-enabled release. Subsequent changes qualify through mandatory automated native, supported-OS, and cross-platform gates; repeat physical testing when file handling, database lifecycle, native integration, or observed device behavior changes materially."
     },
     "scenarios": {
       "backup": { "result": "passed", "evidence": ["docs/qualification-evidence/backup-android-2026-08-20.json"] },

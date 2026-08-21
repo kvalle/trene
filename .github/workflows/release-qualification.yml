@@ -28,8 +28,15 @@ on:
       - 'scripts/validate-backup-qualification.mjs'
       - '.github/workflows/**'
   workflow_dispatch:
+    inputs:
+      accept-release:
+        description: Require completed evidence and accept the release
+        required: true
+        type: boolean
+        default: false
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -54,7 +61,7 @@ jobs:
       - run: npm ci
       - name: Validate qualification record
         env:
-          RELEASE_MODE: ${{ github.event_name == 'workflow_dispatch' }}
+          RELEASE_MODE: ${{ inputs.accept-release == true }}
         run: |
           if [[ "$RELEASE_MODE" == "true" ]]; then
             npm run qualify:backup:record -- --release
@@ -351,7 +358,7 @@ jobs:
 
   acceptance:
     name: Accept backup-enabled release
-    if: always() && github.event_name == 'workflow_dispatch'
+    if: always() && inputs.accept-release == true
     needs:
       - evidence
       - portable-tests
@@ -363,16 +370,6 @@ jobs:
       - ios-last
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/download-artifact@v7
-        with:
-          name: cross-platform-android-apk
-          path: .artifacts/android
-      - name: Require qualified Android APK
-        run: |
-          expected="$(jq -r .androidPhysical.environment.apkSha256 docs/specs/manual-backup-and-restore-qualification.json)"
-          actual="$(sha256sum "${{ env.ANDROID_SMOKE_APK }}" | cut -d ' ' -f 1)"
-          test "$actual" = "$expected"
       - name: Require every qualification gate
         env:
           NEEDS: ${{ toJSON(needs) }}

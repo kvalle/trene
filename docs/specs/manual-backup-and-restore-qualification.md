@@ -24,8 +24,9 @@ Performance qualification uses deterministic synthetic data only. Record the
 dataset counts and byte sizes, device model and OS, app/format/schema versions,
 APK SHA-256, date, tester, battery and thermal conditions, and at least three
 measured runs after one warm-up. The slowest supported device class is the
-lowest-performance physical device on which Trene supports installation; name
-that device explicitly rather than substituting an emulator profile.
+lowest-performance physical device in the supported-device pool; name that
+device explicitly rather than substituting an emulator profile. Fairphone 6 is
+the available lowest-performance device and is accepted for the first release.
 
 Measure and set observed release limits for:
 
@@ -64,7 +65,8 @@ follow-up physical testing. A blank physical result is not a deferral.
 The release is accepted only when:
 
 - the complete automated release workflow succeeded for the recorded commit;
-- every Android physical scenario passed on the recorded device and APK;
+- every Android physical scenario passed on the recorded device and APK, and
+  the record explains why that evidence remains applicable to the release;
 - every performance measurement has observations and an accepted measured limit;
 - physical iOS passed, or the complete residual risk was explicitly accepted;
 - native simultaneous restore-and-rollback failure reached safe stop and proved

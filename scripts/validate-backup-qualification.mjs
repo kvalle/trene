@@ -52,6 +52,8 @@ function validateReleaseRecord() {
 
   required(record.androidPhysical?.result === 'passed', 'physical Android qualification must pass');
   requireEnvironment(record.androidPhysical?.environment, 'Android physical');
+  required(/^[0-9a-f]{40}$/u.test(record.androidPhysical?.environment?.testedCommit), 'Android physical testedCommit must be a full Git SHA');
+  required(isCompleteText(record.androidPhysical?.environment?.applicability), 'Android physical applicability rationale is missing');
   required(
     record.androidPhysical?.environment?.apkSha256 === record.performance?.environment?.apkSha256,
     'performance and physical Android evidence must use the same APK',
@@ -64,6 +66,12 @@ function validateReleaseRecord() {
   required(safeStop?.safeStopObserved === true, 'native safe stop must be observed');
   required(safeStop?.operationMarkerPreserved === true, 'operation marker preservation must be proven');
   required(safeStop?.rollbackSnapshotPreserved === true, 'rollback snapshot preservation must be proven');
+  const nativeEvidence = readNativeSafeStopEvidence(safeStop?.evidence);
+  required(isCompleteText(nativeEvidence?.environment), 'native safe stop environment is missing');
+  required(nativeEvidence?.testedCommit === record.androidPhysical?.environment?.testedCommit, 'native safe stop testedCommit must match physical Android evidence');
+  required(nativeEvidence?.safeStopObserved === true, 'native evidence must record safe stop');
+  required(nativeEvidence?.operationMarkerPreserved === true, 'native evidence must record the preserved operation marker');
+  required(nativeEvidence?.rollbackSnapshotPreserved === true, 'native evidence must record the preserved rollback snapshot');
 
   if (record.iosPhysical?.mode === 'physical') {
     required(record.iosPhysical.result === 'passed', 'physical iOS qualification must pass');
@@ -104,6 +112,12 @@ function isSafeEvidence(value) {
   if (/^https:\/\/github\.com\/kvalle\/trene\/actions\/runs\/\d+(?:\/job\/\d+)?$/u.test(value)) return true;
   if (!/^docs\/qualification-evidence\/[A-Za-z0-9._/-]+\.(?:csv|json|log|md|png|txt)$/u.test(value)) return false;
   return existsSync(new URL(`../${value}`, import.meta.url));
+}
+
+function readNativeSafeStopEvidence(evidence) {
+  const path = evidence?.find((value) => /^docs\/qualification-evidence\/.+\.json$/u.test(value));
+  if (!path) return undefined;
+  return JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')).nativeSafeStopEvidence;
 }
 
 function required(condition, message) {
