@@ -1,5 +1,9 @@
 # Manual backup and restore release qualification
 
+The complete first-release scenario map, physical procedure, performance
+method, and versioned evidence record are maintained in
+[`manual-backup-and-restore-qualification.md`](manual-backup-and-restore-qualification.md).
+
 The `Backup release qualification` workflow is the mandatory automated gate for a backup-enabled release. Run it with `workflow_dispatch` before publishing a release. Missing, cancelled, infrastructure-failed, or product-failed jobs leave qualification unresolved; only a completely successful run qualifies the automation covered here.
 
 ## Automated evidence

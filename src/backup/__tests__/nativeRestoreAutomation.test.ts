@@ -8,7 +8,7 @@ import {
 
 jest.mock('expo-file-system', () => ({
   File: jest.fn(),
-  Paths: { document: 'file:///documents' },
+  Paths: { availableDiskSpace: 123456, document: 'file:///documents' },
 }));
 
 const mockedFile = jest.mocked(File);
@@ -52,6 +52,7 @@ test.each([
   mockedFile.mockImplementation(() => ({
     exists: true,
     textSync: () => scenario,
+    write: jest.fn(),
   }) as unknown as File);
 
   expect(nativeRestoreAvailableBytes(123)).toBe(bytes);
@@ -75,4 +76,20 @@ test('publishes a deterministic interruption checkpoint', async () => {
   await Promise.resolve();
 
   expect(write).toHaveBeenCalledWith('restore.replacement:before');
+});
+
+test('records safe checkpoint timing in automation builds', async () => {
+  process.env.EXPO_PUBLIC_BACKUP_RESTORE_AUTOMATION = '1';
+  const write = jest.fn();
+  mockedFile.mockImplementation((_parent, name) => ({
+    exists: name === 'trene-automation-trace.jsonl',
+    textSync: () => '{"stage":"backup.snapshot","timing":"before","timestampMs":1}\n',
+    write,
+  }) as unknown as File);
+
+  await nativeBackupRestoreFaultCheckpoint('backup.snapshot', 'after');
+
+  expect(write).toHaveBeenCalledWith(expect.stringMatching(
+    /"stage":"backup\.snapshot","timing":"after","timestampMs":\d+,"availableBytes":123456/u,
+  ));
 });

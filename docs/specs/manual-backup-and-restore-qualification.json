@@ -1,0 +1,78 @@
+{
+  "recordVersion": 1,
+  "status": "pending",
+  "release": {
+    "targetCommit": "pending",
+    "appVersion": "0.1.0",
+    "formatVersion": 1,
+    "schemaVersion": 1
+  },
+  "automated": {
+    "result": "pending",
+    "workflowUrl": "pending",
+    "executedAt": "pending",
+    "tester": "pending",
+    "safeEvidence": []
+  },
+  "performance": {
+    "result": "pending",
+    "environment": {
+      "device": "pending",
+      "os": "pending",
+      "deviceClassRationale": "pending",
+      "apkSha256": "pending",
+      "executedAt": "pending",
+      "tester": "pending"
+    },
+    "dataset": {
+      "exercises": 0,
+      "workouts": 0,
+      "workoutExercises": 0,
+      "workoutSets": 0,
+      "databaseBytes": 0,
+      "packageBytes": 0
+    },
+    "measurements": {
+      "creation": { "result": "pending", "observationsMs": [], "limitMs": 0 },
+      "validation": { "result": "pending", "observationsMs": [], "limitMs": 0 },
+      "restore": { "result": "pending", "observationsMs": [], "limitMs": 0 },
+      "temporaryStorage": { "result": "pending", "observationsBytes": [], "limitBytes": 0 },
+      "startupRecovery": { "result": "pending", "observationsMs": [], "limitMs": 0 }
+    },
+    "safeEvidence": []
+  },
+  "androidPhysical": {
+    "result": "pending",
+    "environment": {
+      "device": "pending",
+      "os": "pending",
+      "apkSha256": "pending",
+      "executedAt": "pending",
+      "tester": "pending"
+    },
+    "scenarios": {
+      "backup": { "result": "pending", "evidence": [] },
+      "restore": { "result": "pending", "evidence": [] },
+      "interruption": { "result": "pending", "evidence": [] },
+      "fileFlow": { "result": "pending", "evidence": [] },
+      "accessibility": { "result": "pending", "evidence": [] },
+      "simultaneousRestoreRollbackFailure": {
+        "result": "pending",
+        "safeStopObserved": false,
+        "operationMarkerPreserved": false,
+        "rollbackSnapshotPreserved": false,
+        "evidence": []
+      }
+    }
+  },
+  "iosPhysical": {
+    "mode": "pending",
+    "result": "pending",
+    "physicalEvidence": null,
+    "residualRisk": null
+  },
+  "dataSafety": {
+    "syntheticDataOnly": true,
+    "containsRawBackupOrDatabase": false
+  }
+}
