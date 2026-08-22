@@ -63,6 +63,7 @@ jobs:
       - run: npm ci
       - name: Validate qualification record
         env:
+          GH_TOKEN: ${{ github.token }}
           RELEASE_MODE: ${{ inputs.accept-release == true }}
         run: |
           if [[ "$RELEASE_MODE" == "true" ]]; then
