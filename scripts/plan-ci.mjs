@@ -15,7 +15,7 @@ function routeForPath(path) {
     return ["none", "none"];
   }
 
-  if (path === ".github/workflows/ci.yml") return ["full", "none"];
+  if (path === ".github/workflows/ci.yml") return ["full", "full"];
   if (path === ".github/workflows/ios-runtime.yml") return ["none", "full"];
   if (/^\.github\/workflows\/(release-qualification|cross-platform-(android|ios))\.yml$/.test(path)) {
     return ["full", "full"];
@@ -28,11 +28,15 @@ function routeForPath(path) {
 
   if (path.startsWith("android/")) return ["full", "none"];
   if (path.startsWith("ios/")) return ["none", "full"];
+  if (path === "scripts/create-ios-smoke-fixtures.mjs") return ["full", "full"];
   if (/^scripts\/.*android/i.test(path)) return ["full", "none"];
   if (/^scripts\/.*ios/i.test(path)) return ["none", "full"];
   if (path.startsWith("scripts/")) return ["full", "full"];
 
   if (/^src\/(backup|database|persistence|storage)\//.test(path)) return ["full", "full"];
+  if (path === "src/screens/DataScreen.tsx" || path === "src/StartupGate.tsx") {
+    return ["full", "full"];
+  }
   if (
     /^(package(-lock)?\.json|app\.json|eas\.json|\.nvmrc|app\.config\.(js|mjs|ts)|metro\.config\.(js|mjs)|babel\.config\.(js|mjs)|plugins\/)/.test(
       path,
@@ -41,7 +45,7 @@ function routeForPath(path) {
     return ["full", "full"];
   }
 
-  return ["representative", "none"];
+  return ["representative", "representative"];
 }
 
 export function classifyPaths(paths) {

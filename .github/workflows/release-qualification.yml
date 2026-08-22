@@ -1,36 +1,18 @@
 name: Backup release qualification
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/backup/**'
-      - 'src/database/**'
-      - 'src/domain/**'
-      - 'src/repositories/**'
-      - 'src/screens/DataScreen.tsx'
-      - 'src/StartupGate.tsx'
-      - 'app.json'
-      - 'app.config.*'
-      - 'eas.json'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'plugins/**'
-      - 'android/**'
-      - 'ios/**'
-      - '.maestro/android-backup/**'
-      - '.maestro/ios/**'
-      - 'docs/specs/manual-backup-and-restore-qualification.*'
-      - 'scripts/**android**'
-      - 'scripts/**ios**'
-      - 'scripts/verify-cross-platform-backup.mjs'
-      - 'scripts/create-backup-performance-fixture.mjs'
-      - 'scripts/validate-backup-qualification.mjs'
-      - '.github/workflows/**'
   workflow_dispatch:
     inputs:
+      candidate-commit:
+        description: Full SHA of the release candidate checked out by this run
+        required: true
+        type: string
+      ci-run-id:
+        description: Successful CI run for the same commit; its APK is reused
+        required: true
+        type: string
       accept-release:
-        description: Require completed evidence and accept the release
+        description: Validate committed evidence instead of running qualification
         required: true
         type: boolean
         default: false
@@ -40,7 +22,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: backup-release-qualification-${{ github.ref }}
+  group: backup-release-qualification-${{ inputs.candidate-commit }}
   cancel-in-progress: false
 
 env:
@@ -50,8 +32,10 @@ env:
 
 jobs:
   evidence:
-    name: Validate release evidence
+    name: Validate candidate and evidence
     runs-on: ubuntu-latest
+    outputs:
+      ci-run-id: ${{ steps.candidate.outputs.ci-run-id }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -61,81 +45,57 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Validate exact candidate and authoritative CI
+        id: candidate
+        env:
+          CANDIDATE_COMMIT: ${{ inputs.candidate-commit }}
+          CI_RUN_ID: ${{ inputs.ci-run-id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$CANDIDATE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          if [[ "${{ inputs.accept-release }}" == "true" ]]; then
+            git merge-base --is-ancestor "$CANDIDATE_COMMIT" "$GITHUB_SHA"
+            git diff --quiet "$CANDIDATE_COMMIT" "$GITHUB_SHA" -- . \
+              ':(exclude)docs/specs/manual-backup-and-restore-qualification.json' \
+              ':(exclude)docs/qualification-evidence/**'
+          else
+            test "$CANDIDATE_COMMIT" = "$GITHUB_SHA"
+          fi
+          run="$(gh api "/repos/${{ github.repository }}/actions/runs/$CI_RUN_ID")"
+          artifacts="$(gh api "/repos/${{ github.repository }}/actions/runs/$CI_RUN_ID/artifacts")"
+          printf '%s' "$run" > "$RUNNER_TEMP/ci-run.json"
+          printf '%s' "$artifacts" > "$RUNNER_TEMP/ci-artifacts.json"
+          node scripts/verify-ci-evidence.mjs run "$CANDIDATE_COMMIT" "$CI_RUN_ID" \
+            "$RUNNER_TEMP/ci-run.json" "$RUNNER_TEMP/ci-artifacts.json"
+          echo "ci-run-id=$CI_RUN_ID" >> "$GITHUB_OUTPUT"
       - name: Validate qualification record
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_MODE: ${{ inputs.accept-release == true }}
+          RELEASE_MODE: ${{ inputs.accept-release }}
         run: |
           if [[ "$RELEASE_MODE" == "true" ]]; then
             npm run qualify:backup:record -- --release
             target_commit="$(jq -r .release.targetCommit docs/specs/manual-backup-and-restore-qualification.json)"
-            git merge-base --is-ancestor "$target_commit" "$GITHUB_SHA"
-            git diff --quiet "$target_commit" "$GITHUB_SHA" -- . \
-              ':(exclude)docs/specs/manual-backup-and-restore-qualification.json' \
-              ':(exclude)docs/qualification-evidence/**' \
-              ':(exclude).github/workflows/release-qualification.yml'
+            test "$target_commit" = "${{ inputs.candidate-commit }}"
             expected_workflow="$(jq -r .release.acceptanceWorkflowSha256 docs/specs/manual-backup-and-restore-qualification.json)"
             actual_workflow="$(sha256sum .github/workflows/release-qualification.yml | cut -d ' ' -f 1)"
             test "$actual_workflow" = "$expected_workflow"
             run_url="$(jq -r .automated.workflowUrl docs/specs/manual-backup-and-restore-qualification.json)"
             run_id="${run_url##*/}"
-            run="$(gh api "/repos/kvalle/trene/actions/runs/$run_id")"
-            jq -e --arg commit "$target_commit" \
-              '.name == "Backup release qualification" and .head_sha == $commit and .status == "completed" and .conclusion == "success"' \
-              <<< "$run"
+            run="$(gh api "/repos/${{ github.repository }}/actions/runs/$run_id")"
+            printf '%s' "$run" > "$RUNNER_TEMP/qualification-run.json"
+            node scripts/verify-ci-evidence.mjs qualification "$target_commit" "$run_id" \
+              "$RUNNER_TEMP/qualification-run.json"
           else
             npm run qualify:backup:record
           fi
 
-  portable-tests:
-    name: Portable backup qualification
+  android-maximum-os:
+    name: Android maximum supported OS (API 36)
     if: inputs.accept-release != true
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm test -- --ci
-
-  android-apk:
-    name: Build cross-platform Android app
-    if: inputs.accept-release != true
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: ${{ env.JAVA_VERSION }}
-      - uses: android-actions/setup-android@v3
-      - run: npm ci
-      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'cmake;3.22.1' 'ndk;27.1.12297006'
-      - run: bash scripts/build-android-smoke-apk.sh
-      - uses: actions/upload-artifact@v6
-        with:
-          name: cross-platform-android-apk
-          path: ${{ env.ANDROID_SMOKE_APK }}
-          if-no-files-found: error
-          retention-days: 1
-
-  android-os-matrix:
-    name: Android supported OS (API ${{ matrix.api }})
-    needs: android-apk
+    needs: evidence
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        api: [34, 36]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -159,167 +119,51 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - uses: actions/download-artifact@v7
         with:
-          name: cross-platform-android-apk
+          name: trene-android-apk
           path: .artifacts/android
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.evidence.outputs.ci-run-id }}
+      - name: Verify APK provenance
+        run: node scripts/verify-ci-evidence.mjs apk "$GITHUB_SHA" "${{ needs.evidence.outputs.ci-run-id }}" .artifacts/android/apk-identity.json "$ANDROID_SMOKE_APK"
       - name: Create deterministic input package
         run: node scripts/create-ios-smoke-fixtures.mjs .artifacts/supported-os/input
       - uses: reactivecircus/android-emulator-runner@v2
         env:
-          ANDROID_API_LEVEL: ${{ matrix.api }}
+          ANDROID_API_LEVEL: '36'
           CROSS_PLATFORM_BACKUP_INPUT: .artifacts/supported-os/input/representative.trene-backup
           CROSS_PLATFORM_BACKUP_OUTPUT: .artifacts/supported-os/output/package.trene-backup
         with:
-          api-level: ${{ matrix.api }}
+          api-level: 36
           arch: x86_64
           profile: pixel_2
           disk-size: 4096M
-          script: adb install "${{ env.ANDROID_SMOKE_APK }}" && npm run smoke:android:backup
-      - name: Upload safe Android diagnostics
+          script: adb install "$ANDROID_SMOKE_APK" && npm run smoke:android:backup
+      - name: Upload safe diagnostics
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: android-supported-os-${{ matrix.api }}-diagnostics
-          path: |
-            .artifacts/android/runtime-metadata.json
+          name: android-api-36-diagnostics
+          path: .artifacts/android/runtime-metadata.json
           if-no-files-found: error
           retention-days: 7
-      - name: Upload Android failure diagnostics
+      - name: Upload safe failure diagnostics
         if: failure() || cancelled()
         uses: actions/upload-artifact@v6
         with:
-          name: android-supported-os-${{ matrix.api }}-failure-diagnostics
+          name: android-api-36-failure-diagnostics
           path: |
             .artifacts/maestro-android-backup/debug/
             .artifacts/maestro-android-backup/screenshots/
-          if-no-files-found: ignore
-          retention-days: 7
-
-  android-native-qualification:
-    name: Android native backup qualification
-    needs: android-apk
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: ${{ env.JAVA_VERSION }}
-      - uses: android-actions/setup-android@v3
-      - run: npm ci
-      - name: Install Maestro
-        run: |
-          curl -Ls https://get.maestro.mobile.dev | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-      - uses: actions/download-artifact@v7
-        with:
-          name: cross-platform-android-apk
-          path: .artifacts/android
-      - uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          arch: x86_64
-          profile: pixel_2
-          disk-size: 4096M
-          script: adb install "${{ env.ANDROID_SMOKE_APK }}" && npm run qualify:android
-      - name: Upload safe native diagnostics
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: android-native-qualification-diagnostics
-          path: |
-            .artifacts/android/*metadata.json
-            .artifacts/android/backup-restore-trace.jsonl
-          if-no-files-found: error
-          retention-days: 7
-      - name: Upload native failure diagnostics
-        if: failure() || cancelled()
-        uses: actions/upload-artifact@v6
-        with:
-          name: android-native-qualification-failure-diagnostics
-          path: |
-            .artifacts/maestro/debug/
-            .artifacts/maestro-android-backup/debug/
-            .artifacts/maestro-android-backup/screenshots/
-          if-no-files-found: ignore
-          retention-days: 7
-  ios-os-matrix:
-    name: iOS supported OS (${{ matrix.runtime }})
-    if: inputs.accept-release != true
-    runs-on: macos-26
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runtime: '26'
-            device: iPhone 16
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - name: Install missing simulator runtime
-        env:
-          RUNTIME: ${{ matrix.runtime }}
-        run: |
-          if ! xcrun simctl list runtimes available -j | jq -e --arg runtime "$RUNTIME" '.runtimes[] | select(.platform == "iOS" and (.version == $runtime or (.version | startswith($runtime + "."))))' >/dev/null; then
-            xcodebuild -downloadPlatform iOS -buildVersion "$RUNTIME"
-          fi
-      - name: Install Maestro
-        run: |
-          curl -Ls https://get.maestro.mobile.dev | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-      - run: npm run build:ios:smoke
-      - name: Create deterministic input package
-        run: node scripts/create-ios-smoke-fixtures.mjs .artifacts/supported-os/input
-      - name: Run restore on supported iOS
-        env:
-          CROSS_PLATFORM_BACKUP_INPUT: .artifacts/supported-os/input/representative.trene-backup
-          CROSS_PLATFORM_BACKUP_OUTPUT: .artifacts/supported-os/output/package.trene-backup
-          IOS_SIMULATOR_DEVICE: ${{ matrix.device }}
-          IOS_SIMULATOR_RUNTIME: ${{ matrix.runtime }}
-          IOS_SMOKE_SHARD: supported-os-${{ matrix.runtime }}
-          MAESTRO_DRIVER_STARTUP_TIMEOUT: '360000'
-        run: npm run smoke:ios
-      - name: Upload safe iOS diagnostics
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: ios-supported-os-${{ matrix.runtime }}-diagnostics
-          path: |
-            .artifacts/ios/runtime-metadata.json
-            .artifacts/ios/simulator-selection.json
-          if-no-files-found: error
-          retention-days: 7
-      - name: Upload iOS failure diagnostics
-        if: failure() || cancelled()
-        uses: actions/upload-artifact@v6
-        with:
-          name: ios-supported-os-${{ matrix.runtime }}-failure-diagnostics
-          path: |
-            .artifacts/ios/*.log
-            .artifacts/maestro-ios/debug/
-            .artifacts/maestro-ios/screenshots/
           if-no-files-found: ignore
           retention-days: 7
 
   android-first:
     name: Android produces A-I-A package
-    needs: android-apk
+    if: inputs.accept-release != true
+    needs: evidence
     uses: ./.github/workflows/cross-platform-android.yml
     with:
+      android-apk-run-id: ${{ needs.evidence.outputs.ci-run-id }}
       input-artifact: ''
       output-artifact: android-ios-android-1
 
@@ -334,9 +178,10 @@ jobs:
 
   android-last:
     name: Android completes A-I-A cycle
-    needs: ios-middle
+    needs: [evidence, ios-middle]
     uses: ./.github/workflows/cross-platform-android.yml
     with:
+      android-apk-run-id: ${{ needs.evidence.outputs.ci-run-id }}
       input-artifact: android-ios-android-2
       output-artifact: android-ios-android-3
       expected-metadata-artifact: android-ios-android-2-metadata
@@ -344,6 +189,7 @@ jobs:
   ios-first:
     name: iOS produces I-A-I package
     if: inputs.accept-release != true
+    needs: evidence
     uses: ./.github/workflows/cross-platform-ios.yml
     with:
       input-artifact: ''
@@ -351,9 +197,10 @@ jobs:
 
   android-middle:
     name: Android restores I-A-I package
-    needs: [android-apk, ios-first]
+    needs: [evidence, ios-first]
     uses: ./.github/workflows/cross-platform-android.yml
     with:
+      android-apk-run-id: ${{ needs.evidence.outputs.ci-run-id }}
       input-artifact: ios-android-ios-1
       output-artifact: ios-android-ios-2
       expected-metadata-artifact: ios-android-ios-1-metadata
@@ -367,15 +214,21 @@ jobs:
       output-artifact: ios-android-ios-3
       expected-metadata-artifact: ios-android-ios-2-metadata
 
+  qualification:
+    name: Qualify release candidate
+    if: always() && inputs.accept-release != true
+    needs: [evidence, android-maximum-os, android-last, ios-last]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every release-specific gate
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: jq -e 'all(.[]; .result == "success")' <<< "$NEEDS"
+
   acceptance:
     name: Accept backup-enabled release
     if: always() && inputs.accept-release == true
-    needs:
-      - evidence
+    needs: evidence
     runs-on: ubuntu-latest
     steps:
-      - name: Require every qualification gate
-        env:
-          NEEDS: ${{ toJSON(needs) }}
-        run: |
-          jq -e 'all(.[]; .result == "success")' <<< "$NEEDS"
+      - run: test '${{ needs.evidence.result }}' = success

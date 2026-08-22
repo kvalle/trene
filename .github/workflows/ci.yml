@@ -2,8 +2,7 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
@@ -20,7 +19,6 @@ env:
   ANDROID_COMPILE_SDK: '36'
   ANDROID_CMAKE: 3.22.1
   ANDROID_NDK: 27.1.12297006
-  ANDROID_SMOKE_APK_CACHE_VERSION: v5
   GRADLE_USER_HOME: /home/runner/.gradle
   GRADLE_VERSION: 9.3.1
   JAVA_VERSION: '17'
@@ -30,8 +28,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  plan:
+    name: Plan verification level
+    runs-on: ubuntu-latest
+    outputs:
+      android: ${{ steps.routes.outputs.android }}
+      android-matrix: ${{ steps.matrix.outputs.android }}
+      ios: ${{ steps.routes.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Classify changed behavior
+        id: routes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            printf '%s\n' package.json | node scripts/plan-ci.mjs >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" | node scripts/plan-ci.mjs >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build Android matrix
+        id: matrix
+        env:
+          MODE: ${{ steps.routes.outputs.android }}
+        run: |
+          if [[ "$MODE" == "full" ]]; then
+            matrix='["standalone","export-cleanup","before-replacement","around-activation","after-replacement"]'
+          elif [[ "$MODE" == "representative" ]]; then
+            matrix='["representative"]'
+          else
+            matrix='[]'
+          fi
+          echo "android=$matrix" >> "$GITHUB_OUTPUT"
+
   test:
     name: Typecheck and unit tests
+    needs: plan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -42,15 +77,16 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test -- --ci
+      - run: npm run test:ci-plan
+      - run: npm run qualify:backup:record
 
   android-apk:
     name: Standalone Android APK
-    needs: test
+    needs: [plan, test]
+    if: needs.plan.outputs.android != 'none'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     outputs:
-      apk-cache-hit: ${{ steps.android-smoke-apk.outputs.cache-hit }}
-      apk-cache-key: ${{ steps.android-smoke-apk.outputs.cache-primary-key }}
       gradle-cache-hit: ${{ steps.gradle-build-cache.outputs.cache-hit }}
       gradle-cache-key: ${{ steps.gradle-build-cache.outputs.cache-primary-key }}
     steps:
@@ -69,54 +105,39 @@ jobs:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
           gradle-home-cache-excludes: caches/build-cache-1
       - run: npm ci
-
-      - name: Install Android SDK 36
-        run: sdkmanager 'platforms;android-${{ env.ANDROID_COMPILE_SDK }}' 'build-tools;${{ env.ANDROID_BUILD_TOOLS }}' 'cmake;${{ env.ANDROID_CMAKE }}' 'ndk;${{ env.ANDROID_NDK }}'
-
+      - run: sdkmanager 'platforms;android-${{ env.ANDROID_COMPILE_SDK }}' 'build-tools;${{ env.ANDROID_BUILD_TOOLS }}' 'cmake;${{ env.ANDROID_CMAKE }}' 'ndk;${{ env.ANDROID_NDK }}'
       - name: Restore Gradle build cache
         id: gradle-build-cache
         uses: actions/cache/restore@v5
         with:
           path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
-          key: gradle-build-v2-${{ runner.os }}-${{ env.ANDROID_ARCH }}-gradle${{ env.GRADLE_VERSION }}-jdk${{ env.JAVA_VERSION }}-sdk${{ env.ANDROID_COMPILE_SDK }}-tools${{ env.ANDROID_BUILD_TOOLS }}-cmake${{ env.ANDROID_CMAKE }}-ndk${{ env.ANDROID_NDK }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'plugins/**', '.nvmrc', 'scripts/build-android-smoke-apk.sh') }}-${{ github.sha }}
-          restore-keys: |
-            gradle-build-v2-${{ runner.os }}-${{ env.ANDROID_ARCH }}-gradle${{ env.GRADLE_VERSION }}-jdk${{ env.JAVA_VERSION }}-sdk${{ env.ANDROID_COMPILE_SDK }}-tools${{ env.ANDROID_BUILD_TOOLS }}-cmake${{ env.ANDROID_CMAKE }}-ndk${{ env.ANDROID_NDK }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'plugins/**', '.nvmrc', 'scripts/build-android-smoke-apk.sh') }}-
-
-      - name: Restore Android smoke APK
-        id: android-smoke-apk
-        uses: actions/cache/restore@v5
-        with:
-          path: ${{ env.ANDROID_SMOKE_APK }}
-          key: android-smoke-apk-${{ env.ANDROID_SMOKE_APK_CACHE_VERSION }}-${{ runner.os }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'app.config.*', 'eas.json', '.nvmrc', 'index.ts', 'src/**', 'locales/**', 'assets/**', 'plugins/**', 'android/**', 'scripts/build-android-smoke-apk.sh', 'scripts/run-android-backup-smoke.sh', 'scripts/create-ios-smoke-fixtures.mjs', '.maestro/android-backup/**', '.maestro/android-interruption/**', '.github/workflows/ci.yml') }}
-
+          key: gradle-build-v2-${{ runner.os }}-${{ env.ANDROID_ARCH }}-gradle${{ env.GRADLE_VERSION }}-jdk${{ env.JAVA_VERSION }}-sdk${{ env.ANDROID_COMPILE_SDK }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'plugins/**', 'scripts/build-android-smoke-apk.sh') }}-${{ github.sha }}
+          restore-keys: gradle-build-v2-${{ runner.os }}-${{ env.ANDROID_ARCH }}-gradle${{ env.GRADLE_VERSION }}-jdk${{ env.JAVA_VERSION }}-sdk${{ env.ANDROID_COMPILE_SDK }}-${{ hashFiles('package.json', 'package-lock.json', 'app.json', 'plugins/**', 'scripts/build-android-smoke-apk.sh') }}-
       - name: Build Android smoke APK
-        if: steps.android-smoke-apk.outputs.cache-hit != 'true'
         run: bash scripts/build-android-smoke-apk.sh
-
-      - name: Record APK checksum
-        run: shasum -a 256 "${{ env.ANDROID_SMOKE_APK }}" > .artifacts/android/trene.apk.sha256
-
-      - name: Upload standalone Android APK
-        uses: actions/upload-artifact@v6
+      - name: Record immutable APK identity
+        run: |
+          digest="$(shasum -a 256 "$ANDROID_SMOKE_APK" | cut -d ' ' -f 1)"
+          jq -n --arg commit "$GITHUB_SHA" --arg sha256 "$digest" --arg runId "$GITHUB_RUN_ID" \
+            '{commit:$commit,sha256:$sha256,ciRunId:$runId}' > .artifacts/android/apk-identity.json
+      - uses: actions/upload-artifact@v6
         with:
           name: trene-android-apk
           path: |
             ${{ env.ANDROID_SMOKE_APK }}
-            .artifacts/android/trene.apk.sha256
+            .artifacts/android/apk-identity.json
           if-no-files-found: error
-          retention-days: 1
-
+          retention-days: 7
       - name: Upload Android build report
-        if: always() && steps.android-smoke-apk.outputs.cache-hit != 'true'
+        if: always()
         uses: actions/upload-artifact@v6
         with:
           name: android-build-report
           path: .artifacts/android/gradle-build.log
           if-no-files-found: ignore
           retention-days: 7
-
       - name: Upload Gradle build cache
-        if: steps.android-smoke-apk.outputs.cache-hit != 'true' && steps.gradle-build-cache.outputs.cache-hit != 'true'
+        if: steps.gradle-build-cache.outputs.cache-hit != 'true'
         uses: actions/upload-artifact@v6
         with:
           name: gradle-build-cache
@@ -126,14 +147,15 @@ jobs:
           retention-days: 1
 
   android-smoke:
-    name: Android offline qualification (${{ matrix.suite }})
-    needs: android-apk
+    name: Android ${{ matrix.suite }} verification
+    needs: [plan, android-apk]
+    if: needs.plan.outputs.android != 'none'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        suite: [standalone, export-cleanup, before-replacement, around-activation, after-replacement]
+        suite: ${{ fromJSON(needs.plan.outputs.android-matrix) }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -146,27 +168,22 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
       - uses: android-actions/setup-android@v3
       - run: npm ci
-
       - name: Install Maestro
         env:
           MAESTRO_VERSION: 2.8.0
         run: |
           curl -Ls https://get.maestro.mobile.dev | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-
-      - name: Download Android smoke APK
-        uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v7
         with:
           name: trene-android-apk
           path: .artifacts/android
-
-      - name: Install app offline and run qualification
+      - name: Install app offline and run verification
         uses: reactivecircus/android-emulator-runner@v2
         env:
           ANDROID_QUALIFICATION_SUITE: ${{ matrix.suite }}
@@ -176,50 +193,25 @@ jobs:
           disk-size: 4096M
           profile: pixel_2
           script: bash scripts/ci-android-offline.sh
-
-      - name: Upload safe smoke diagnostics
-        if: failure()
+      - name: Upload safe Android diagnostics
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v6
         with:
-          name: android-smoke-diagnostics-${{ matrix.suite }}
+          name: android-diagnostics-${{ matrix.suite }}
           path: |
             .artifacts/maestro/debug/
             .artifacts/maestro-android-backup/debug/
             .artifacts/maestro-android-backup/screenshots/
-            .artifacts/android/runtime-metadata.json
+            .artifacts/android/*metadata.json
             .artifacts/android/accessibility.xml
-            .artifacts/runner-disk.txt
-            .artifacts/runner-memory.txt
           if-no-files-found: ignore
           retention-days: 7
-
-      - name: Save Android smoke APK
-        if: success() && matrix.suite == 'standalone' && needs.android-apk.outputs.apk-cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: ${{ env.ANDROID_SMOKE_APK }}
-          key: ${{ needs.android-apk.outputs.apk-cache-key }}
-
-      - name: Download Gradle build cache
-        if: success() && matrix.suite == 'standalone' && needs.android-apk.outputs.apk-cache-hit != 'true' && needs.android-apk.outputs.gradle-cache-hit != 'true'
-        uses: actions/download-artifact@v7
-        with:
-          name: gradle-build-cache
-          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
-
-      - name: Save Gradle build cache
-        if: success() && matrix.suite == 'standalone' && needs.android-apk.outputs.apk-cache-hit != 'true' && needs.android-apk.outputs.gradle-cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: ${{ env.GRADLE_USER_HOME }}/caches/build-cache-1
-          key: ${{ needs.android-apk.outputs.gradle-cache-key }}
-
-  ios-build:
-    name: iOS release build
-    needs: test
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+  ios-runtime:
+    name: iOS ${{ needs.plan.outputs.ios }} verification
+    needs: [plan, test]
+    if: needs.plan.outputs.ios != 'none'
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -227,9 +219,30 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - name: Generate the iOS project
-        run: npx expo prebuild --platform ios --no-install
-      - name: Install CocoaPods dependencies
-        run: pod install --project-directory=ios
-      - name: Compile the release app for the simulator
-        run: xcodebuild -workspace ios/Trene.xcworkspace -scheme Trene -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+      - name: Install Maestro
+        env:
+          MAESTRO_VERSION: 2.8.0
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - run: npm run build:ios:smoke
+      - name: Run native backup and restore journeys
+        env:
+          IOS_SIMULATOR_DEVICE: iPhone 16
+          IOS_SIMULATOR_RUNTIME: '26'
+          IOS_SMOKE_FLOWS: ${{ needs.plan.outputs.ios == 'full' && 'all' || 'restore-success' }}
+          IOS_SMOKE_SHARD: ${{ needs.plan.outputs.ios }}
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
+        run: npm run smoke:ios
+      - name: Upload safe iOS diagnostics
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ios-runtime-diagnostics-${{ needs.plan.outputs.ios }}
+          path: |
+            .artifacts/ios/*.json
+            .artifacts/ios/*.log
+            .artifacts/maestro-ios/debug/
+            .artifacts/maestro-ios/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7

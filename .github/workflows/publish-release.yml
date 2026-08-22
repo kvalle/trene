@@ -1,0 +1,55 @@
+name: Publish qualified release
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate-commit:
+        description: Full SHA of the qualified release candidate
+        required: true
+        type: string
+      acceptance-run-id:
+        description: Successful acceptance run for the candidate
+        required: true
+        type: string
+      tag:
+        description: Release tag to create
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    name: Verify acceptance and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Verify candidate and acceptance
+        env:
+          CANDIDATE_COMMIT: ${{ inputs.candidate-commit }}
+          ACCEPTANCE_RUN_ID: ${{ inputs.acceptance-run-id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$CANDIDATE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          git cat-file -e "$CANDIDATE_COMMIT^{commit}"
+          run="$(gh api "/repos/${{ github.repository }}/actions/runs/$ACCEPTANCE_RUN_ID")"
+          jq -e --arg commit "$GITHUB_SHA" \
+            '.name == "Backup release qualification" and .path == ".github/workflows/release-qualification.yml" and .event == "workflow_dispatch" and .head_sha == $commit and .status == "completed" and .conclusion == "success"' \
+            <<< "$run"
+          jobs="$(gh api "/repos/${{ github.repository }}/actions/runs/$ACCEPTANCE_RUN_ID/jobs?per_page=100")"
+          jq -e '.jobs | any(.name == "Accept backup-enabled release" and .status == "completed" and .conclusion == "success")' <<< "$jobs"
+          test "$(jq -r .release.targetCommit docs/specs/manual-backup-and-restore-qualification.json)" = "$CANDIDATE_COMMIT"
+          git merge-base --is-ancestor "$CANDIDATE_COMMIT" "$GITHUB_SHA"
+          git diff --quiet "$CANDIDATE_COMMIT" "$GITHUB_SHA" -- . \
+            ':(exclude)docs/specs/manual-backup-and-restore-qualification.json' \
+            ':(exclude)docs/qualification-evidence/**'
+      - name: Publish GitHub release from qualified commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          CANDIDATE_COMMIT: ${{ inputs.candidate-commit }}
+        run: gh release create "$TAG" --target "$CANDIDATE_COMMIT" --generate-notes

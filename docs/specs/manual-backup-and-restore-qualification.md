@@ -16,7 +16,7 @@ does not accept pending, failed, or incomplete evidence.
 | Destructive confirmation, replacement, fresh session, migration, and forward compatibility (stories 24-35) | Restore commit and migration tests; Android and iOS restore; Android-to-iOS-to-Android and iOS-to-Android-to-iOS release cycles | Physical Android restore over different current data; measured large-dataset restore time |
 | Rollback, interruption recovery, safe stop, and user-safe outcomes (stories 36-45) | Failure-injection tests; native interruption suites; native simultaneous restore-and-rollback failure | Physical Android interruption and safe-stop flows; measured startup recovery; retained recovery marker and rollback artifact evidence |
 | Accessibility (stories 46-48) | RNTL accessibility checks and native semantic smoke | Physical Android TalkBack names, reading/focus order, disabled states, preview, destructive confirmation, success, and error announcements |
-| Ownership, lifecycle, compatibility fixtures, and verification policy (stories 49-57) | Typecheck/unit/integration CI, historical fixtures, supported-OS matrix, and cross-platform cycles | Versioned qualification record, performance environment, physical Android sign-off, and physical iOS sign-off or accepted residual risk |
+| Ownership, lifecycle, compatibility fixtures, and verification policy (stories 49-57) | Authoritative portable CI, historical fixtures, API 34 CI plus API 36 release-boundary coverage, and cross-platform cycles | Versioned qualification record, performance environment, physical Android sign-off, and physical iOS sign-off or accepted residual risk |
 
 ## Performance method
 
@@ -61,6 +61,14 @@ evidence, mitigation, owner, acceptance date, and the condition that triggers
 follow-up physical testing. A blank physical result is not a deferral.
 
 ## Release acceptance
+
+CI assigns native work by changed behavior. Documentation-only changes run no
+native jobs; ordinary application changes run representative Android and iOS smoke;
+backup, database, persistence, native file-flow, Maestro, and owned workflow
+changes escalate to complete relevant Android and/or iOS coverage. Portable
+typechecking and tests run once in CI before native work. The release workflow
+must reference that successful run for the exact candidate and verifies the
+reused APK identity before any release-specific runtime job.
 
 The release is accepted only when:
 

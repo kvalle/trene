@@ -13,8 +13,12 @@ on:
         required: false
         default: ''
         type: string
+      android-apk-run-id:
+        required: true
+        type: string
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -46,8 +50,12 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - uses: actions/download-artifact@v7
         with:
-          name: cross-platform-android-apk
+          name: trene-android-apk
           path: .artifacts/android
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.android-apk-run-id }}
+      - name: Verify APK provenance
+        run: node scripts/verify-ci-evidence.mjs apk "$GITHUB_SHA" "${{ inputs.android-apk-run-id }}" .artifacts/android/apk-identity.json .artifacts/android/trene.apk
       - name: Download incoming runtime package
         if: inputs.input-artifact != ''
         uses: actions/download-artifact@v7

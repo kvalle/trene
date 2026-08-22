@@ -15,8 +15,13 @@ test("classifies no changes and documentation or agent configuration", () => {
   assert.deepEqual(classifyPaths(["docs/ci.md", "AGENTS.md", ".github/pull_request_template.md"]), none);
 });
 
-test("classifies ordinary and unknown product files as representative Android", () => {
-  const representative = { has_changes: true, native: true, android: "representative", ios: "none" };
+test("classifies ordinary and unknown product files as representative native coverage", () => {
+  const representative = {
+    has_changes: true,
+    native: true,
+    android: "representative",
+    ios: "representative",
+  };
   assert.deepEqual(classifyPaths(["src/screens/HomeScreen.tsx"]), representative);
   assert.deepEqual(classifyPaths(["locales/nb.json"]), representative);
 });
@@ -27,6 +32,8 @@ test("classifies shared persistence and native configuration as full on both pla
     "src/backup/createBackup.ts",
     "src/database/schema.ts",
     "src/persistence/store.ts",
+    "src/screens/DataScreen.tsx",
+    "src/StartupGate.tsx",
     "package-lock.json",
     "app.json",
     "plugins/withNativeBackup.js",
@@ -76,6 +83,7 @@ test("classifies scripts by platform ownership", () => {
     android: "none",
     ios: "full",
   });
+  assert.deepEqual(classifyPaths(["scripts/create-ios-smoke-fixtures.mjs"]), full);
   assert.deepEqual(classifyPaths(["scripts/validate-backup-qualification.mjs"]), full);
   assert.deepEqual(classifyPaths([".maestro/qualification/round-trip.yaml"]), full);
 });
@@ -85,7 +93,7 @@ test("classifies every workflow by the native jobs it owns", () => {
     has_changes: true,
     native: true,
     android: "full",
-    ios: "none",
+    ios: "full",
   });
   assert.deepEqual(classifyPaths([".github/workflows/ios-runtime.yml"]), {
     has_changes: true,
@@ -96,6 +104,7 @@ test("classifies every workflow by the native jobs it owns", () => {
 
   for (const workflow of [
     "release-qualification.yml",
+    "publish-release.yml",
     "cross-platform-android.yml",
     "cross-platform-ios.yml",
   ]) {
