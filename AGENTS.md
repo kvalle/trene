@@ -43,6 +43,18 @@ Triage uses the default five-role label vocabulary. See `docs/agents/triage-labe
 
 Domain documentation uses a single-context layout. See `docs/agents/domain.md`.
 
+### Design system
+
+The first draft of the design system is documented in
+`docs/design-system/README.md`, with an interactive component catalog in
+`docs/design-system/catalog/`. Read these before implementing or reviewing any
+user-interface change. Reuse the documented components, variants, tokens, and
+interaction patterns.
+
+If a requested change needs a new component or variant, or needs to deviate from
+the design system, stop and discuss that design decision with the user before
+implementation. Do not introduce the addition or deviation silently.
+
 ## Ticket implementation workflow
 
 When the user asks to implement a GitHub ticket, whether in natural language or
@@ -57,9 +69,13 @@ through an implementation skill, deliver the work through a pull request:
 3. Start from an up-to-date `origin/main` and create a dedicated branch named
    `issue-<number>-<short-description>`. If a branch or open pull request already
    exists for the ticket, continue there instead of creating a duplicate.
-4. Implement, test, and review the ticket on that branch. Never push ticket work
+4. For any user-interface change, review `docs/design-system/README.md` and the
+   component catalog before implementation. Confirm during review that the
+   result follows the design system. If it needs a new component or variant, or
+   an exception to the system, agree that change with the user first.
+5. Implement, test, and review the ticket on that branch. Never push ticket work
    directly to `main`.
-5. Decide whether the ticket causes user-visible changes. For visible changes,
+6. Decide whether the ticket causes user-visible changes. For visible changes,
    capture before and after screenshots of every relevant screen, commit them
    under `docs/pr-screenshots/<issue-number>/`, and include them in the pull
    request description. Commit the implementation before capturing screenshots,
@@ -69,10 +85,10 @@ through an implementation skill, deliver the work through a pull request:
    worktree where `main` may already be checked out. See
    `docs/pr-screenshots/README.md`. Reassess this after implementation if the
    scope changes; do not rely only on the initial classification.
-6. Commit only the intended changes, push the branch, and create a pull request
+7. Commit only the intended changes, push the branch, and create a pull request
    against `main`. Write a concise description of what changed and why so the
    result is easy to review. Include `Closes #<number>` in the pull request body.
-7. Treat the ticket implementation as incomplete until the pull request exists
+8. Treat the ticket implementation as incomplete until the pull request exists
    and return its URL to the user.
 
 If local changes prevent safely switching or creating branches, stop and ask the
