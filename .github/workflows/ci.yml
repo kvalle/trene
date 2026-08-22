@@ -215,12 +215,38 @@ jobs:
             .artifacts/android/accessibility.xml
           if-no-files-found: ignore
           retention-days: 7
-  ios-runtime:
-    name: iOS ${{ needs.plan.outputs.ios }} verification
+  ios-app:
+    name: iOS simulator app
     needs: [plan, test]
     if: needs.plan.outputs.ios != 'none'
     runs-on: macos-26
-    timeout-minutes: 75
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build:ios:smoke
+      - name: Upload simulator app
+        uses: actions/upload-artifact@v6
+        with:
+          name: trene-ios-simulator-app
+          path: .artifacts/ios/derived-data/Build/Products/Release-iphonesimulator/Trene.app
+          if-no-files-found: error
+          retention-days: 1
+
+  ios-runtime:
+    name: iOS ${{ matrix.shard }} verification
+    needs: [plan, ios-app]
+    if: needs.plan.outputs.ios != 'none'
+    runs-on: macos-26
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.ios-matrix) }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -234,20 +260,25 @@ jobs:
         run: |
           curl -Ls https://get.maestro.mobile.dev | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-      - run: npm run build:ios:smoke
+      - uses: actions/download-artifact@v7
+        with:
+          name: trene-ios-simulator-app
+          path: .artifacts/ios/Trene.app
+      - name: Record downloaded app path
+        run: printf '%s\n' "$PWD/.artifacts/ios/Trene.app" > .artifacts/ios/app-path.txt
       - name: Run native backup and restore journeys
         env:
           IOS_SIMULATOR_DEVICE: iPhone 16
           IOS_SIMULATOR_RUNTIME: '26'
-          IOS_SMOKE_FLOWS: ${{ needs.plan.outputs.ios == 'full' && 'all' || 'restore-success' }}
-          IOS_SMOKE_SHARD: ${{ needs.plan.outputs.ios }}
+          IOS_SMOKE_FLOWS: ${{ matrix.flows }}
+          IOS_SMOKE_SHARD: ${{ matrix.shard }}
           MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
         run: npm run smoke:ios
       - name: Upload safe iOS diagnostics
         if: failure() || cancelled()
         uses: actions/upload-artifact@v6
         with:
-          name: ios-runtime-diagnostics-${{ needs.plan.outputs.ios }}
+          name: ios-runtime-diagnostics-${{ matrix.shard }}
           path: |
             .artifacts/ios/*.json
             .artifacts/ios/*.log
