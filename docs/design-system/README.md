@@ -89,9 +89,10 @@ destruktive tilstander.
 «Prøv igjen» er ikke en egen knappetype. Det er en primærknapp brukt som
 gjenopprettingshandling i en feiltilstand. Knapphierarkiet består av primær,
 sekundær, tekst og destruktiv. Primærknappen er fylt grønn, mens sekundærknappen
-har overflatefarge og nøytral kant. Deaktiverte varianter bruker nøytral fyll,
-kant og tekst uten grønt handlingssignal, slik at deaktivert leses som en
-tilstand fremfor et ekstra nivå i handlingshierarkiet.
+har overflatefarge og nøytral kant. Deaktivert og opptatt er tilstander på
+interaktive komponenter, ikke egne komponenter. Deaktiverte handlinger bruker
+nøytral fyll, kant og tekst uten vanlig handlingssignal, slik at tilstanden ikke
+leses som et ekstra nivå i handlingshierarkiet.
 
 Små handlinger i rader er kompakte tekstknapper, ikke et eget hierarkinivå. De
 bruker et relevant ikon sammen med en synlig tekstetikett; ikonet skal
@@ -125,6 +126,11 @@ Dialog er grunnkomponenten, med bekreftende og destruktiv variant.
 Forhåndsvisning av gjenoppretting er et flertrinns brukseksempel, ikke en egen
 komponent. Låst sikkerhetsstopp er et ikke-avvisbart feileksempel komponert av
 dialog og feilinnhold, heller ikke en egen komponent.
+
+En sikkerhetsstopp som oppstår før appens navigasjon er tilgjengelig, vises som
+en ikke-avvisbar helsides feilvariant av `Sidestatus`. En sikkerhetsstopp som
+oppstår i en pågående modal arbeidsflyt, som gjenoppretting, beholder konteksten
+og vises som en ikke-avvisbar dialog.
 
 Start katalogen med `npm run prototype:components` og åpne
 `http://localhost:4174`. Hvert komponentvalg kan lenkes direkte med

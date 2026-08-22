@@ -10,8 +10,6 @@ const groups = [
     ['secondary-button', 'Sekundærknapp', 'Overflatefarget støttehandling med nøytral kant og lavere visuell vekt.', 'En tilgjengelig handling er viktig, men ikke skjermens foretrukne neste steg.', 'home', '.secondary'],
     ['text-button', 'Tekstknapp', 'Laveste handlingsnivå, ofte avbryt eller tilbake.', 'Handlingen skal være tilgjengelig uten å konkurrere med primære eller sekundære valg.', 'picker', '.text'],
     ['destructive-button', 'Destruktiv knapp', 'Permanent sletting eller erstatning.', 'Handlingen har irreversible eller alvorlige konsekvenser som må være umiddelbart synlige.', 'completed', '.danger'],
-    ['disabled-primary', 'Deaktivert primærknapp', 'Nøytral fyllfarge og tekst gjør tilstanden viktigere enn knappens vanlige hierarki.', 'Primærhandlingen må vises for forståelse eller layout, men kan ikke utføres ennå.', 'buttons-disabled', '.disabled-primary'],
-    ['disabled-secondary', 'Deaktivert sekundærknapp', 'Svak nøytral kant og tekst uten grønt handlingssignal.', 'En støttehandling er midlertidig utilgjengelig og årsaken fremgår av konteksten.', 'buttons-disabled', '.disabled-secondary'],
     ['busy-button', 'Opptatt knapp', 'Handling under arbeid med spinner og presis status.', 'En igangsatt handling tar merkbar tid og gjentatte trykk må forhindres.', 'data-busy', '.busy'],
     ['compact-action', 'Liten handling', 'Kompakt tekstknapp med ikon og etikett for en tydelig lokal handling.', 'En handling gjelder én bestemt rad eller ett lite innholdselement. Velg ikon etter handlingen, for eksempel blyant, pluss eller søppelbøtte.', 'small-actions', '.small-button.text-small'],
   ]],
