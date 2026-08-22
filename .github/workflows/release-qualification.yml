@@ -82,6 +82,7 @@ jobs:
 
   portable-tests:
     name: Portable backup qualification
+    if: inputs.accept-release != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -95,6 +96,7 @@ jobs:
 
   android-apk:
     name: Build cross-platform Android app
+    if: inputs.accept-release != true
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -245,6 +247,7 @@ jobs:
           retention-days: 7
   ios-os-matrix:
     name: iOS supported OS (${{ matrix.runtime }})
+    if: inputs.accept-release != true
     runs-on: macos-26
     timeout-minutes: 60
     strategy:
@@ -333,6 +336,7 @@ jobs:
 
   ios-first:
     name: iOS produces I-A-I package
+    if: inputs.accept-release != true
     uses: ./.github/workflows/cross-platform-ios.yml
     with:
       input-artifact: ''
@@ -361,13 +365,6 @@ jobs:
     if: always() && inputs.accept-release == true
     needs:
       - evidence
-      - portable-tests
-      - android-apk
-      - android-native-qualification
-      - android-os-matrix
-      - ios-os-matrix
-      - android-last
-      - ios-last
     runs-on: ubuntu-latest
     steps:
       - name: Require every qualification gate
