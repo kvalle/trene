@@ -1,0 +1,54 @@
+{
+  "recordVersion": 1,
+  "executedAt": "2026-08-20",
+  "tester": "Developer",
+  "environment": {
+    "device": "Fairphone 6",
+    "os": "Android 16 (API 36)",
+    "buildFingerprint": "Fairphone/FP6/FP6:16/FP6.QREL.16.95.0/WS1J:user/release-keys",
+    "testedCommit": "c29a9206388c422879a15a43ed55db7a895146b0",
+    "appVersion": "0.1.0",
+    "formatVersion": 1,
+    "schemaVersion": 1,
+    "apkSha256": "13e13d94cab75f32cfb5a7838afe4e92b5f2f8c6cfa27acdbe0dcd4384fb756f"
+  },
+  "dataset": {
+    "exercises": 500,
+    "workouts": 5000,
+    "workoutExercises": 15000,
+    "workoutSets": 45000,
+    "databaseBytes": 2920448,
+    "packageBytes": 2921049
+  },
+  "measurements": {
+    "creationMs": [16000, 16000, 16000],
+    "validationMs": [8000, 6000, 7000],
+    "restoreMs": [16000, 17000, 17000],
+    "temporaryStorageBytes": [2985984, 11747328, 11849728],
+    "startupRecoveryMs": [4000, 3000, 3000],
+    "normalColdStartMs": [325, 293]
+  },
+  "physicalResults": {
+    "backupAndShareCancellation": "passed",
+    "pickerCancellation": "passed",
+    "damagedPackage": "passed",
+    "newerPackage": "passed",
+    "restoreReplacementAndRelaunch": "passed",
+    "talkBack": "passed",
+    "largeDatasetRoundTrip": "passed",
+    "interruptedRestoreRecovery": "passed"
+  },
+  "nativeSafeStopEvidence": {
+    "environment": "Android API 34 rootable emulator",
+    "testedCommit": "c29a9206388c422879a15a43ed55db7a895146b0",
+    "safeStopObserved": true,
+    "operationMarkerPreserved": true,
+    "rollbackSnapshotPreserved": true
+  },
+  "notes": [
+    "The Android share sheet did not offer a local Save As destination on this device; cancellation returned safely without a false saved-success claim.",
+    "Fairphone 6 is accepted as the lowest-performance physical device in the supported-device pool and therefore as the slowest supported device class for this first-release qualification.",
+    "The evidence remains applicable while later changes pass mandatory native, supported-OS, and cross-platform automation and do not materially change file handling, database lifecycle, native integration, or observed device behavior.",
+    "All data was deterministic and synthetic. No backup package, database, device serial, or user data is retained."
+  ]
+}

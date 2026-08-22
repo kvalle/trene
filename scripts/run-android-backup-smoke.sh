@@ -9,6 +9,7 @@ fixtures="$android_artifacts/fixtures"
 package=com.kjetilvalle.trene
 documents="/data/user/0/$package/files"
 maestro_pid=""
+private_access=direct
 
 mkdir -p "$maestro_artifacts/home" "$maestro_artifacts/tmp" "$maestro_artifacts/debug" "$maestro_artifacts/screenshots"
 export MAESTRO_OPTS="-Duser.home=$maestro_artifacts/home"
@@ -17,6 +18,16 @@ export MAESTRO_CLI_NO_ANALYTICS=true
 export MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true
 export MAESTRO_DISABLE_UPDATE_CHECK=true
 export ADB_SERVER_SOCKET=tcp:127.0.0.1:5037
+
+if adb shell run-as "$package" id >/dev/null 2>&1; then
+  private_access=run-as
+else
+  if adb root >/dev/null 2>&1; then adb wait-for-device; fi
+  if ! adb shell test -d "/data/user/0/$package" >/dev/null 2>&1; then
+    echo 'App-private qualification access requires a debuggable APK or a rootable emulator.' >&2
+    exit 1
+  fi
+fi
 
 cleanup() {
   if [[ -n "$maestro_pid" ]]; then kill "$maestro_pid" >/dev/null 2>&1 || true; wait "$maestro_pid" >/dev/null 2>&1 || true; fi
@@ -66,7 +77,41 @@ reset_app() {
 
 run_flow() {
   local flow="$1"
-  maestro test --debug-output "$maestro_artifacts/debug/$(basename "$flow" .yaml)" "$flow"
+  shift
+  maestro test --debug-output "$maestro_artifacts/debug/$(basename "$flow" .yaml)" "$@" "$flow"
+}
+
+private_test() {
+  if [[ "$private_access" == "run-as" ]]; then adb shell run-as "$package" test "$@"
+  else adb shell test "$@"
+  fi
+}
+
+write_private_file() {
+  local path="$1" value="$2"
+  if [[ "$private_access" == "run-as" ]]; then
+    printf '%s\n' "$value" | adb shell run-as "$package" sh -c "cat > '$path'"
+  else
+    printf '%s\n' "$value" | adb shell "cat > '$path'"
+  fi
+}
+
+pull_private_file() {
+  if [[ "$private_access" == "run-as" ]]; then adb exec-out run-as "$package" cat "$1" > "$2"
+  else adb pull "$1" "$2" >/dev/null
+  fi
+}
+
+remove_private_files() {
+  if [[ "$private_access" == "run-as" ]]; then adb shell run-as "$package" rm -f "$@"
+  else adb shell rm -f "$@"
+  fi
+}
+
+private_files() {
+  if [[ "$private_access" == "run-as" ]]; then adb shell run-as "$package" find "$1" -type f 2>/dev/null || true
+  else adb shell find "$1" -type f 2>/dev/null || true
+  fi
 }
 
 cross_platform_input="${CROSS_PLATFORM_BACKUP_INPUT:-}"
@@ -83,11 +128,11 @@ if [[ -n "$cross_platform_input" || -n "$cross_platform_output" ]]; then
   adb shell am force-stop com.google.android.documentsui >/dev/null 2>&1 || true
   reset_app
   export scenario=cross-platform-round-trip
-  run_flow .maestro/android-backup/cross-platform-round-trip.yaml
+  run_flow .maestro/android-backup/cross-platform-round-trip.yaml \
+    -e "EXPECTED_WORKOUTS=${CROSS_PLATFORM_EXPECTED_WORKOUTS:-1}" \
+    -e "EXPECTED_EXERCISES=${CROSS_PLATFORM_EXPECTED_EXERCISES:-2}"
   mkdir -p "$(dirname "$cross_platform_output")"
-  adb root >/dev/null
-  adb wait-for-device
-  adb pull "$documents/trene-automation-export.trene-backup" "$cross_platform_output" >/dev/null
+  pull_private_file "$documents/trene-automation-export.trene-backup" "$cross_platform_output"
   export QUALIFICATION_PLATFORM="Android API ${ANDROID_API_LEVEL:-unknown}"
   export QUALIFICATION_SCENARIO=cross-platform-round-trip
   node scripts/verify-cross-platform-backup.mjs "$cross_platform_output" \
@@ -115,9 +160,18 @@ for flow in "${flows[@]}"; do
     rollback-failure.yaml) fault_scenario=rollback-failure ;;
   esac
   if [[ -n "$fault_scenario" ]]; then
-    printf '%s\n' "$fault_scenario" | adb shell "cat > '$documents/trene-automation-scenario.txt'"
+    write_private_file "$documents/trene-automation-scenario.txt" "$fault_scenario"
   fi
   run_flow "$flow"
+  if [[ "$fault_scenario" == "rollback-failure" ]]; then
+    private_test -f "$documents/trene-restore-recovery/operation.json"
+    private_test -f "$documents/trene-restore-recovery/rollback.sqlite"
+    mkdir -p "$android_artifacts"
+    node -e '
+      const fs=require("node:fs");
+      fs.writeFileSync(process.argv[1], JSON.stringify({scenario:"rollback-failure",safeStopObserved:true,operationMarkerPreserved:true,rollbackSnapshotPreserved:true},null,2)+"\n");
+    ' "$android_artifacts/rollback-failure-metadata.json"
+  fi
 done
 
 if [[ -n "$requested_interruption" && "$requested_interruption" != "none" ]]; then
@@ -133,14 +187,14 @@ run_interruption() {
   local name="$1" stage="$2" expected="$3"
   reset_app
   export scenario="$name"
-  printf 'interrupt:%s\n' "$stage" | adb shell "cat > '$documents/trene-automation-scenario.txt'"
+  write_private_file "$documents/trene-automation-scenario.txt" "interrupt:$stage"
   maestro test --debug-output "$maestro_artifacts/debug/$name-start" ".maestro/android-interruption/$name-start.yaml" &
   maestro_pid=$!
   for _ in $(seq 1 60); do
-    adb shell test -f "$documents/trene-automation-checkpoint.txt" && break
+    private_test -f "$documents/trene-automation-checkpoint.txt" && break
     sleep 1
   done
-  adb shell test -f "$documents/trene-automation-checkpoint.txt"
+  private_test -f "$documents/trene-automation-checkpoint.txt"
   if [[ "$name" == "around-activation" ]]; then
     wait "$maestro_pid"
     maestro_pid=""
@@ -150,10 +204,10 @@ run_interruption() {
     wait "$maestro_pid" || true
     maestro_pid=""
   fi
-  adb shell rm -f "$documents/trene-automation-scenario.txt" "$documents/trene-automation-checkpoint.txt"
+  remove_private_files "$documents/trene-automation-scenario.txt" "$documents/trene-automation-checkpoint.txt"
   run_flow ".maestro/android-interruption/$expected.yaml"
   if [[ "$name" == "export-cleanup" ]]; then
-    test -z "$(adb shell find /data/user/0/$package/cache/trene-exports -type f 2>/dev/null || true)"
+    test -z "$(private_files "/data/user/0/$package/cache/trene-exports")"
   fi
 }
 
@@ -174,7 +228,10 @@ case "$requested_interruption" in
     ;;
 esac
 
-test -z "$(adb shell find /data/user/0/$package/cache/trene-exports -type f 2>/dev/null || true)"
+test -z "$(private_files "/data/user/0/$package/cache/trene-exports")"
+if private_test -f "$documents/trene-automation-trace.jsonl"; then
+  pull_private_file "$documents/trene-automation-trace.jsonl" "$android_artifacts/backup-restore-trace.jsonl"
+fi
 node -e '
   const fs=require("node:fs");
   fs.writeFileSync(process.argv[1], JSON.stringify({appVersion:"0.1.0",formatVersion:1,schemaVersion:1,platform:"Android API 34",scenarios:13,tableCounts:{exercises:2,workouts:1,workout_exercises:2,workout_sets:2}},null,2)+"\n");

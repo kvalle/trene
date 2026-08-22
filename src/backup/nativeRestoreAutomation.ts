@@ -12,6 +12,7 @@ type AutomationScenario = 'storage-failure' | 'restore-failure' | 'rollback-fail
 const SCENARIO_FILE = 'trene-automation-scenario.txt';
 const CHECKPOINT_FILE = 'trene-automation-checkpoint.txt';
 const EXPORTED_BACKUP_FILE = 'trene-automation-export.trene-backup';
+const TRACE_FILE = 'trene-automation-trace.jsonl';
 
 export async function preserveAutomationBackup(uri: string): Promise<void> {
   if (process.env.EXPO_PUBLIC_BACKUP_RESTORE_AUTOMATION !== '1') return;
@@ -23,6 +24,7 @@ export function nativeRestoreAvailableBytes(availableBytes: number): number {
 }
 
 export const nativeBackupRestoreFaultCheckpoint: FaultCheckpoint = async (stage, timing) => {
+  writeTrace(stage, timing);
   const interruption = readInterruption();
   if (interruption?.stage === stage && interruption.timing === timing) {
     new File(Paths.document, CHECKPOINT_FILE).write(`${stage}:${timing}`);
@@ -41,6 +43,18 @@ export const nativeBackupRestoreFaultCheckpoint: FaultCheckpoint = async (stage,
     throw new Error('Injected simulator rollback failure');
   }
 };
+
+function writeTrace(stage: BackupRestoreStage, timing: FaultTiming): void {
+  if (process.env.EXPO_PUBLIC_BACKUP_RESTORE_AUTOMATION !== '1') return;
+  const file = new File(Paths.document, TRACE_FILE);
+  const entry = JSON.stringify({
+    stage,
+    timing,
+    timestampMs: Date.now(),
+    availableBytes: Paths.availableDiskSpace,
+  });
+  file.write(`${file.exists ? file.textSync() : ''}${entry}\n`);
+}
 
 function readScenario(): AutomationScenario | null {
   if (process.env.EXPO_PUBLIC_BACKUP_RESTORE_AUTOMATION !== '1') return null;
