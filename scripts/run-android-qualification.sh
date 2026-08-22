@@ -19,12 +19,18 @@ fi
 
 qualification_suite="${ANDROID_QUALIFICATION_SUITE:-all}"
 case "$qualification_suite" in
-  all|standalone|export-cleanup|before-replacement|around-activation|after-replacement) ;;
+  all|representative|standalone|export-cleanup|before-replacement|around-activation|after-replacement) ;;
   *)
     echo "Unknown Android qualification suite: $qualification_suite" >&2
     exit 2
     ;;
 esac
+
+if [ "$qualification_suite" = representative ]; then
+  adb shell pm clear com.kjetilvalle.trene >/dev/null
+  sleep 2
+  maestro test --debug-output "$artifacts/debug" .maestro/smoke/start-workout.yaml
+fi
 
 if [ "$qualification_suite" = all ] || [ "$qualification_suite" = standalone ]; then
   for flow in .maestro/smoke/*.yaml .maestro/qualification/*.yaml; do
@@ -39,6 +45,10 @@ if [ "$qualification_suite" = all ]; then
   for flow in export-cleanup before-replacement around-activation after-replacement; do
     ANDROID_BACKUP_INTERRUPTION_FLOW="$flow" npm run smoke:android:backup
   done
-elif [ "$qualification_suite" != standalone ]; then
-  ANDROID_BACKUP_INTERRUPTION_FLOW="$qualification_suite" npm run smoke:android:backup
+else
+  case "$qualification_suite" in
+    export-cleanup|before-replacement|around-activation|after-replacement)
+      ANDROID_BACKUP_INTERRUPTION_FLOW="$qualification_suite" npm run smoke:android:backup
+      ;;
+  esac
 fi
