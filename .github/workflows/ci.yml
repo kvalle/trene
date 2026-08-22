@@ -35,6 +35,7 @@ jobs:
       android: ${{ steps.routes.outputs.android }}
       android-matrix: ${{ steps.matrix.outputs.android }}
       ios: ${{ steps.routes.outputs.ios }}
+      ios-matrix: ${{ steps.matrix.outputs.ios }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -63,6 +64,14 @@ jobs:
             matrix='[]'
           fi
           echo "android=$matrix" >> "$GITHUB_OUTPUT"
+          if [[ "${{ steps.routes.outputs.ios }}" == "full" ]]; then
+            ios='[{"shard":"restore","flows":"restore-success,damaged-backup,picker-cancellation"},{"shard":"recovery","flows":"restore-failure,newer-backup"},{"shard":"fail-safe","flows":"rollback-failure,storage-failure,share-cancellation"}]'
+          elif [[ "${{ steps.routes.outputs.ios }}" == "representative" ]]; then
+            ios='[{"shard":"representative","flows":"restore-success"}]'
+          else
+            ios='[]'
+          fi
+          echo "ios=$ios" >> "$GITHUB_OUTPUT"
 
   test:
     name: Typecheck and unit tests
