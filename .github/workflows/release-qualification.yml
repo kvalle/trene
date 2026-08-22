@@ -72,7 +72,11 @@ jobs:
             git merge-base --is-ancestor "$target_commit" "$GITHUB_SHA"
             git diff --quiet "$target_commit" "$GITHUB_SHA" -- . \
               ':(exclude)docs/specs/manual-backup-and-restore-qualification.json' \
-              ':(exclude)docs/qualification-evidence/**'
+              ':(exclude)docs/qualification-evidence/**' \
+              ':(exclude).github/workflows/release-qualification.yml'
+            expected_workflow="$(jq -r .release.acceptanceWorkflowSha256 docs/specs/manual-backup-and-restore-qualification.json)"
+            actual_workflow="$(sha256sum .github/workflows/release-qualification.yml | cut -d ' ' -f 1)"
+            test "$actual_workflow" = "$expected_workflow"
             run_url="$(jq -r .automated.workflowUrl docs/specs/manual-backup-and-restore-qualification.json)"
             run_id="${run_url##*/}"
             run="$(gh api "/repos/kvalle/trene/actions/runs/$run_id")"

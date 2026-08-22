@@ -3,6 +3,7 @@
   "status": "passed",
   "release": {
     "targetCommit": "57497a6192ae22936cab8a189553f4d1cb5f2887",
+    "acceptanceWorkflowSha256": "67669edcad4d995f29d66cd6326dfc7dd23de07075969de96ed94079790602fc",
     "appVersion": "0.1.0",
     "formatVersion": 1,
     "schemaVersion": 1
