@@ -2,17 +2,17 @@
   "recordVersion": 1,
   "status": "passed",
   "release": {
-    "targetCommit": "79ea55c705dc315a20b135cfac00335904d15900",
+    "targetCommit": "57497a6192ae22936cab8a189553f4d1cb5f2887",
     "appVersion": "0.1.0",
     "formatVersion": 1,
     "schemaVersion": 1
   },
   "automated": {
     "result": "passed",
-    "workflowUrl": "https://github.com/kvalle/trene/actions/runs/32563188112",
+    "workflowUrl": "https://github.com/kvalle/trene/actions/runs/32565731538",
     "executedAt": "2026-08-22",
     "tester": "Developer",
-    "safeEvidence": ["https://github.com/kvalle/trene/actions/runs/32563188112"]
+    "safeEvidence": ["https://github.com/kvalle/trene/actions/runs/32565731538"]
   },
   "performance": {
     "result": "passed",
@@ -74,7 +74,7 @@
     "residualRisk": {
       "reason": "No physical iOS device is available for first-release qualification.",
       "impact": "Platform file-provider and VoiceOver behavior may differ from simulator coverage.",
-      "simulatorEvidence": ["https://github.com/kvalle/trene/actions/runs/32563188112"],
+      "simulatorEvidence": ["https://github.com/kvalle/trene/actions/runs/32565731538"],
       "mitigation": "Mandatory iOS simulator restore, accessibility component tests, supported-OS matrix, and cross-platform package cycles remain release gates.",
       "owner": "Developer",
       "acceptedAt": "2026-08-20",
