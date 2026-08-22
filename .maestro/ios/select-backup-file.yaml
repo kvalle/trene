@@ -1,8 +1,14 @@
 appId: com.kjetilvalle.trene
 ---
 - extendedWaitUntil:
-    visible: "(Browse|${BACKUP_FILE}|On My iPhone)"
+    visible: "(Browse|${BACKUP_FILE}|On My iPhone|No Recents)"
     timeout: 30000
+- runFlow:
+    when:
+      visible: "No Recents"
+    commands:
+      - tapOn:
+          point: "72%,95%"
 - runFlow:
     when:
       visible: "Browse"
