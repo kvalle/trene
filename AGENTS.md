@@ -55,6 +55,12 @@ If a requested change needs a new component or variant, or needs to deviate from
 the design system, stop and discuss that design decision with the user before
 implementation. Do not introduce the addition or deviation silently.
 
+When a new component is added in `src/ui/`, also add it to the runtime component library in
+`src/catalog/ComponentCatalog.tsx`: add an entry in the overview group (under the correct
+`docs/design-system/README.md` group) and a detail screen with name / description / “Bruk når”
+plus all variants and states side by side, using generic isolated examples (no app-screen
+strings).
+
 ## Ticket implementation workflow
 
 When the user asks to implement a GitHub ticket, whether in natural language or
