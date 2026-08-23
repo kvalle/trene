@@ -148,11 +148,16 @@ npm run catalog          # generisk Expo start (velg selv plattform i Expo CLI, 
 
 Katalog-entrypoint velges via `EXPO_PUBLIC_COMPONENT_CATALOG=1` (`src/entrypoint.ts` → `index.ts`). Uten variabelen starter `index.ts` produksjonsappen `src/App`. Produksjonsentrypointet er uendret.
 
+Katalogen er strukturert som oversikt → detalj via native stack, gruppert som i kapittelet over
+(Handlinger, Skjema, Navigasjon og struktur — kun grupper med implementerte komponenter vises). Hver
+detaljskjerm viser navn/beskrivelse/«Bruk når» og alle varianter/tilstander med generiske, isolerte
+eksempler.
+
 Katalogen demonstrerer:
 
-- lys/mørk modus via bryteren «Mørk modus» (`AppThemeProvider` scheme-toggle)
-- native stack (`StackExample`) og native modal (`ModalExample`) via samme `getAppStackScreenOptions` som produksjonen
-- systemtekstskalering (`PixelRatio.getFontScale()`) – alle tekster bruker native skalering
+- lys/mørk modus via bryteren «Mørk modus» på oversikten (`AppThemeProvider` scheme-toggle)
+- native stack og modal via samme `getAppStackScreenOptions` som produksjonen (vist under Navigasjon og struktur)
+- systemtekstskalering (`PixelRatio.getFontScale()`) – synlig på oversikten og i app-shell-detaljen
 
 Forutsetninger:
 

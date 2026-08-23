@@ -14,21 +14,30 @@ jest.mock('@react-navigation/native-stack', () => ({
     Navigator: ({ children }: { children: React.ReactNode }) => (
       require('react').createElement(require('react-native').View, null, children)
     ),
-    Screen: ({ children, name }: { children?: (props: object) => React.ReactNode; name: string }) => (
-      name === 'Catalog'
-        ? children?.({ navigation: { navigate: jest.fn() }, route: { key: 'Catalog', name: 'Catalog' } })
-        : require('react').createElement(require('react-native').Text, null, name)
-    ),
+    Screen: ({ children, name }: { children?: (props: object) => React.ReactNode; name: string }) =>
+      name === 'Overview'
+        ? children?.({ navigation: { navigate: jest.fn() }, route: { key: 'Overview', name: 'Overview' } })
+        : require('react').createElement(require('react-native').Text, null, name),
   }),
 }));
 
 it('renders production theme contexts and switches theme', () => {
   render(<ComponentCatalog />);
 
-  expect(screen.getByRole('header', { name: 'Runtime-katalog' })).toBeOnTheScreen();
+  expect(screen.getByRole('header', { name: 'Komponentbibliotek' })).toBeOnTheScreen();
   expect(screen.getByText(/Aktuell systemskala:/)).toBeOnTheScreen();
-  expect(screen.getByText('StackExample')).toBeOnTheScreen();
-  expect(screen.getByText('ModalExample')).toBeOnTheScreen();
+  // overview groups and components
+  expect(screen.getByText('HANDLINGER')).toBeOnTheScreen();
+  expect(screen.getByText('Button')).toBeOnTheScreen();
+  expect(screen.getByText('SKJEMA')).toBeOnTheScreen();
+  expect(screen.getByText('TextField')).toBeOnTheScreen();
+  expect(screen.getByText('FieldError')).toBeOnTheScreen();
+  expect(screen.getByText('NAVIGASJON OG STRUKTUR')).toBeOnTheScreen();
+  // detail screens are mounted via mock as text fallbacks
+  expect(screen.getByText('ButtonDetail')).toBeOnTheScreen();
+  expect(screen.getByText('TextFieldDetail')).toBeOnTheScreen();
+  expect(screen.getByText('FieldErrorDetail')).toBeOnTheScreen();
+  expect(screen.getByText('AppShellDetail')).toBeOnTheScreen();
 
   fireEvent(screen.getByLabelText('Mørk modus'), 'valueChange', true);
   expect(screen.getByLabelText('Mørk modus')).toBeOnTheScreen();
