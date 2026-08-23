@@ -23,6 +23,9 @@ tags:
 - assertVisible: "1 treningsøkter"
 - assertVisible: "2 øvelser"
 - tapOn: { id: "continue-restore" }
+- extendedWaitUntil:
+    visible: { id: "restore-confirmation" }
+    timeout: 30000
 - tapOn: { id: "confirm-restore" }
 - extendedWaitUntil:
     visible: "Klar for en økt?"

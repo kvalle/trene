@@ -25,7 +25,7 @@ name: Restore a synthetic backup on Android
 - assertVisible: "2 øvelser"
 - assertVisible: "Ingenting er gjenopprettet ennå."
 - tapOn: { id: "continue-restore" }
-- assertVisible: { id: "restore-confirmation" }
+- extendedWaitUntil: { visible: { id: "restore-confirmation" }, timeout: 30000 }
 - assertVisible: "Dette erstatter alle data i Trene og kan ikke angres."
 - tapOn: { id: "confirm-restore" }
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 30000 }
