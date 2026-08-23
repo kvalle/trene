@@ -5,6 +5,7 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
+    "catalog": "EXPO_PUBLIC_COMPONENT_CATALOG=1 expo start",
     "prototype:components": "printf 'Designsystemet kjorer pa http://localhost:4174\n' && python3 -m http.server 4174 --directory docs/design-system/catalog",
     "start:android": "sh scripts/start-android-metro.sh",
     "android": "expo run:android",

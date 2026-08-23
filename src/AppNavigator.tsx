@@ -1,6 +1,5 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useColorScheme } from 'react-native';
 
 import { HomeScreen } from './screens/HomeScreen';
 import { CreateExerciseScreen } from './screens/CreateExerciseScreen';
@@ -12,7 +11,8 @@ import { HistoryScreen } from './screens/HistoryScreen';
 import { WorkoutScreen } from './screens/WorkoutScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { DataScreen } from './screens/DataScreen';
-import { darkTheme, lightTheme } from './theme';
+import { useAppTheme } from './ui/AppThemeProvider';
+import { getAppStackScreenOptions } from './ui/appShell';
 import { WorkoutDraftProvider } from './workoutDrafts';
 
 export type RootStackParamList = {
@@ -35,13 +35,12 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function AppNavigator() {
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  const { colors, navigation: theme } = useAppTheme();
 
   return (
     <WorkoutDraftProvider>
       <NavigationContainer theme={theme}>
-        <Stack.Navigator screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
+        <Stack.Navigator screenOptions={getAppStackScreenOptions(colors)}>
           <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Trene' }} />
           <Stack.Screen name="Workout" component={WorkoutScreen} options={{ title: 'Treningsøkt' }} />
           <Stack.Screen name="CompletedWorkout" component={CompletedWorkoutScreen} options={{ title: 'Fullført økt' }} />
