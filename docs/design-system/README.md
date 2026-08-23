@@ -132,9 +132,15 @@ en ikke-avvisbar helsides feilvariant av `Sidestatus`. En sikkerhetsstopp som
 oppstår i en pågående modal arbeidsflyt, som gjenoppretting, beholder konteksten
 og vises som en ikke-avvisbar dialog.
 
-Start katalogen med `npm run prototype:components` og åpne
-`http://localhost:4174`. Hvert komponentvalg kan lenkes direkte med
-`?component=<id>`, og katalogen støtter både lys og mørk modus.
+Start React Native-katalogen med `npm run catalog` og åpne den i Expo på samme
+måte som appen. Katalogen importerer produksjonstemaet og app-shell-kontrakten,
+og viser lyst og mørkt tema, stor tekst, native stack og native modal.
+
+Den midlertidige HTML-referansen startes fortsatt med
+`npm run prototype:components` og åpnes på `http://localhost:4174`. Hvert
+komponentvalg kan lenkes direkte med `?component=<id>`. Den fjernes først når
+alle godkjente mønstre er representert med produksjonskomponenter i
+React Native-katalogen.
 
 ## Arbeidsregel for agenter
 
