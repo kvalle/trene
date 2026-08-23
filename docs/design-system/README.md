@@ -132,9 +132,41 @@ en ikke-avvisbar helsides feilvariant av `Sidestatus`. En sikkerhetsstopp som
 oppstår i en pågående modal arbeidsflyt, som gjenoppretting, beholder konteksten
 og vises som en ikke-avvisbar dialog.
 
-Start React Native-katalogen med `npm run catalog` og åpne den i Expo på samme
-måte som appen. Katalogen importerer produksjonstemaet og app-shell-kontrakten,
-og viser lyst og mørkt tema, stor tekst, native stack og native modal.
+### Runtime-katalogen (React Native, Expo Go)
+
+Runtime-katalogen er en separat Expo-utviklingsapp som importerer produksjonstemaet (`src/theme`), app-shell-kontrakten (`src/ui/appShell`, `src/ui/AppThemeProvider`) og UI-komponenter gjennom samme offentlige modulgrenser som `src/App.tsx`. Ingen farger, typer eller navigatoroppsett dupliseres.
+
+Katalogen kjører i Expo Go og krever ingen ny native bygg av Trene. Den deler ikke bundle-identifier med `com.kjetilvalle.trene` og kan derfor ligge installert side om side med Trene på samme enhet.
+
+Start direkte på plattform:
+
+```sh
+npm run catalog:android  # starter Metro med katalog-entrypoint og åpner i Expo Go på Android-emulator/enhet
+npm run catalog:ios      # starter Metro med katalog-entrypoint og åpner i Expo Go på iOS-simulator
+npm run catalog          # generisk Expo start (velg selv plattform i Expo CLI, W for web, a/i for device)
+```
+
+Katalog-entrypoint velges via `EXPO_PUBLIC_COMPONENT_CATALOG=1` (`src/entrypoint.ts` → `index.ts`). Uten variabelen starter `index.ts` produksjonsappen `src/App`. Produksjonsentrypointet er uendret.
+
+Katalogen demonstrerer:
+
+- lys/mørk modus via bryteren «Mørk modus» (`AppThemeProvider` scheme-toggle)
+- native stack (`StackExample`) og native modal (`ModalExample`) via samme `getAppStackScreenOptions` som produksjonen
+- systemtekstskalering (`PixelRatio.getFontScale()`) – alle tekster bruker native skalering
+
+Forutsetninger:
+
+- Node >= 22.13 og `npm install`
+- Expo Go: installeres automatisk av `expo start --android/--ios` når enheten/simulatoren mangler den (praktisk på emulator/simulator; fysisk enhet krever normalt manuell installasjon)
+- Android: kjørende emulator eller enhet synlig i `adb devices`; ADB reverse kobler port 8081 automatisk
+- iOS: Xcode med tilgjengelig simulator (`xcrun simctl`); simulatoren booter automatisk om nødvendig
+- Port 8081 må være ledig; Metro lytter på `127.0.0.1`
+
+Metro-eierskap og avslutning:
+
+- `npm run catalog:android` / `npm run catalog:ios` eier Metro-prosessen i terminalen som startet kommandoen (`scripts/run-catalog.sh` setter `__UNSAFE_EXPO_HOME_DIRECTORY=.artifacts/expo` og `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1` og exec-er `expo start`).
+- Avslutt med `Ctrl+C` i samme terminal. Expo Go forblir installert, men mister tilkoblingen. Å starte en annen kataloginstans gjenbruker samme Metro-adresse.
+- `npm run start:android` eier en separat Metro for Trene-native; katalogens Metro kolliderer ikke med Trene-APK-en, men to Metro-instanser kan ikke dele 8081 samtidig.
 
 Den midlertidige HTML-referansen startes fortsatt med
 `npm run prototype:components` og åpnes på `http://localhost:4174`. Hvert
