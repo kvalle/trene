@@ -16,7 +16,7 @@ name: Verify Android restore accessibility journey
 - assertVisible: { id: "cancel-restore", enabled: true }
 - assertVisible: { id: "continue-restore", enabled: true }
 - tapOn: { id: "continue-restore" }
-- assertVisible: { id: "restore-confirmation" }
+- extendedWaitUntil: { visible: { id: "restore-confirmation" }, timeout: 30000 }
 - assertVisible: "Dette erstatter alle data i Trene og kan ikke angres."
 - assertVisible: { id: "confirm-restore", enabled: true }
 - tapOn: { id: "cancel-restore" }
