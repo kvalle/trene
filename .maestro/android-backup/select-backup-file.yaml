@@ -1,6 +1,7 @@
 appId: com.kjetilvalle.trene
 ---
 - tapOn: "Show roots"
+- waitForAnimationToEnd
 - tapOn: "Downloads"
 - extendedWaitUntil: { visible: "${BACKUP_FILE}", timeout: 30000 }
 - tapOn: "${BACKUP_FILE}"

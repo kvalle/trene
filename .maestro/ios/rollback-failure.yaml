@@ -9,8 +9,10 @@ tags:
     visible: "Klar for en økt?"
     timeout: 120000
 - tapOn: "Innstillinger"
+- waitForAnimationToEnd
 - tapOn:
     id: "settings-data"
+- waitForAnimationToEnd
 - tapOn:
     id: "restore-from-file"
 - runFlow:

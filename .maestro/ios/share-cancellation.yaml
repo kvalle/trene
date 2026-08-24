@@ -9,8 +9,10 @@ tags:
     visible: "Klar for en økt?"
     timeout: 120000
 - tapOn: "Innstillinger"
+- waitForAnimationToEnd
 - tapOn:
     id: "settings-data"
+- waitForAnimationToEnd
 - tapOn:
     id: "create-backup"
 - extendedWaitUntil:
@@ -18,6 +20,7 @@ tags:
     timeout: 60000
 - tapOn:
     id: "PopoverDismissRegion"
+- waitForAnimationToEnd
 - assertVisible:
     id: "create-backup"
 - assertNotVisible: "lagret"

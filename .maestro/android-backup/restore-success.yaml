@@ -4,14 +4,18 @@ name: Restore a synthetic backup on Android
 - launchApp
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
 - tapOn: "Øvelser"
+- waitForAnimationToEnd
 - tapOn: "Opprett første øvelse"
+- waitForAnimationToEnd
 - tapOn: { id: "exercise-name-input" }
 - inputText: "Utdatert"
 - tapOn: { id: "create-exercise-submit" }
 - back
 - back
 - tapOn: "Innstillinger"
+- waitForAnimationToEnd
 - tapOn: { id: "settings-data" }
+- waitForAnimationToEnd
 - tapOn: { id: "create-backup" }
 - extendedWaitUntil: { notVisible: { id: "create-backup" }, timeout: 30000 }
 - pressKey: BACK
@@ -30,22 +34,27 @@ name: Restore a synthetic backup on Android
 - tapOn: { id: "confirm-restore" }
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 30000 }
 - tapOn: "Øvelser"
+- waitForAnimationToEnd
 - assertVisible: "Knebøy"
 - assertVisible: "Markløft"
 - assertNotVisible: "Utdatert"
 - tapOn: "Knebøy"
+- waitForAnimationToEnd
 - assertVisible: "80 kg · 5 repetisjoner"
 - back
 - tapOn: "Markløft"
+- waitForAnimationToEnd
 - assertVisible: "100 kg · 3 repetisjoner"
 - back
 - back
 - tapOn: "Tidligere økter"
+- waitForAnimationToEnd
 - assertVisible: "2 øvelser"
 - stopApp
 - launchApp
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 30000 }
 - tapOn: "Øvelser"
+- waitForAnimationToEnd
 - assertVisible: "Knebøy"
 - assertVisible: "Markløft"
 - assertNotVisible: "Utdatert"

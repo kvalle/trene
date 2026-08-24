@@ -4,7 +4,9 @@ name: Verify Android restore accessibility journey
 - launchApp
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
 - tapOn: "Innstillinger"
+- waitForAnimationToEnd
 - tapOn: { id: "settings-data" }
+- waitForAnimationToEnd
 - assertVisible: { id: "create-backup", enabled: true }
 - assertVisible: { id: "restore-from-file", enabled: true }
 - tapOn: { id: "restore-from-file" }
@@ -16,8 +18,10 @@ name: Verify Android restore accessibility journey
 - assertVisible: { id: "cancel-restore", enabled: true }
 - assertVisible: { id: "continue-restore", enabled: true }
 - tapOn: { id: "continue-restore" }
+- waitForAnimationToEnd
 - assertVisible: { id: "restore-confirmation" }
 - assertVisible: "Dette erstatter alle data i Trene og kan ikke angres."
 - assertVisible: { id: "confirm-restore", enabled: true }
 - tapOn: { id: "cancel-restore" }
+- waitForAnimationToEnd
 - assertVisible: { id: "restore-from-file", enabled: true }

@@ -4,10 +4,12 @@ name: Verify restored Android data after interruption
 - launchApp
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 30000 }
 - tapOn: "Øvelser"
+- waitForAnimationToEnd
 - assertVisible: "Knebøy"
 - assertVisible: "Markløft"
 - stopApp
 - launchApp
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 30000 }
 - tapOn: "Øvelser"
+- waitForAnimationToEnd
 - assertVisible: "Knebøy"

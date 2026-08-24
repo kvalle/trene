@@ -13,11 +13,13 @@ tags:
     visible: "Opprett første øvelse"
     timeout: 30000
 - tapOn: "Opprett første øvelse"
+- waitForAnimationToEnd
 - tapOn:
     id: "exercise-name-input"
 - inputText: "Beholdes"
 - tapOn:
     id: "create-exercise-submit"
+- waitForAnimationToEnd
 - assertVisible: "Beholdes"
 - stopApp
 - launchApp
@@ -25,8 +27,10 @@ tags:
     visible: "Klar for en økt?"
     timeout: 30000
 - tapOn: "Innstillinger"
+- waitForAnimationToEnd
 - tapOn:
     id: "settings-data"
+- waitForAnimationToEnd
 - tapOn:
     id: "restore-from-file"
 - runFlow:
@@ -42,4 +46,5 @@ tags:
     visible: "Klar for en økt?"
     timeout: 30000
 - tapOn: "Øvelser"
+- waitForAnimationToEnd
 - assertVisible: "Beholdes.*"
