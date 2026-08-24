@@ -12,6 +12,8 @@ import { ErrorAlert } from '../ui/ErrorAlert';
 import { FieldError } from '../ui/FieldError';
 import { Hero } from '../ui/Hero';
 import { Loader } from '../ui/Loader';
+import { ListContainer } from '../ui/ListContainer';
+import { NavigationRow } from '../ui/NavigationRow';
 import { PageStatus } from '../ui/PageStatus';
 import { TextField } from '../ui/TextField';
 
@@ -25,6 +27,8 @@ type CatalogStackParamList = {
   LoaderDetail: undefined;
   ErrorAlertDetail: undefined;
   PageStatusDetail: undefined;
+  ListContainerDetail: undefined;
+  NavigationRowDetail: undefined;
   StackExample: undefined;
   ModalExample: undefined;
 };
@@ -101,6 +105,22 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         route: 'HeroDetail',
         testID: 'catalog-item-hero',
       },
+      {
+        id: 'listcontainer',
+        name: 'ListContainer',
+        description: 'Grupperer relaterte rader med felles kant, avrunding og skillelinjer.',
+        usage: 'Bruk når flere relaterte rader skal oppleves som én samling.',
+        route: 'ListContainerDetail',
+        testID: 'catalog-item-listcontainer',
+      },
+      {
+        id: 'navigationrow',
+        name: 'NavigationRow',
+        description: 'Trykkbar rad med tittel, valgfri beskrivelse og pil.',
+        usage: 'Bruk når hele raden åpner en ny skjerm.',
+        route: 'NavigationRowDetail',
+        testID: 'catalog-item-navigationrow',
+      },
     ],
   },
   {
@@ -171,6 +191,8 @@ function CatalogNavigator({
         <Stack.Screen name="LoaderDetail" component={LoaderDetailScreen} options={{ title: 'Loader' }} />
         <Stack.Screen name="ErrorAlertDetail" component={ErrorAlertDetailScreen} options={{ title: 'ErrorAlert' }} />
         <Stack.Screen name="PageStatusDetail" component={PageStatusDetailScreen} options={{ title: 'PageStatus' }} />
+        <Stack.Screen name="ListContainerDetail" component={ListContainerDetailScreen} options={{ title: 'ListContainer' }} />
+        <Stack.Screen name="NavigationRowDetail" component={NavigationRowDetailScreen} options={{ title: 'NavigationRow' }} />
         <Stack.Screen name="StackExample" component={StackExampleScreen} options={{ title: 'Stack' }} />
         <Stack.Screen name="ModalExample" component={ModalExampleScreen} options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack.Navigator>
@@ -652,6 +674,46 @@ function PageStatusDetailScreen() {
             />
           </View>
         </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+function ListContainerDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-listcontainer">
+      <DetailHeader
+        name="ListContainer"
+        description="Grupperer relaterte rader med felles kant, avrunding, klipping og skillelinjer."
+        usage="Bruk når flere relaterte rader skal oppleves som én samling."
+      />
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Komposisjon</Text>
+        <ListContainer testID="catalog-listcontainer">
+          <NavigationRow title="Første rad" description="Valgfri forklaring" showSeparator onPress={() => {}} />
+          <NavigationRow title="Andre rad" onPress={() => {}} />
+        </ListContainer>
+      </View>
+    </ScrollView>
+  );
+}
+
+function NavigationRowDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-navigationrow">
+      <DetailHeader
+        name="NavigationRow"
+        description="Trykkbar rad med tittel, valgfri beskrivelse og pil."
+        usage="Bruk når hele raden åpner en ny skjerm."
+      />
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Varianter</Text>
+        <ListContainer>
+          <NavigationRow title="Med beskrivelse" description="Forklarer valget" showSeparator onPress={() => {}} testID="catalog-navigationrow-description" />
+          <NavigationRow title="Uten beskrivelse" onPress={() => {}} testID="catalog-navigationrow-title" />
+        </ListContainer>
       </View>
     </ScrollView>
   );

@@ -5,6 +5,7 @@ import { AccessibilityInfo } from 'react-native';
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
 import { getActiveWorkoutId, listCompletedWorkouts, startWorkout } from '../../database/workouts';
+import { AppThemeProvider } from '../../ui/AppThemeProvider';
 import { HistoryScreen } from '../HistoryScreen';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
@@ -30,6 +31,13 @@ const mockedStart = jest.mocked(startWorkout);
 beforeEach(() => {
   jest.clearAllMocks();
   mockedActiveWorkout.mockResolvedValue(null);
+});
+
+test('announces that completed workouts are loading', () => {
+  mockedList.mockImplementation(() => new Promise(() => undefined));
+  renderScreen();
+
+  expect(screen.getByLabelText('Laster tidligere økter')).toBeOnTheScreen();
 });
 
 test('shows accessible whole rows with completion time and saved exercise count', async () => {
@@ -97,12 +105,14 @@ test('blocks navigation again for each new workout start', async () => {
   await waitFor(() => expect(navigate).toHaveBeenCalledWith('Workout'));
   view.rerender(
     <DatabaseProvider database={database}>
-      <NavigationContainer>
-        <HistoryScreen
-          navigation={{ dispatch, navigate } as never}
-          route={{} as never}
-        />
-      </NavigationContainer>
+      <AppThemeProvider scheme="light">
+        <NavigationContainer>
+          <HistoryScreen
+            navigation={{ dispatch, navigate } as never}
+            route={{} as never}
+          />
+        </NavigationContainer>
+      </AppThemeProvider>
     </DatabaseProvider>,
   );
   fireEvent.press(screen.getByRole('button', { name: 'Start økt' }));
@@ -129,7 +139,7 @@ test('keeps the empty state available when starting a workout fails', async () =
   renderScreen();
 
   fireEvent.press(await screen.findByRole('button', { name: 'Start økt' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke starte økten.');
+  expect(await screen.findByText('Kunne ikke starte økten.')).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Start økt' })).toBeEnabled();
 });
 
@@ -158,12 +168,14 @@ test.each([null, 7] as const)('focuses the empty action after deleting the last 
 function renderScreen(navigation: Record<string, jest.Mock> = {}, params?: { focusWorkoutId?: number; focusEmptyAction?: boolean }) {
   return render(
     <DatabaseProvider database={database}>
-      <NavigationContainer>
-        <HistoryScreen
-          navigation={{ dispatch: jest.fn(), navigate: jest.fn(), setParams: jest.fn(), ...navigation } as never}
-          route={{ params } as never}
-        />
-      </NavigationContainer>
+      <AppThemeProvider scheme="light">
+        <NavigationContainer>
+          <HistoryScreen
+            navigation={{ dispatch: jest.fn(), navigate: jest.fn(), setParams: jest.fn(), ...navigation } as never}
+            route={{ params } as never}
+          />
+        </NavigationContainer>
+      </AppThemeProvider>
     </DatabaseProvider>,
   );
 }

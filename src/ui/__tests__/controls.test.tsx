@@ -5,6 +5,8 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Button } from '../Button';
 import { TextField } from '../TextField';
 import { FieldError } from '../FieldError';
+import { ListContainer } from '../ListContainer';
+import { NavigationRow } from '../NavigationRow';
 import { AppThemeProvider } from '../AppThemeProvider';
 
 function renderWithTheme(ui: React.ReactElement) {
@@ -136,5 +138,34 @@ describe('FieldError', () => {
     expect(el).toBeOnTheScreen();
     expect(el.props.accessibilityRole).toBe('alert');
     expect(screen.getByText('Feil')).toBeOnTheScreen();
+  });
+});
+
+describe('NavigationRow', () => {
+  it('forwards ref, metadata, accessibility and press behavior', () => {
+    const ref = createRef<View>();
+    const onPress = jest.fn();
+    renderWithTheme(
+      <ListContainer testID="list">
+        <NavigationRow
+          ref={ref}
+          title="Data"
+          description="Administrer sikkerhetskopier"
+          accessibilityHint="Åpner data"
+          onPress={onPress}
+          showSeparator
+          testID="row"
+        />
+      </ListContainer>,
+    );
+
+    const row = screen.getByTestId('row');
+    expect(screen.getByTestId('list')).toBeOnTheScreen();
+    expect(ref.current).not.toBeNull();
+    expect(row).toHaveProp('accessibilityRole', 'button');
+    expect(row).toHaveProp('accessibilityLabel', 'Data, Administrer sikkerhetskopier');
+    expect(row).toHaveProp('accessibilityHint', 'Åpner data');
+    fireEvent.press(row);
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 });

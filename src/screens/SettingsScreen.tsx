@@ -1,34 +1,31 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useTheme } from '@react-navigation/native';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 
 import type { RootStackParamList } from '../AppNavigator';
+import { typography } from '../theme';
+import { ListContainer } from '../ui/ListContainer';
+import { NavigationRow } from '../ui/NavigationRow';
+import { useAppTheme } from '../ui/AppThemeProvider';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 export function SettingsScreen({ navigation }: Props) {
-  const { colors } = useTheme();
+  const { colors } = useAppTheme();
   return (
     <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
-      <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>Innstillinger</Text>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => navigation.navigate('Data')}
-        testID="settings-data"
-        style={({ pressed }) => [styles.row, { backgroundColor: colors.card, borderColor: colors.border }, pressed && styles.pressed]}
-      >
-        <Text style={[styles.rowTitle, { color: colors.text }]}>Data</Text>
-        <Text style={[styles.chevron, { color: colors.border }]}>›</Text>
-      </Pressable>
+      <Text accessibilityRole="header" style={[typography.screenTitle, styles.heading, { color: colors.text }]}>Innstillinger</Text>
+      <ListContainer>
+        <NavigationRow
+          onPress={() => navigation.navigate('Data')}
+          testID="settings-data"
+          title="Data"
+        />
+      </ListContainer>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 24 },
-  heading: { fontSize: 30, fontWeight: '700', marginBottom: 28 },
-  row: { alignItems: 'center', borderRadius: 14, borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', minHeight: 58, paddingHorizontal: 18 },
-  rowTitle: { fontSize: 18, fontWeight: '600' },
-  chevron: { fontSize: 30, lineHeight: 32 },
-  pressed: { opacity: 0.72 },
+  container: { flexGrow: 1, gap: 20, padding: 20 },
+  heading: { marginTop: 4 },
 });

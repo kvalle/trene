@@ -34,6 +34,8 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('FieldError')).toBeOnTheScreen();
   expect(screen.getByText('NAVIGASJON OG STRUKTUR')).toBeOnTheScreen();
   expect(screen.getByText('Hero')).toBeOnTheScreen();
+  expect(screen.getByText('ListContainer')).toBeOnTheScreen();
+  expect(screen.getByText('NavigationRow')).toBeOnTheScreen();
   expect(screen.getByText('FEEDBACK')).toBeOnTheScreen();
   expect(screen.getByText('Loader')).toBeOnTheScreen();
   expect(screen.getByText('ErrorAlert')).toBeOnTheScreen();
@@ -48,6 +50,8 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('LoaderDetail')).toBeOnTheScreen();
   expect(screen.getByText('ErrorAlertDetail')).toBeOnTheScreen();
   expect(screen.getByText('PageStatusDetail')).toBeOnTheScreen();
+  expect(screen.getByText('ListContainerDetail')).toBeOnTheScreen();
+  expect(screen.getByText('NavigationRowDetail')).toBeOnTheScreen();
 
   fireEvent(screen.getByLabelText('Mørk modus'), 'valueChange', true);
   expect(screen.getByLabelText('Mørk modus')).toBeOnTheScreen();
