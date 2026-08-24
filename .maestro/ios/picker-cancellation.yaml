@@ -14,7 +14,7 @@ tags:
 - tapOn:
     id: "restore-from-file"
 - extendedWaitUntil:
-    visible: "Recents"
+    visible: "(Recents|Browse|Cancel)"
     timeout: 30000
 - tapOn: "Cancel"
 - assertVisible:

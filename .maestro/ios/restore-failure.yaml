@@ -9,6 +9,9 @@ tags:
     visible: "Klar for en økt?"
     timeout: 120000
 - tapOn: "Øvelser"
+- extendedWaitUntil:
+    visible: "Opprett første øvelse"
+    timeout: 30000
 - tapOn: "Opprett første øvelse"
 - tapOn:
     id: "exercise-name-input"
@@ -30,6 +33,9 @@ tags:
 - inputText: "6"
 - tapOn: "Bekreft planlagt sett for Beholdes"
 - tapOn: "Ferdig"
+- extendedWaitUntil:
+    visible: "Fullfør økt"
+    timeout: 30000
 - tapOn: "Fullfør økt"
 - tapOn: "Tilbake til forsiden"
 - tapOn: "Innstillinger"
