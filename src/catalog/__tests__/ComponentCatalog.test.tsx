@@ -33,11 +33,21 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('TextField')).toBeOnTheScreen();
   expect(screen.getByText('FieldError')).toBeOnTheScreen();
   expect(screen.getByText('NAVIGASJON OG STRUKTUR')).toBeOnTheScreen();
+  expect(screen.getByText('Hero')).toBeOnTheScreen();
+  expect(screen.getByText('FEEDBACK')).toBeOnTheScreen();
+  expect(screen.getByText('Loader')).toBeOnTheScreen();
+  expect(screen.getByText('ErrorAlert')).toBeOnTheScreen();
+  expect(screen.getByText('SIDEVISNINGER')).toBeOnTheScreen();
+  expect(screen.getByText('PageStatus')).toBeOnTheScreen();
   // detail screens are mounted via mock as text fallbacks
   expect(screen.getByText('ButtonDetail')).toBeOnTheScreen();
   expect(screen.getByText('TextFieldDetail')).toBeOnTheScreen();
   expect(screen.getByText('FieldErrorDetail')).toBeOnTheScreen();
   expect(screen.getByText('AppShellDetail')).toBeOnTheScreen();
+  expect(screen.getByText('HeroDetail')).toBeOnTheScreen();
+  expect(screen.getByText('LoaderDetail')).toBeOnTheScreen();
+  expect(screen.getByText('ErrorAlertDetail')).toBeOnTheScreen();
+  expect(screen.getByText('PageStatusDetail')).toBeOnTheScreen();
 
   fireEvent(screen.getByLabelText('Mørk modus'), 'valueChange', true);
   expect(screen.getByLabelText('Mørk modus')).toBeOnTheScreen();

@@ -6,6 +6,7 @@ import { HomeScreen } from '../HomeScreen';
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
 import { getActiveWorkoutId, startWorkout } from '../../database/workouts';
+import { AppThemeProvider } from '../../ui/AppThemeProvider';
 import { WorkoutDraftProvider } from '../../workoutDrafts';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
@@ -73,7 +74,8 @@ test('marks an active workout when a set edit has not been saved', async () => {
   mockedGetActiveWorkoutId.mockResolvedValue(7);
   renderScreen({}, undefined, true);
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('Økten har endringer som ikke er lagret');
+  expect(await screen.findByText('Økten har endringer som ikke er lagret')).toBeOnTheScreen();
+  expect(screen.getByTestId('home-unsaved-warning').props.accessibilityRole).toBe('alert');
 });
 
 test('refreshes the active workout from SQLite on foreground', async () => {
@@ -100,6 +102,68 @@ test('ignores save errors belonging to another workout', async () => {
   expect(screen.queryByText('Økten har endringer som ikke er lagret')).not.toBeOnTheScreen();
 });
 
+test('shows loading with accessible label while resolving active workout', async () => {
+  let resolveLookup!: (id: number | null) => void;
+  mockedGetActiveWorkoutId.mockImplementation(() => new Promise((resolve) => { resolveLookup = resolve; }));
+  renderScreen();
+
+  expect(screen.getByLabelText('Laster aktiv økt')).toBeOnTheScreen();
+  expect(screen.queryByRole('button', { name: 'Start økt' })).not.toBeOnTheScreen();
+
+  await act(async () => resolveLookup(null));
+  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+});
+
+test('shows error and primary retry when active workout lookup fails and recovers on retry', async () => {
+  mockedGetActiveWorkoutId.mockRejectedValueOnce(new Error('db down'));
+  renderScreen();
+
+  expect(await screen.findByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
+  expect(screen.getByText('Kunne ikke laste inn')).toBeOnTheScreen();
+  expect(screen.getByTestId('home-error').props.accessibilityRole).toBe('alert');
+
+  mockedGetActiveWorkoutId.mockResolvedValueOnce(null);
+  fireEvent.press(screen.getByRole('button', { name: 'Prøv igjen' }));
+
+  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+  expect(screen.queryByText('Kunne ikke laste inn')).not.toBeOnTheScreen();
+});
+
+test('shows error when durable workout creation fails and allows retry', async () => {
+  const navigate = jest.fn();
+  mockedStartWorkout.mockRejectedValueOnce(new Error('failed'));
+  renderScreen({ navigate });
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Start økt' }));
+
+  expect(await screen.findByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
+  expect(screen.getByText('Kunne ikke laste inn')).toBeOnTheScreen();
+  expect(navigate).not.toHaveBeenCalled();
+
+  // retry lookup resolves to empty again
+  mockedGetActiveWorkoutId.mockResolvedValueOnce(null);
+  fireEvent.press(screen.getByRole('button', { name: 'Prøv igjen' }));
+  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+});
+
+test('disables all secondary actions and blocks navigation while starting', async () => {
+  const { usePreventRemove } = jest.requireMock('@react-navigation/native') as { usePreventRemove: jest.Mock };
+  let finishStart!: (id: number) => void;
+  mockedStartWorkout.mockImplementation(() => new Promise((resolve) => { finishStart = resolve; }));
+  renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Start økt' }));
+
+  expect(await screen.findByRole('button', { name: 'Starter økt' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Tidligere økter' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Øvelser' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Innstillinger' })).toBeDisabled();
+  expect(usePreventRemove).toHaveBeenCalledWith(true, expect.any(Function));
+
+  await act(async () => finishStart(7));
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Starter økt' })).not.toBeOnTheScreen());
+});
+
 function renderScreen(
   navigation: Record<string, jest.Mock> = {},
   params?: { focusStartWorkout?: boolean },
@@ -107,14 +171,16 @@ function renderScreen(
   draftWorkoutId = 7,
 ) {
   return render(
-    <DatabaseProvider database={database}>
-      <WorkoutDraftProvider initialDrafts={failedDraft ? {
-        6: { workoutId: draftWorkoutId, load: '80', repetitions: '5', unsaved: true },
-      } : undefined}>
-        <NavigationContainer>
-          <HomeScreen navigation={{ navigate: jest.fn(), ...navigation } as never} route={{ params } as never} />
-        </NavigationContainer>
-      </WorkoutDraftProvider>
-    </DatabaseProvider>,
+    <AppThemeProvider>
+      <DatabaseProvider database={database}>
+        <WorkoutDraftProvider initialDrafts={failedDraft ? {
+          6: { workoutId: draftWorkoutId, load: '80', repetitions: '5', unsaved: true },
+        } : undefined}>
+          <NavigationContainer>
+            <HomeScreen navigation={{ navigate: jest.fn(), ...navigation } as never} route={{ params } as never} />
+          </NavigationContainer>
+        </WorkoutDraftProvider>
+      </DatabaseProvider>
+    </AppThemeProvider>,
   );
 }

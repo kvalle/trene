@@ -6,6 +6,7 @@ import { StartupGate } from '../StartupGate';
 import type { Database } from '../database/types';
 import { useDatabase } from '../database/DatabaseContext';
 import type { DatabaseRuntime } from '../database/DatabaseRuntime';
+import { AppThemeProvider } from '../ui/AppThemeProvider';
 import { cleanupAbandonedBackupExports } from '../backup/nativeBackupPlatform';
 import { cleanupAbandonedRestorePreparations } from '../backup/nativeRestorePlatform';
 import { recoverInterruptedRestore, RestoreSafeStopError } from '../backup/recoverRestore';
@@ -39,13 +40,17 @@ const database: Database = {
   runAsync: jest.fn(async () => ({ lastInsertRowId: 1, changes: 1 })),
 };
 
+function renderWithTheme(ui: React.ReactElement) {
+  return render(<AppThemeProvider>{ui}</AppThemeProvider>);
+}
+
 test('blocks the app until startup succeeds and retries manually', async () => {
   const firstAttempt = deferred<Database>();
   const openDatabase = jest.fn<Promise<Database>, []>()
     .mockReturnValueOnce(firstAttempt.promise)
     .mockResolvedValueOnce(database);
 
-  await render(
+  await renderWithTheme(
     <StartupGate openDatabase={openDatabase}>
       <Text>Navigation er klar</Text>
     </StartupGate>,
@@ -71,7 +76,7 @@ test('does not open the database when abandoned export cleanup fails', async () 
   mockedCleanup.mockRejectedValueOnce(new Error('cleanup failed'));
   const openDatabase = jest.fn(async () => database);
 
-  render(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
+  renderWithTheme(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
 
   expect(await screen.findByText('Trene kunne ikke starte')).toBeOnTheScreen();
   expect(openDatabase).not.toHaveBeenCalled();
@@ -81,7 +86,7 @@ test('opens the database before cleaning abandoned restore preparations', async 
   mockedRestoreCleanup.mockRejectedValueOnce(new Error('cleanup failed'));
   const openDatabase = jest.fn(async () => database);
 
-  render(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
+  renderWithTheme(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
 
   expect(await screen.findByText('Navigation er klar')).toBeOnTheScreen();
   expect(openDatabase).toHaveBeenCalledTimes(1);
@@ -94,7 +99,7 @@ test('adds restart guidance after persistent failure', async () => {
   const openDatabase = jest.fn<Promise<Database>, []>()
     .mockReturnValueOnce(firstAttempt.promise)
     .mockReturnValueOnce(secondAttempt.promise);
-  await render(
+  await renderWithTheme(
     <StartupGate openDatabase={openDatabase}>
       <Text>Navigation er klar</Text>
     </StartupGate>,
@@ -121,7 +126,7 @@ test('shows a non-retry safe stop without opening the database', async () => {
   ));
   const openDatabase = jest.fn(async () => database);
 
-  render(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
+  renderWithTheme(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
 
   expect(await screen.findByRole('header', { name: 'Trene kan ikke åpne dataene trygt' })).toBeOnTheScreen();
   expect(screen.UNSAFE_getByProps({ accessibilityLiveRegion: 'assertive' })).toBeTruthy();
@@ -135,7 +140,7 @@ test('cleans recovery artifacts only after the recovered database remounts', asy
   mockedRecovery.mockResolvedValueOnce(cleanup);
   const openDatabase = jest.fn(async () => database);
 
-  render(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
+  renderWithTheme(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
 
   expect(await screen.findByText('Navigation er klar')).toBeOnTheScreen();
   expect(cleanup).toHaveBeenCalledTimes(1);
@@ -154,7 +159,7 @@ test('remounts data-dependent state after a successful database reopen', async (
     return <Text onPress={() => setValue('stale')}>{value}</Text>;
   }
 
-  await render(
+  await renderWithTheme(
     <StartupGate openDatabase={openDatabase}>
       <Session />
     </StartupGate>,
@@ -167,6 +172,85 @@ test('remounts data-dependent state after a successful database reopen', async (
   });
 
   expect(screen.getByText('fresh')).toBeOnTheScreen();
+});
+
+test('shows loading state with branded title and accessible loader', async () => {
+  const openDatabase = jest.fn<Promise<Database>, []>(() => new Promise(() => {}));
+  renderWithTheme(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
+
+  expect(screen.getByText('Trene')).toBeOnTheScreen();
+  expect(screen.getByLabelText('Starter Trene')).toBeOnTheScreen();
+  expect(screen.queryByRole('button', { name: 'Prøv igjen' })).not.toBeOnTheScreen();
+  expect(openDatabase).not.toHaveBeenCalled();
+  // still loading, cleanup should have been attempted
+  await waitFor(() => expect(mockedCleanup).toHaveBeenCalled());
+});
+
+test('focuses retry button after a recoverable startup failure', async () => {
+  jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
+    ...jest.requireActual('react-native/Libraries/ReactNative/RendererProxy'),
+    findNodeHandle: jest.fn(() => 12),
+  }));
+  const { AccessibilityInfo, findNodeHandle } = require('react-native') as {
+    AccessibilityInfo: { setAccessibilityFocus: jest.Mock };
+    findNodeHandle: jest.Mock;
+  };
+  const focusSpy = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus').mockImplementation(() => {});
+  const findSpy = jest.spyOn(require('react-native'), 'findNodeHandle').mockReturnValue(99);
+  const openDatabase = jest.fn(async () => { throw new Error('failed'); });
+
+  renderWithTheme(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
+
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen());
+  await waitFor(() => expect(focusSpy).toHaveBeenCalled());
+
+  focusSpy.mockRestore();
+  findSpy.mockRestore();
+});
+
+test('preserves startup ordering: cleanup, recovery, then database open', async () => {
+  const order: string[] = [];
+  mockedCleanup.mockImplementation(async () => { order.push('cleanup'); });
+  mockedRecovery.mockImplementation(async () => { order.push('recovery'); return null; });
+  const openDatabase = jest.fn(async () => { order.push('open'); return database; });
+
+  renderWithTheme(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
+
+  expect(await screen.findByText('Navigation er klar')).toBeOnTheScreen();
+  expect(order).toEqual(['cleanup', 'recovery', 'open']);
+});
+
+test('closes runtime if startup succeeds after the gate unmounts', async () => {
+  let resolveDb!: (db: Database) => void;
+  const openDatabase = jest.fn<Promise<Database>, []>(() => new Promise((resolve) => { resolveDb = resolve; }));
+  const { unmount } = renderWithTheme(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
+
+  // wait for cleanup+recovery to have run before unmounting
+  await waitFor(() => expect(mockedRecovery).toHaveBeenCalled());
+  unmount();
+  const closeSpy = jest.spyOn(database, 'closeAsync');
+  await act(async () => resolveDb(database));
+  // give effect time to close
+  await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+  expect(closeSpy).toHaveBeenCalled();
+});
+
+test('exposes assertive live region on failure and safe-stop', async () => {
+  mockedRecovery.mockRejectedValueOnce(new RestoreSafeStopError('rollback-validation', new Error('both invalid')));
+  const openDatabase = jest.fn(async () => database);
+  const { unmount: unmountFirst } = renderWithTheme(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
+
+  expect(await screen.findByRole('header', { name: 'Trene kan ikke åpne dataene trygt' })).toBeOnTheScreen();
+  expect(screen.UNSAFE_getAllByProps({ accessibilityLiveRegion: 'assertive' }).length).toBeGreaterThanOrEqual(1);
+  unmountFirst();
+
+  // now test failure live region
+  mockedRecovery.mockResolvedValue(null);
+  const failingOpen = jest.fn(async () => { throw new Error('failed'); });
+  const { unmount } = renderWithTheme(<StartupGate openDatabase={failingOpen}><Text>Navigation er klar</Text></StartupGate>);
+  expect(await screen.findByText('Trene kunne ikke starte')).toBeOnTheScreen();
+  expect(screen.UNSAFE_getAllByProps({ accessibilityLiveRegion: 'assertive' }).length).toBeGreaterThanOrEqual(1);
+  unmount();
 });
 
 function deferred<T>() {
