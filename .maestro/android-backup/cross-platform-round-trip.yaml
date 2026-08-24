@@ -4,9 +4,7 @@ name: Restore and re-export a cross-platform backup on Android
 - launchApp
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
 - tapOn: "Innstillinger"
-- waitForAnimationToEnd
 - tapOn: { id: "settings-data" }
-- waitForAnimationToEnd
 - tapOn: { id: "restore-from-file" }
 - runFlow:
     file: select-backup-file.yaml
@@ -19,9 +17,7 @@ name: Restore and re-export a cross-platform backup on Android
 - tapOn: { id: "confirm-restore" }
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
 - tapOn: "Innstillinger"
-- waitForAnimationToEnd
 - tapOn: { id: "settings-data" }
-- waitForAnimationToEnd
 - tapOn: { id: "create-backup" }
 - extendedWaitUntil: { notVisible: { id: "create-backup" }, timeout: 30000 }
 - pressKey: BACK

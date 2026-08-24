@@ -9,7 +9,6 @@ tags:
     visible: "Klar for en økt?"
     timeout: 120000
 - tapOn: "Innstillinger"
-- waitForAnimationToEnd
 - tapOn: { id: "settings-data" }
 - extendedWaitUntil:
     visible: { id: "restore-from-file" }
@@ -32,7 +31,6 @@ tags:
     visible: "Klar for en økt?"
     timeout: 30000
 - tapOn: "Øvelser"
-- waitForAnimationToEnd
 - assertVisible: "Knebøy.*"
 - assertVisible: "Markløft.*"
 - stopApp
@@ -41,7 +39,6 @@ tags:
     visible: "Klar for en økt?"
     timeout: 30000
 - tapOn: "Innstillinger"
-- waitForAnimationToEnd
 - tapOn: { id: "settings-data" }
 - extendedWaitUntil:
     visible: { id: "create-backup" }
@@ -51,5 +48,4 @@ tags:
     visible: "Copy"
     timeout: 60000
 - tapOn: { id: "PopoverDismissRegion" }
-- waitForAnimationToEnd
 - assertVisible: { id: "create-backup" }

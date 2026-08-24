@@ -13,13 +13,11 @@ tags:
     visible: "Opprett første øvelse"
     timeout: 30000
 - tapOn: "Opprett første øvelse"
-- waitForAnimationToEnd
 - tapOn:
     id: "exercise-name-input"
 - inputText: "Beholdes"
 - tapOn:
     id: "create-exercise-submit"
-- waitForAnimationToEnd
 - assertVisible: "Beholdes"
 - stopApp
 - launchApp
@@ -27,30 +25,22 @@ tags:
     visible: "Klar for en økt?"
     timeout: 60000
 - tapOn: "Start økt"
-- waitForAnimationToEnd
 - tapOn: "Legg til øvelse"
-- waitForAnimationToEnd
 - tapOn: "Beholdes"
-- waitForAnimationToEnd
 - tapOn: "Belastning"
 - inputText: "42.5"
 - tapOn: "Repetisjoner"
 - inputText: "6"
 - tapOn: "Bekreft planlagt sett for Beholdes"
-- waitForAnimationToEnd
 - tapOn: "Ferdig"
 - extendedWaitUntil:
     visible: "Fullfør økt"
     timeout: 30000
 - tapOn: "Fullfør økt"
-- waitForAnimationToEnd
 - tapOn: "Tilbake til forsiden"
-- waitForAnimationToEnd
 - tapOn: "Innstillinger"
-- waitForAnimationToEnd
 - tapOn:
     id: "settings-data"
-- waitForAnimationToEnd
 - tapOn:
     id: "restore-from-file"
 - runFlow:
@@ -78,7 +68,6 @@ tags:
     visible: "Klar for en økt?"
     timeout: 60000
 - tapOn: "Øvelser"
-- waitForAnimationToEnd
 - assertVisible: "Beholdes.*"
 - assertNotVisible: "Knebøy.*"
 - stopApp
@@ -87,7 +76,5 @@ tags:
     visible: "Klar for en økt?"
     timeout: 60000
 - tapOn: "Tidligere økter"
-- waitForAnimationToEnd
 - tapOn: ".*, 1 øvelse"
-- waitForAnimationToEnd
 - assertVisible: "Sett 1, 6 repetisjoner med 42,5 kilogram"

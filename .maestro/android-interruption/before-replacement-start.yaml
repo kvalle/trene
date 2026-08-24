@@ -4,23 +4,18 @@ name: Interrupt Android restore before replacement
 - launchApp
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
 - tapOn: "Øvelser"
-- waitForAnimationToEnd
 - tapOn: "Opprett første øvelse"
-- waitForAnimationToEnd
 - tapOn: { id: "exercise-name-input" }
 - inputText: "Beholdes"
 - tapOn: { id: "create-exercise-submit" }
 - back
 - back
 - tapOn: "Innstillinger"
-- waitForAnimationToEnd
 - tapOn: { id: "settings-data" }
-- waitForAnimationToEnd
 - tapOn: { id: "restore-from-file" }
 - runFlow:
     file: ../android-backup/select-backup-file.yaml
     env: { BACKUP_FILE: "representative.trene-backup" }
 - extendedWaitUntil: { visible: { id: "restore-preview" }, timeout: 30000 }
 - tapOn: { id: "continue-restore" }
-- waitForAnimationToEnd
 - tapOn: { id: "confirm-restore" }

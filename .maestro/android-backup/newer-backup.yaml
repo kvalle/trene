@@ -4,18 +4,14 @@ name: Reject a newer Android backup
 - launchApp
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
 - tapOn: "Øvelser"
-- waitForAnimationToEnd
 - tapOn: "Opprett første øvelse"
-- waitForAnimationToEnd
 - tapOn: { id: "exercise-name-input" }
 - inputText: "Beholdes"
 - tapOn: { id: "create-exercise-submit" }
 - back
 - back
 - tapOn: "Innstillinger"
-- waitForAnimationToEnd
 - tapOn: { id: "settings-data" }
-- waitForAnimationToEnd
 - tapOn: { id: "restore-from-file" }
 - runFlow:
     file: select-backup-file.yaml
@@ -24,5 +20,4 @@ name: Reject a newer Android backup
 - back
 - back
 - tapOn: "Øvelser"
-- waitForAnimationToEnd
 - assertVisible: "Beholdes"
