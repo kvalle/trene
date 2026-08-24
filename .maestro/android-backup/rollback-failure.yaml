@@ -11,6 +11,7 @@ name: Safely stop after Android restore and rollback failure
     env: { BACKUP_FILE: "representative.trene-backup" }
 - extendedWaitUntil: { visible: { id: "restore-preview" }, timeout: 30000 }
 - tapOn: { id: "continue-restore" }
+- extendedWaitUntil: { visible: { id: "restore-confirmation" }, timeout: 30000 }
 - tapOn: { id: "confirm-restore" }
 - extendedWaitUntil: { visible: "Gjenopprettingen kunne ikke fullføres trygt. Lukk Trene og behold appdataene for å kunne gjenopprette dem senere.", timeout: 30000 }
 - stopApp

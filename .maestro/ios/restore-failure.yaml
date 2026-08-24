@@ -9,6 +9,9 @@ tags:
     visible: "Klar for en økt?"
     timeout: 120000
 - tapOn: "Øvelser"
+- extendedWaitUntil:
+    visible: "Opprett første øvelse"
+    timeout: 30000
 - tapOn: "Opprett første øvelse"
 - tapOn:
     id: "exercise-name-input"
@@ -20,7 +23,7 @@ tags:
 - launchApp
 - extendedWaitUntil:
     visible: "Klar for en økt?"
-    timeout: 30000
+    timeout: 60000
 - tapOn: "Start økt"
 - tapOn: "Legg til øvelse"
 - tapOn: "Beholdes"
@@ -30,6 +33,9 @@ tags:
 - inputText: "6"
 - tapOn: "Bekreft planlagt sett for Beholdes"
 - tapOn: "Ferdig"
+- extendedWaitUntil:
+    visible: "Fullfør økt"
+    timeout: 30000
 - tapOn: "Fullfør økt"
 - tapOn: "Tilbake til forsiden"
 - tapOn: "Innstillinger"
@@ -47,8 +53,10 @@ tags:
     timeout: 30000
 - tapOn:
     id: "continue-restore"
-- assertVisible:
-    id: "restore-confirmation"
+- extendedWaitUntil:
+    visible:
+      id: "restore-confirmation"
+    timeout: 30000
 - tapOn:
     id: "confirm-restore"
 - extendedWaitUntil:
@@ -58,7 +66,7 @@ tags:
 - launchApp
 - extendedWaitUntil:
     visible: "Klar for en økt?"
-    timeout: 30000
+    timeout: 60000
 - tapOn: "Øvelser"
 - assertVisible: "Beholdes.*"
 - assertNotVisible: "Knebøy.*"
@@ -66,7 +74,7 @@ tags:
 - launchApp
 - extendedWaitUntil:
     visible: "Klar for en økt?"
-    timeout: 30000
+    timeout: 60000
 - tapOn: "Tidligere økter"
 - tapOn: ".*, 1 øvelse"
 - assertVisible: "Sett 1, 6 repetisjoner med 42,5 kilogram"

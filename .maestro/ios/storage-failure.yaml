@@ -9,6 +9,9 @@ tags:
     visible: "Klar for en økt?"
     timeout: 120000
 - tapOn: "Øvelser"
+- extendedWaitUntil:
+    visible: "Opprett første øvelse"
+    timeout: 30000
 - tapOn: "Opprett første øvelse"
 - tapOn:
     id: "exercise-name-input"

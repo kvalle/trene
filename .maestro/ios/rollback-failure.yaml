@@ -23,6 +23,10 @@ tags:
     timeout: 30000
 - tapOn:
     id: "continue-restore"
+- extendedWaitUntil:
+    visible:
+      id: "restore-confirmation"
+    timeout: 30000
 - assertVisible: "Dette erstatter alle data i Trene og kan ikke angres."
 - tapOn:
     id: "confirm-restore"

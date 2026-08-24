@@ -9,6 +9,9 @@ tags:
     visible: "Klar for en økt?"
     timeout: 120000
 - tapOn: "Øvelser"
+- extendedWaitUntil:
+    visible: "Opprett første øvelse"
+    timeout: 30000
 - tapOn: "Opprett første øvelse"
 - tapOn:
     id: "exercise-name-input"
@@ -43,8 +46,10 @@ tags:
 - assertVisible: "Ingenting er gjenopprettet ennå."
 - tapOn:
     id: "continue-restore"
-- assertVisible:
-    id: "restore-confirmation"
+- extendedWaitUntil:
+    visible:
+      id: "restore-confirmation"
+    timeout: 30000
 - assertVisible: "Dette erstatter alle data i Trene og kan ikke angres."
 - tapOn:
     id: "confirm-restore"

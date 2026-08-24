@@ -13,6 +13,7 @@ name: Restore and re-export a cross-platform backup on Android
 - assertVisible: "${EXPECTED_WORKOUTS} treningsøkter"
 - assertVisible: "${EXPECTED_EXERCISES} øvelser"
 - tapOn: { id: "continue-restore" }
+- extendedWaitUntil: { visible: { id: "restore-confirmation" }, timeout: 30000 }
 - tapOn: { id: "confirm-restore" }
 - extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
 - tapOn: "Innstillinger"
