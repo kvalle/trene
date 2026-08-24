@@ -18,7 +18,6 @@ name: Roll back a failed Android restore
     env: { BACKUP_FILE: "representative.trene-backup" }
 - extendedWaitUntil: { visible: { id: "restore-preview" }, timeout: 30000 }
 - tapOn: { id: "continue-restore" }
-- extendedWaitUntil: { visible: { id: "restore-confirmation" }, timeout: 30000 }
 - tapOn: { id: "confirm-restore" }
 - extendedWaitUntil: { visible: "Gjenopprettingen mislyktes. De opprinnelige dataene er kontrollert og gjenopprettet.", timeout: 30000 }
 - back
