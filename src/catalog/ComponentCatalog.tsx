@@ -8,7 +8,11 @@ import { radii, typography } from '../theme';
 import { AppThemeProvider, useAppTheme } from '../ui/AppThemeProvider';
 import { getAppStackScreenOptions } from '../ui/appShell';
 import { Button } from '../ui/Button';
+import { ErrorAlert } from '../ui/ErrorAlert';
 import { FieldError } from '../ui/FieldError';
+import { Hero } from '../ui/Hero';
+import { Loader } from '../ui/Loader';
+import { PageStatus } from '../ui/PageStatus';
 import { TextField } from '../ui/TextField';
 
 type CatalogStackParamList = {
@@ -17,6 +21,10 @@ type CatalogStackParamList = {
   TextFieldDetail: undefined;
   FieldErrorDetail: undefined;
   AppShellDetail: undefined;
+  HeroDetail: undefined;
+  LoaderDetail: undefined;
+  ErrorAlertDetail: undefined;
+  PageStatusDetail: undefined;
   StackExample: undefined;
   ModalExample: undefined;
 };
@@ -85,6 +93,48 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         route: 'AppShellDetail',
         testID: 'catalog-item-appshell',
       },
+      {
+        id: 'hero',
+        name: 'Hero',
+        description: 'Romslig startside med én tydelig hovedoppgave og få alternativer.',
+        usage: 'Bruk når skjermen er et startpunkt med én dominerende handling og få sekundære valg.',
+        route: 'HeroDetail',
+        testID: 'catalog-item-hero',
+      },
+    ],
+  },
+  {
+    title: 'Feedback',
+    items: [
+      {
+        id: 'loader',
+        name: 'Loader',
+        description: 'Aktivitetsindikator i stor sidevariant og kompakt inline-variant.',
+        usage: 'Bruk stor loader når hovedinnholdet venter. Bruk kompakt loader i knapper, rader eller lokale operasjoner.',
+        route: 'LoaderDetail',
+        testID: 'catalog-item-loader',
+      },
+      {
+        id: 'erroralert',
+        name: 'ErrorAlert',
+        description: 'Lokal feilmelding med fareikon, svak fareflate og valgfri gjenopprettingshandling.',
+        usage: 'Bruk når en avgrenset operasjon feiler, mens resten av skjermen fortsatt er gyldig.',
+        route: 'ErrorAlertDetail',
+        testID: 'catalog-item-erroralert',
+      },
+    ],
+  },
+  {
+    title: 'Sidevisninger',
+    items: [
+      {
+        id: 'pagestatus',
+        name: 'PageStatus',
+        description: 'Sentrert sideoppsett for lasting, feil, tomt innhold og sikkerhetsstopp.',
+        usage: 'Bruk når skjermens hovedinnhold ikke kan vises. Velg variant etter om brukeren venter, kan prøve igjen eller må stoppe.',
+        route: 'PageStatusDetail',
+        testID: 'catalog-item-pagestatus',
+      },
     ],
   },
 ];
@@ -117,6 +167,10 @@ function CatalogNavigator({
         <Stack.Screen name="TextFieldDetail" component={TextFieldDetailScreen} options={{ title: 'TextField' }} />
         <Stack.Screen name="FieldErrorDetail" component={FieldErrorDetailScreen} options={{ title: 'FieldError' }} />
         <Stack.Screen name="AppShellDetail" component={AppShellDetailScreen} options={{ title: 'App-shell' }} />
+        <Stack.Screen name="HeroDetail" component={HeroDetailScreen} options={{ title: 'Hero' }} />
+        <Stack.Screen name="LoaderDetail" component={LoaderDetailScreen} options={{ title: 'Loader' }} />
+        <Stack.Screen name="ErrorAlertDetail" component={ErrorAlertDetailScreen} options={{ title: 'ErrorAlert' }} />
+        <Stack.Screen name="PageStatusDetail" component={PageStatusDetailScreen} options={{ title: 'PageStatus' }} />
         <Stack.Screen name="StackExample" component={StackExampleScreen} options={{ title: 'Stack' }} />
         <Stack.Screen name="ModalExample" component={ModalExampleScreen} options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack.Navigator>
@@ -412,6 +466,191 @@ function FieldErrorDetailScreen() {
             error="Skriv inn en gyldig verdi"
             testID="catalog-fielderror-with-field"
           />
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+function HeroDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-hero">
+      <DetailHeader
+        name="Hero"
+        description="Romslig startside med én tydelig hovedoppgave og få alternativer."
+        usage="Bruk når skjermen er et startpunkt med én dominerende handling og få sekundære valg."
+      />
+
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Komposisjon</Text>
+        <Text style={[typography.metadata, { color: colors.muted }]}>
+          Generisk eksempel med nøytral tittel, beskrivelse og primær/sekundære handlinger. Domeneinnhold vises bare i eksempler.
+        </Text>
+        <Hero title="Klar for en økt?" description="Registrer øvelser og sett mens du trener." testID="catalog-hero-example">
+          <Button title="Start økt" variant="primary" onPress={() => {}} testID="catalog-hero-primary" />
+          <Button title="Tidligere økter" variant="secondary" onPress={() => {}} testID="catalog-hero-secondary-1" />
+          <Button title="Øvelser" variant="secondary" onPress={() => {}} testID="catalog-hero-secondary-2" />
+          <Button title="Innstillinger" variant="secondary" onPress={() => {}} testID="catalog-hero-secondary-3" />
+        </Hero>
+      </View>
+
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Opptatt tilstand</Text>
+        <Text style={[typography.metadata, { color: colors.muted }]}>
+          Primær handling viser opptatt spinner og deaktiverer sekundære valg mens en operasjon pågår.
+        </Text>
+        <Hero title="Klar for en økt?" description="Registrer øvelser og sett mens du trener." testID="catalog-hero-busy">
+          <Button title="Starter økt" variant="primary" busy onPress={() => {}} testID="catalog-hero-busy-primary" />
+          <Button title="Tidligere økter" variant="secondary" disabled onPress={() => {}} testID="catalog-hero-busy-secondary" />
+        </Hero>
+      </View>
+    </ScrollView>
+  );
+}
+
+function LoaderDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-loader">
+      <DetailHeader
+        name="Loader"
+        description="Aktivitetsindikator i stor sidevariant og kompakt inline-variant, begge med valgfri statusetikett."
+        usage="Bruk stor loader når hovedinnholdet på en hel skjerm venter. Bruk kompakt loader i en knapp, rad eller lokal operasjon."
+      />
+
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Størrelser</Text>
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Stor · sideinnhold</Text>
+          <Loader label="Laster øvelser" size="large" testID="catalog-loader-large" />
+        </View>
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Kompakt · inline</Text>
+          <Loader label="Lagrer" size="compact" testID="catalog-loader-compact" />
+        </View>
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Uten etikett</Text>
+          <Loader size="large" testID="catalog-loader-no-label" />
+        </View>
+      </View>
+
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>I kontekst</Text>
+        <Text style={[typography.metadata, { color: colors.muted }]}>Kompakt loader vises i handlingsområdet der en primær handling ellers står.</Text>
+        <View style={[styles.controlGroup, { alignItems: 'center' }]}>
+          <Loader label="Laster aktiv økt" size="compact" testID="catalog-loader-home" />
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+function ErrorAlertDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-erroralert">
+      <DetailHeader
+        name="ErrorAlert"
+        description="Lokal feilmelding med fareikon, svak fareflate og valgfri gjenopprettingshandling."
+        usage="Bruk når en avgrenset operasjon feiler, mens resten av skjermen fortsatt er gyldig og nyttig."
+      />
+
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Varianter</Text>
+        <Text style={[typography.metadata, { color: colors.muted }]}>Farge eller ikon er aldri eneste signal — teksten bærer betydningen.</Text>
+
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Melding alene</Text>
+          <ErrorAlert message="Kunne ikke laste inn" testID="catalog-erroralert-message" />
+        </View>
+
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Med tittel</Text>
+          <ErrorAlert title="Kunne ikke lagre" message="Kontroller tilkoblingen og prøv igjen." testID="catalog-erroralert-titled" />
+        </View>
+
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Med sekundær handling</Text>
+          <ErrorAlert
+            message="Endringene er ikke lagret"
+            actionTitle="Prøv igjen"
+            onAction={() => {}}
+            actionTestID="catalog-erroralert-action"
+            testID="catalog-erroralert-with-action"
+          />
+        </View>
+
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Ulagret varsel</Text>
+          <ErrorAlert message="Økten har endringer som ikke er lagret" testID="catalog-erroralert-unsaved" />
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+function PageStatusDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-pagestatus">
+      <DetailHeader
+        name="PageStatus"
+        description="Sentrert sideoppsett for lasting, tomt innhold, feil og sikkerhetsstopp."
+        usage="Bruk når skjermens hovedinnhold ikke kan vises. Velg variant etter om brukeren venter, kan prøve igjen eller må stoppe."
+      />
+
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Varianter</Text>
+
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Laster</Text>
+          <View style={[styles.errorPreview, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <PageStatus variant="loading" loaderLabel="Starter Trene" testID="catalog-pagestatus-loading" />
+          </View>
+        </View>
+
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Feil · med primær retry</Text>
+          <View style={[styles.errorPreview, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <PageStatus
+              variant="error"
+              title="Trene kunne ikke starte"
+              message="Dataene dine er ikke endret. Prøv å starte på nytt."
+              actionTitle="Prøv igjen"
+              onAction={() => {}}
+              actionTestID="catalog-pagestatus-retry"
+              testID="catalog-pagestatus-error"
+            />
+          </View>
+        </View>
+
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Gjentatt feil</Text>
+          <View style={[styles.errorPreview, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <PageStatus
+              variant="error"
+              title="Trene kunne ikke starte"
+              message="Dataene dine er ikke endret. Prøv å starte på nytt."
+              secondaryMessage="Hvis problemet fortsetter, avslutt appen helt og åpne den igjen."
+              actionTitle="Prøv igjen"
+              onAction={() => {}}
+              testID="catalog-pagestatus-repeated"
+            />
+          </View>
+        </View>
+
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Låst sikkerhetsstopp · uten handling</Text>
+          <View style={[styles.errorPreview, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <PageStatus
+              variant="safe-stop"
+              title="Trene kan ikke åpne dataene trygt"
+              message="Gjenopprettingen ble avbrutt, og ingen av databasene kunne bekreftes. Dataene er bevart for hjelp med gjenoppretting."
+              secondaryMessage="Ikke slett eller installer appen på nytt."
+              testID="catalog-pagestatus-safestop"
+            />
+          </View>
         </View>
       </View>
     </ScrollView>

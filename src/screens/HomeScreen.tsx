@@ -1,18 +1,23 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useFocusEffect, usePreventRemove, useTheme } from '@react-navigation/native';
+import { useFocusEffect, usePreventRemove } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, AppState, findNodeHandle, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, AppState, findNodeHandle, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { RootStackParamList } from '../AppNavigator';
 import { useDatabase } from '../database/DatabaseContext';
 import { getActiveWorkoutId, startWorkout } from '../database/workouts';
+import { useAppTheme } from '../ui/AppThemeProvider';
+import { Button } from '../ui/Button';
+import { ErrorAlert } from '../ui/ErrorAlert';
+import { Hero } from '../ui/Hero';
+import { Loader } from '../ui/Loader';
 import { useWorkoutDrafts } from '../workoutDrafts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export function HomeScreen({ navigation, route }: Props) {
   const database = useDatabase();
-  const { colors } = useTheme();
+  const { colors } = useAppTheme();
   const { drafts } = useWorkoutDrafts();
   const [activeWorkoutId, setActiveWorkoutId] = useState<number | null>();
   const [starting, setStarting] = useState(false);
@@ -61,122 +66,85 @@ export function HomeScreen({ navigation, route }: Props) {
     }
   }
 
+  const hasUnsavedDraft = activeWorkoutId !== null && Object.values(drafts).some((draft) =>
+    draft.workoutId === activeWorkoutId && draft.unsaved,
+  );
+
   return (
     <ScrollView
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}
       contentInsetAdjustmentBehavior="automatic"
+      style={{ backgroundColor: colors.background }}
     >
-      <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>
-        Klar for en økt?
-      </Text>
-      <Text style={[styles.introduction, { color: colors.text }]}>
-        Registrer øvelser og sett mens du trener.
-      </Text>
+      <Hero
+        title="Klar for en økt?"
+        description="Registrer øvelser og sett mens du trener."
+        testID="home-hero"
+      />
       <View style={styles.actions}>
         {error ? (
-          <Action colors={colors} label="Prøv igjen" onPress={() => {
-            setError(false);
-            setActiveWorkoutId(undefined);
-            setReload((value) => value + 1);
-          }} primary />
+          <Button
+            title="Prøv igjen"
+            variant="primary"
+            onPress={() => {
+              setError(false);
+              setActiveWorkoutId(undefined);
+              setReload((value) => value + 1);
+            }}
+            testID="home-retry"
+          />
         ) : activeWorkoutId === undefined ? (
-          <ActivityIndicator accessibilityLabel="Laster aktiv økt" />
+          <Loader label="Laster aktiv økt" size="compact" testID="home-loader" />
         ) : (
-          <Action
-            actionRef={startWorkoutRef}
-            colors={colors}
+          <Button
+            ref={startWorkoutRef}
+            title={starting ? 'Starter økt' : activeWorkoutId === null ? 'Start økt' : 'Fortsett økt'}
+            variant="primary"
+            busy={starting}
             disabled={starting}
-            label={starting ? 'Starter økt' : activeWorkoutId === null ? 'Start økt' : 'Fortsett økt'}
             onPress={() => void openWorkout()}
-            primary
+            testID="home-primary-action"
           />
         )}
-        {activeWorkoutId !== null && Object.values(drafts).some((draft) =>
-          draft.workoutId === activeWorkoutId && draft.unsaved,
-        ) && (
-          <Text accessibilityRole="alert" style={{ color: colors.notification }}>
-            Økten har endringer som ikke er lagret
-          </Text>
+        {hasUnsavedDraft && (
+          <ErrorAlert message="Økten har endringer som ikke er lagret" testID="home-unsaved-warning" />
         )}
-        {error && <Text accessibilityRole="alert" style={{ color: colors.notification }}>Kunne ikke laste inn</Text>}
-        <Action colors={colors} disabled={starting} label="Tidligere økter" onPress={() => navigation.navigate('History')} />
-        <Action colors={colors} disabled={starting} label="Øvelser" onPress={() => navigation.navigate('Exercises')} />
-        <Action colors={colors} disabled={starting} label="Innstillinger" onPress={() => navigation.navigate('Settings')} />
+        {error && <ErrorAlert message="Kunne ikke laste inn" testID="home-error" />}
+        <Button
+          title="Tidligere økter"
+          variant="secondary"
+          disabled={starting}
+          onPress={() => navigation.navigate('History')}
+          testID="home-history"
+        />
+        <Button
+          title="Øvelser"
+          variant="secondary"
+          disabled={starting}
+          onPress={() => navigation.navigate('Exercises')}
+          testID="home-exercises"
+        />
+        <Button
+          title="Innstillinger"
+          variant="secondary"
+          disabled={starting}
+          onPress={() => navigation.navigate('Settings')}
+          testID="home-settings"
+        />
       </View>
     </ScrollView>
-  );
-}
-
-function Action({
-  actionRef,
-  colors,
-  label,
-  onPress,
-  disabled = false,
-  primary = false,
-}: {
-  actionRef?: React.RefObject<View | null>;
-  colors: { background: string; border: string; primary: string; text: string };
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  primary?: boolean;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      ref={actionRef}
-      style={({ pressed }) => [
-        styles.action,
-        { borderColor: primary ? colors.primary : colors.border },
-        primary && { backgroundColor: colors.primary },
-        pressed && styles.pressed,
-      ]}
-    >
-      <Text style={[styles.actionText, { color: primary ? colors.background : colors.text }]}>
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
+    gap: 12,
     paddingHorizontal: 24,
     paddingTop: 56,
   },
-  heading: {
-    fontSize: 32,
-    fontWeight: '700',
-    lineHeight: 39,
-  },
-  introduction: {
-    fontSize: 18,
-    lineHeight: 27,
-    marginTop: 12,
-  },
   actions: {
     gap: 12,
-    marginTop: 40,
-  },
-  action: {
-    alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  pressed: {
-    opacity: 0.72,
-  },
-  actionText: {
-    fontSize: 18,
-    fontWeight: '600',
+    marginTop: 28,
   },
 });

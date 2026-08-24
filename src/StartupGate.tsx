@@ -1,20 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  AccessibilityInfo,
-  ActivityIndicator,
-  findNodeHandle,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+import { AccessibilityInfo, findNodeHandle, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DatabaseProvider } from './database/DatabaseContext';
 import { DatabaseRuntime } from './database/DatabaseRuntime';
 import type { Database } from './database/types';
-import { darkTheme, lightTheme } from './theme';
+import { useAppTheme } from './ui/AppThemeProvider';
+import { Loader } from './ui/Loader';
+import { PageStatus } from './ui/PageStatus';
 import { cleanupAbandonedBackupExports } from './backup/nativeBackupPlatform';
 import {
   cleanupAbandonedRestorePreparations,
@@ -39,8 +31,7 @@ export function StartupGate({
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<StartupState>({ status: 'loading' });
   const [runtime] = useState(() => new DatabaseRuntime(openDatabase));
-  const colorScheme = useColorScheme();
-  const colors = colorScheme === 'dark' ? darkTheme.colors : lightTheme.colors;
+  const { colors } = useAppTheme();
   const retryRef = useRef<View>(null);
   const recoveryCleanup = useRef<null | (() => void)>(null);
 
@@ -106,43 +97,31 @@ export function StartupGate({
     >
       <Text style={[styles.brand, { color: colors.text }]}>Trene</Text>
       {state.status === 'loading' ? (
-        <ActivityIndicator accessibilityLabel="Starter Trene" color={colors.primary} size="large" />
+        <PageStatus
+          variant="loading"
+          loaderLabel="Starter Trene"
+          testID="startup-loading"
+        />
       ) : state.status === 'safe-stop' ? (
-        <View accessibilityLiveRegion="assertive" style={styles.failure}>
-          <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>
-            Trene kan ikke åpne dataene trygt
-          </Text>
-          <Text style={[styles.message, { color: colors.text }]}>
-            Gjenopprettingen ble avbrutt, og ingen av databasene kunne bekreftes. Dataene er bevart for hjelp med gjenoppretting.
-          </Text>
-          <Text style={[styles.message, { color: colors.text }]}>Ikke slett eller installer appen på nytt.</Text>
-        </View>
+        <PageStatus
+          variant="safe-stop"
+          title="Trene kan ikke åpne dataene trygt"
+          message="Gjenopprettingen ble avbrutt, og ingen av databasene kunne bekreftes. Dataene er bevart for hjelp med gjenoppretting."
+          secondaryMessage="Ikke slett eller installer appen på nytt."
+          testID="startup-safe-stop"
+        />
       ) : (
-        <View accessibilityLiveRegion="assertive" style={styles.failure}>
-          <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>
-            Trene kunne ikke starte
-          </Text>
-          <Text style={[styles.message, { color: colors.text }]}>
-            Dataene dine er ikke endret. Prøv å starte på nytt.
-          </Text>
-          {state.failures > 1 && (
-            <Text style={[styles.message, { color: colors.text }]}>
-              Hvis problemet fortsetter, avslutt appen helt og åpne den igjen.
-            </Text>
-          )}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setAttempt((value) => value + 1)}
-            ref={retryRef}
-            style={({ pressed }) => [
-              styles.retry,
-              { backgroundColor: colors.primary },
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={[styles.retryText, { color: colors.background }]}>Prøv igjen</Text>
-          </Pressable>
-        </View>
+        <PageStatus
+          variant="error"
+          title="Trene kunne ikke starte"
+          message="Dataene dine er ikke endret. Prøv å starte på nytt."
+          secondaryMessage={state.failures > 1 ? 'Hvis problemet fortsetter, avslutt appen helt og åpne den igjen.' : undefined}
+          actionTitle="Prøv igjen"
+          onAction={() => setAttempt((value) => value + 1)}
+          actionTestID="startup-retry"
+          actionRef={retryRef}
+          testID="startup-error"
+        />
       )}
     </ScrollView>
   );
@@ -156,17 +135,4 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   brand: { fontSize: 36, fontWeight: '800', marginBottom: 32 },
-  failure: { alignItems: 'center', maxWidth: 440 },
-  heading: { fontSize: 26, fontWeight: '700', textAlign: 'center' },
-  message: { fontSize: 17, lineHeight: 25, marginTop: 16, textAlign: 'center' },
-  retry: {
-    alignItems: 'center',
-    borderRadius: 14,
-    justifyContent: 'center',
-    marginTop: 28,
-    minHeight: 52,
-    paddingHorizontal: 24,
-  },
-  retryText: { fontSize: 18, fontWeight: '700' },
-  pressed: { opacity: 0.72 },
 });

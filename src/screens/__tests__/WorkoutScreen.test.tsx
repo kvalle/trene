@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import { AccessibilityInfo, AppState, type AppStateStatus, Modal } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
+import { AppThemeProvider } from '../../ui/AppThemeProvider';
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
 import {
@@ -598,7 +599,8 @@ test('retains a failed draft across Home and reopening the workout', async () =>
   expect(await screen.findByText('Endringene er ikke lagret')).toBeOnTheScreen();
 
   view.rerender(sharedScreen('home'));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Økten har endringer som ikke er lagret');
+  expect(await screen.findByText('Økten har endringer som ikke er lagret')).toBeOnTheScreen();
+  expect(screen.getByTestId('home-unsaved-warning').props.accessibilityRole).toBe('alert');
   view.rerender(sharedScreen('workout'));
   const reopenedLoad = await screen.findByLabelText('Belastning for Knebøy');
   expect(reopenedLoad).toHaveProp('value', '80');
@@ -733,24 +735,27 @@ test('preserves the workout, announces retry, and does not navigate when cancell
 function renderScreen(navigation: Record<string, jest.Mock> = {}) {
   const mergedNavigation = { navigate: jest.fn(), popTo: jest.fn(), replace: jest.fn(), setParams: jest.fn(), ...navigation };
   return render(
-    <DatabaseProvider database={database}>
-      <WorkoutDraftProvider>
-        <NavigationContainer>
-          <WorkoutScreen
+    <AppThemeProvider>
+      <DatabaseProvider database={database}>
+        <WorkoutDraftProvider>
+          <NavigationContainer>
+            <WorkoutScreen
             navigation={mergedNavigation as never}
             route={{ params: undefined } as never}
           />
-        </NavigationContainer>
-      </WorkoutDraftProvider>
-    </DatabaseProvider>,
+          </NavigationContainer>
+        </WorkoutDraftProvider>
+      </DatabaseProvider>
+    </AppThemeProvider>,
   );
 }
 
 function sharedScreen(screenName: 'home' | 'workout') {
   return (
-    <DatabaseProvider database={database}>
-      <WorkoutDraftProvider>
-        <NavigationContainer>
+    <AppThemeProvider>
+      <DatabaseProvider database={database}>
+        <WorkoutDraftProvider>
+          <NavigationContainer>
           {screenName === 'home' ? (
             <HomeScreen navigation={{ navigate: jest.fn() } as never} route={{ params: undefined } as never} />
           ) : (
@@ -759,9 +764,10 @@ function sharedScreen(screenName: 'home' | 'workout') {
               route={{ params: undefined } as never}
             />
           )}
-        </NavigationContainer>
-      </WorkoutDraftProvider>
-    </DatabaseProvider>
+          </NavigationContainer>
+        </WorkoutDraftProvider>
+      </DatabaseProvider>
+    </AppThemeProvider>
   );
 }
 
