@@ -80,7 +80,7 @@ function completed() {
   return `<h1 class="page-title">Fullført økt</h1><p class="timestamp">Lørdag 22. august 2026 kl. 08:42</p><article class="card result-card"><h3>Benkpress</h3><div class="result-set"><b>Sett 1</b><span>80 kg · 8 repetisjoner</span></div><div class="result-set"><b>Sett 2</b><span>80 kg · 8 repetisjoner</span></div><div class="result-set"><b>Sett 3</b><span>80 kg · 7 repetisjoner</span></div></article>${button('Slett økt', 'danger')}${button('Tilbake til forsiden')}`;
 }
 function data(busy = false) {
-  return `<h1 class="page-title">Dine data</h1><p class="intro">Lag en fil med alle øvelser og treningsøkter i Trene.</p><aside class="notice"><h3>Filen inneholder treningsdata</h3><p>Sikkerhetskopien er ikke kryptert av Trene. Oppbevar og del den på en trygg måte.</p></aside>${button(busy ? '<span class="spinner"></span>Lager sikkerhetskopi' : 'Lag sikkerhetskopi', 'primary', busy ? 'busy' : '')}${button('Gjenopprett fra fil', 'secondary', busy ? 'disabled' : '')}`;
+  return `<h1 class="page-title">Dine data</h1><p class="intro">Lag en fil med alle øvelser og treningsøkter i Trene.</p><aside class="notice"><h3>Filen inneholder treningsdata</h3><p>Sikkerhetskopien er ikke kryptert av Trene. Oppbevar og del den på en trygg måte.</p></aside>${button(busy ? '<span class="spinner"></span>Lager sikkerhetskopi' : 'Lag sikkerhetskopi', 'primary', busy ? 'busy' : '')}<button class="button secondary" type="button" data-restore-open>Gjenopprett fra fil</button>`;
 }
 function detail() {
   return `<h1 class="page-title">Benkpress</h1><section><h2>Endre navn</h2>${field('Navn', 'Benkpress')}${button('Lagre navn')}</section><section><h2>Historikk</h2><article class="card"><h3>22. august 2026</h3><div class="result-set"><b>Sett 1</b><span>80 kg · 8 repetisjoner</span></div><div class="result-set"><b>Sett 2</b><span>80 kg · 8 repetisjoner</span></div></article></section>${button('Slett øvelse', 'danger')}`;
@@ -141,10 +141,18 @@ function showRestoreDialog(stage) {
   dialogLayer.innerHTML = restoreDialog(stage);
   dialogLayer.hidden = false;
   const primary = dialogLayer.querySelector('.primary, .danger');
+  const secondary = dialogLayer.querySelector('.secondary');
+  if (secondary) secondary.addEventListener('click', closeRestoreDialog);
+  if (stage === 'file-error' && primary) primary.addEventListener('click', () => showRestoreDialog('preview'));
   if (stage === 'preview' && primary) primary.addEventListener('click', () => showRestoreDialog('current-data'));
   if (stage === 'current-data' && primary) primary.addEventListener('click', () => showRestoreDialog('confirm'));
   if (stage === 'confirm' && primary) primary.addEventListener('click', () => showRestoreDialog('committing'));
   if (stage === 'committing') window.setTimeout(() => showRestoreDialog('success'), 1300);
+  if ((stage === 'success' || stage === 'recoverable-error') && primary) primary.addEventListener('click', closeRestoreDialog);
+}
+
+function closeRestoreDialog() {
+  dialogLayer.hidden = true;
 }
 function showDialog(kind) {
   const dialogs = {
@@ -203,6 +211,7 @@ function selectComponent(id) {
   if (exampleId === 'dialog-anatomy') {
     const stage = new URLSearchParams(location.search).get('restore-stage');
     showRestoreDialog(['file-error', 'preview', 'current-data', 'confirm', 'committing', 'success', 'recoverable-error', 'safe-stop'].includes(stage) ? stage : 'preview');
+    screen.querySelector('[data-restore-open]').addEventListener('click', () => showRestoreDialog('preview'));
   } else if (dialog) showDialog(dialog);
   requestAnimationFrame(() => {
     const element = document.querySelector(target);
