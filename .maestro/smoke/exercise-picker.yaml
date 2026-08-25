@@ -1,0 +1,36 @@
+appId: com.kjetilvalle.trene
+name: Select an existing exercise for a workout
+tags:
+  - smoke
+  - android
+---
+- launchApp
+
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Øvelser"
+- tapOn: "Opprett første øvelse"
+- tapOn:
+    id: "exercise-name-input"
+- setClipboard: "Knebøy"
+- pasteText
+- tapOn:
+    id: "create-exercise-submit"
+- pressKey: BACK
+- pressKey: BACK
+
+- tapOn: "Start økt"
+- tapOn: "Legg til øvelse"
+- assertVisible: "Knebøy"
+- tapOn: "Søk i øvelser"
+- inputText: "kneb"
+- assertVisible: "Knebøy"
+- tapOn: "Avbryt"
+- assertVisible: "Ingen øvelser lagt til ennå"
+
+- tapOn: "Legg til øvelse"
+- tapOn: "Knebøy"
+- assertVisible: "Knebøy"
+- tapOn: "Legg til øvelse"
+- assertVisible: "Alle eksisterende øvelser er lagt til"
