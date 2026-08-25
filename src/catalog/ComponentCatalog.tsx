@@ -8,6 +8,9 @@ import { radii, typography } from '../theme';
 import { AppThemeProvider, useAppTheme } from '../ui/AppThemeProvider';
 import { getAppStackScreenOptions } from '../ui/appShell';
 import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
+import { DataRow } from '../ui/DataRow';
+import { Dialog } from '../ui/Dialog';
 import { ErrorAlert } from '../ui/ErrorAlert';
 import { FieldError } from '../ui/FieldError';
 import { Hero } from '../ui/Hero';
@@ -22,6 +25,9 @@ import { TextField } from '../ui/TextField';
 type CatalogStackParamList = {
   Overview: undefined;
   ButtonDetail: undefined;
+  CardDetail: undefined;
+  DataRowDetail: undefined;
+  DialogDetail: undefined;
   TextFieldDetail: undefined;
   FieldErrorDetail: undefined;
   AppShellDetail: undefined;
@@ -66,6 +72,35 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         usage: 'Bruk én primær handling per kontekst. Sekundær og tekst brukes for støttehandlinger, destruktiv for irreversible valg.',
         route: 'ButtonDetail',
         testID: 'catalog-item-button',
+      },
+      {
+        id: 'dialog',
+        name: 'Dialog',
+        description: 'Modal beholder for bekreftelse og destruktive handlinger.',
+        usage: 'Bruk når brukeren må ta stilling før den underliggende skjermen kan brukes videre.',
+        route: 'DialogDetail',
+        testID: 'catalog-item-dialog',
+      },
+    ],
+  },
+  {
+    title: 'Lister og beholdere',
+    items: [
+      {
+        id: 'card',
+        name: 'Card',
+        description: 'Overflate som grupperer relatert innhold.',
+        usage: 'Bruk når en avgrenset oppsummering eller gruppe trenger felles flate og kant.',
+        route: 'CardDetail',
+        testID: 'catalog-item-card',
+      },
+      {
+        id: 'datarow',
+        name: 'DataRow',
+        description: 'Statisk etikett og verdi i en dataliste.',
+        usage: 'Bruk når lesbart, ikke-redigerbart data skal oppsummeres i en gruppe.',
+        route: 'DataRowDetail',
+        testID: 'catalog-item-datarow',
       },
     ],
   },
@@ -204,6 +239,9 @@ function CatalogNavigator({
           {(props) => <OverviewScreen {...props} scheme={scheme} setScheme={setScheme} />}
         </Stack.Screen>
         <Stack.Screen name="ButtonDetail" component={ButtonDetailScreen} options={{ title: 'Button' }} />
+        <Stack.Screen name="CardDetail" component={CardDetailScreen} options={{ title: 'Card' }} />
+        <Stack.Screen name="DataRowDetail" component={DataRowDetailScreen} options={{ title: 'DataRow' }} />
+        <Stack.Screen name="DialogDetail" component={DialogDetailScreen} options={{ title: 'Dialog' }} />
         <Stack.Screen name="TextFieldDetail" component={TextFieldDetailScreen} options={{ title: 'TextField' }} />
         <Stack.Screen name="FieldErrorDetail" component={FieldErrorDetailScreen} options={{ title: 'FieldError' }} />
         <Stack.Screen name="AppShellDetail" component={AppShellDetailScreen} options={{ title: 'App-shell' }} />
@@ -349,6 +387,49 @@ function ButtonDetailScreen() {
           labels={{ normal: 'Slett', disabled: 'Slett', busy: 'Sletter…' }}
         />
       </View>
+    </ScrollView>
+  );
+}
+
+function CardDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail}>
+      <DetailHeader name="Card" description="Overflate som grupperer relatert innhold." usage="Bruk når en avgrenset oppsummering eller gruppe trenger felles flate og kant." />
+      <Card testID="catalog-card">
+        <Text style={[typography.sectionTitle, { color: colors.text }]}>Overskrift</Text>
+        <Text style={[typography.body, { color: colors.text }]}>Avgrenset innhold på en felles flate.</Text>
+      </Card>
+    </ScrollView>
+  );
+}
+
+function DataRowDetailScreen() {
+  return (
+    <ScrollView contentContainerStyle={styles.detail}>
+      <DetailHeader name="DataRow" description="Statisk etikett og verdi i en dataliste." usage="Bruk når lesbart, ikke-redigerbart data skal oppsummeres i en gruppe." />
+      <Card>
+        <DataRow label="Etikett" value="Verdi" showSeparator testID="catalog-datarow" />
+        <DataRow label="Neste etikett" value="Neste verdi" showSeparator />
+      </Card>
+    </ScrollView>
+  );
+}
+
+function DialogDetailScreen() {
+  const { colors } = useAppTheme();
+  const [visible, setVisible] = useState(true);
+  const [busy, setBusy] = useState(false);
+  return (
+    <ScrollView contentContainerStyle={styles.detail}>
+      <DetailHeader name="Dialog" description="Modal beholder for bekreftelse og destruktive handlinger." usage="Bruk når brukeren må ta stilling før den underliggende skjermen kan brukes videre." />
+      <Text style={[typography.metadata, { color: colors.muted }]}>Bekreftelsesdialogen viser trygg handling først og destruktiv handling sist. Velg Slett for opptatt tilstand.</Text>
+      <Button title="Vis dialog" variant="secondary" onPress={() => { setBusy(false); setVisible(true); }} />
+      <Dialog visible={visible} title="Slett element?" onRequestClose={() => { if (!busy) setVisible(false); }}>
+        <Text style={[typography.body, { color: colors.text }]}>Denne handlingen kan ikke angres.</Text>
+        <Button title="Avbryt" variant="secondary" disabled={busy} onPress={() => setVisible(false)} />
+        <Button title={busy ? 'Sletter' : 'Slett'} variant="destructive" busy={busy} onPress={() => setBusy(true)} />
+      </Dialog>
     </ScrollView>
   );
 }
