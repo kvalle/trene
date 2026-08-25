@@ -150,15 +150,10 @@ button { cursor: pointer; }
 .restore-dialog .error-icon { margin-top: 14px; }
 .restore-dialog small { color: var(--muted); display: block; line-height: 1.45; margin-top: 10px; }
 .restore-dialog .loader-row { margin: 18px 0; }
+.restore-data-rows { background: var(--bg); border-radius: 8px; margin: 14px 0; padding: 0 13px; }
 .restore-actions { display: grid; gap: 9px; margin-top: 20px; }
 .danger-copy { color: var(--danger); font-weight: 750; }
 .locked-dialog { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); }
-.prototype-controls { background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
-.prototype-controls p { color: var(--muted); font-size: 13px; line-height: 1.4; margin: 7px 0 10px; }
-.prototype-controls div { display: flex; flex-wrap: wrap; gap: 3px 8px; }
-.prototype-state-picker { border-top: 1px solid var(--border); margin-top: 20px; padding-top: 12px; }
-.prototype-state-picker summary { color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 750; }
-.prototype-state-picker div { display: flex; flex-wrap: wrap; gap: 3px 8px; margin-top: 8px; }
 .counts { background: var(--bg); border-radius: 8px; display: grid; gap: 6px; margin: 14px 0; padding: 13px; }
 .dialog-examples { display: grid; gap: 22px; }
 .dialog-examples > div + div { border-top: 1px solid var(--border); padding-top: 20px; }

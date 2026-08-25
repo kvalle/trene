@@ -116,34 +116,33 @@ function pageStates() {
   return `<h1 class="page-title">Sidestatus</h1><p class="intro">Samme sentrerte oppsett med innhold tilpasset årsaken.</p><div class="page-state-gallery"><section class="state-sample"><span class="state-kind">Laster</span><span class="spinner large-spinner"></span><b>Laster øvelser</b></section><section class="state-sample"><span class="state-kind">Tom</span><b>Ingen fullførte økter ennå</b><small>Fullfør en økt for å se den her.</small><span class="sample-action">Start økt</span></section><section class="state-sample"><span class="state-kind">Ingen treff</span><b>Ingen øvelser funnet</b><small>Prøv et annet søk eller opprett en ny øvelse.</small><span class="sample-action">Opprett øvelse</span></section><section class="state-sample error-sample"><span class="state-kind">Feil</span>${errorIcon}<b>Kunne ikke laste inn</b><small>Dataene dine er ikke endret.</small><span class="sample-action">Prøv igjen</span></section><section class="state-sample"><span class="state-kind">Mangler</span><b>Økten finnes ikke lenger</b><small>Den kan ha blitt slettet.</small><span class="sample-action">Tilbake</span></section></div>`;
 }
 function dialogAnatomy() {
-  return `${data()}<aside class="prototype-controls" aria-label="Prototypetilstander"><span class="variant-label">Interaktiv prototype</span><p>Velg en tilstand for å kontrollere hele gjenopprettingsflyten.</p><div>${['Filfeil', 'Forhåndsvisning', 'Nåværende data', 'Bekreft erstatt', 'Gjenoppretter', 'Ferdig', 'Gjenopprettbar feil', 'Sikkerhetsstopp'].map((label, index) => `<button class="small-button text-small" type="button" data-restore-stage="${['file-error', 'preview', 'current-data', 'confirm', 'committing', 'success', 'recoverable-error', 'safe-stop'][index]}">${label}</button>`).join('')}</div></aside>`;
+  return data();
 }
 
 function restoreDialog(stage) {
-  const preview = '<p>Opprettet fredag 21. august 2026 kl. 20:14</p><div class="counts"><b>24 treningsøkter</b><b>8 øvelser</b></div>';
-  const current = '<p>Nåværende data som blir erstattet:</p><div class="counts"><b>12 treningsøkter</b><b>6 øvelser</b></div><p>Sikkerhetskopien som gjenopprettes:</p><div class="counts"><b>24 treningsøkter</b><b>8 øvelser</b></div>';
+  const backupCounts = '<div class="restore-data-rows"><div class="data-row"><span><b>Treningsøkter</b><small>24 i sikkerhetskopien</small></span></div><div class="data-row"><span><b>Øvelser</b><small>8 i sikkerhetskopien</small></span></div></div>';
+  const preview = `<p>Opprettet fredag 21. august 2026 kl. 20:14</p>${backupCounts}`;
+  const current = `<p>Nåværende data som blir erstattet:</p><div class="restore-data-rows"><div class="data-row"><span><b>Treningsøkter</b><small>12 i Trene nå</small></span></div><div class="data-row"><span><b>Øvelser</b><small>6 i Trene nå</small></span></div></div><p>Sikkerhetskopien som gjenopprettes:</p>${backupCounts}`;
   const dialogs = {
     'file-error': ['Sikkerhetskopien kan ikke brukes', `${errorIcon}<p>Sikkerhetskopien er skadet eller kan ikke leses. Dataene dine er ikke endret.</p>`, button('Velg en annen fil', 'primary')],
     preview: ['Kontroller sikkerhetskopien', `${preview}<p>Ingenting er gjenopprettet ennå.</p>`, button('Avbryt', 'secondary') + button('Fortsett', 'primary')],
-    'current-data': ['Kontrollerer nåværende data', `${preview}<div class="loader-row"><span class="spinner compact-spinner"></span><span>Kontrollerer dataene som kan bli erstattet</span></div>`, button('Avbryt', 'secondary')],
+    'current-data': ['Nåværende data blir erstattet', `${current}<p>Ingenting er endret ennå.</p>`, button('Avbryt', 'secondary') + button('Fortsett til bekreftelse', 'primary')],
     confirm: ['Erstatt alle data?', `${current}<p class="danger-copy">Dette erstatter alle data i Trene og kan ikke angres.</p>`, button('Avbryt', 'secondary') + button('Erstatt og gjenopprett', 'danger')],
-    committing: ['Gjenoppretter data', '<div class="loader-row page-loader"><span class="spinner large-spinner"></span><span>Ikke lukk Trene mens dataene erstattes.</span></div><p>Avbryt er ikke tilgjengelig etter at gjenopprettingen har startet.</p>', ''],
+    committing: ['Gjenoppretter data', '<div class="loader-row page-loader"><span class="spinner large-spinner"></span><span>Ikke lukk Trene mens dataene erstattes.</span></div><p>Avbryt er ikke tilgjengelig etter at gjenopprettingen har startet.</p>', button('<span class="spinner compact-spinner"></span>Gjenoppretter', 'danger', 'disabled')],
     success: ['Gjenopprettingen er fullført', '<p>24 treningsøkter og 8 øvelser er gjenopprettet.</p><p>De tidligere dataene er erstattet.</p>', button('Ferdig', 'primary')],
     'recoverable-error': ['Gjenopprettingen mislyktes', `${errorIcon}<p>De opprinnelige dataene er kontrollert og gjenopprettet. Dataene dine er ikke endret.</p>`, button('Ferdig', 'primary')],
     'safe-stop': ['Trene kan ikke åpne dataene trygt', `${errorIcon}<p>Gjenopprettingen ble avbrutt, og ingen av databasene kunne bekreftes. Dataene er bevart for hjelp med gjenoppretting.</p><p class="danger-copy">Ikke slett eller installer appen på nytt.</p><small>Ingen handlinger vises når videre bruk kan skade data.</small>`, ''],
   };
   const [title, copy, actions] = dialogs[stage];
-  const controls = ['file-error', 'preview', 'current-data', 'confirm', 'committing', 'success', 'recoverable-error', 'safe-stop'];
-  return `<section class="dialog restore-dialog ${stage === 'safe-stop' ? 'locked-dialog' : ''}" role="dialog" aria-modal="true" aria-labelledby="restore-title"><span class="variant-label">${stage === 'safe-stop' ? 'Låst sikkerhetsstopp' : 'Gjenoppretting'}</span><h2 id="restore-title">${title}</h2>${copy}<div class="restore-actions">${actions}</div><details class="prototype-state-picker"><summary>Vis prototypetilstand</summary><div>${controls.map((name) => `<button class="small-button text-small" type="button" data-restore-stage="${name}">${name.replaceAll('-', ' ')}</button>`).join('')}</div></details></section>`;
+  return `<section class="dialog restore-dialog ${stage === 'safe-stop' ? 'locked-dialog' : ''}" role="dialog" aria-modal="true" aria-labelledby="restore-title"><span class="variant-label">${stage === 'safe-stop' ? 'Låst sikkerhetsstopp' : 'Gjenoppretting'}</span><h2 id="restore-title">${title}</h2>${copy}<div class="restore-actions">${actions}</div></section>`;
 }
 
 function showRestoreDialog(stage) {
   dialogLayer.innerHTML = restoreDialog(stage);
   dialogLayer.hidden = false;
-  dialogLayer.querySelectorAll('[data-restore-stage]').forEach((control) => control.addEventListener('click', () => showRestoreDialog(control.dataset.restoreStage)));
   const primary = dialogLayer.querySelector('.primary, .danger');
   if (stage === 'preview' && primary) primary.addEventListener('click', () => showRestoreDialog('current-data'));
-  if (stage === 'current-data') window.setTimeout(() => showRestoreDialog('confirm'), 900);
+  if (stage === 'current-data' && primary) primary.addEventListener('click', () => showRestoreDialog('confirm'));
   if (stage === 'confirm' && primary) primary.addEventListener('click', () => showRestoreDialog('committing'));
   if (stage === 'committing') window.setTimeout(() => showRestoreDialog('success'), 1300);
 }
@@ -202,8 +201,8 @@ function selectComponent(id) {
   dialogLayer.hidden = true;
   screen.innerHTML = render();
   if (exampleId === 'dialog-anatomy') {
-    screen.querySelectorAll('[data-restore-stage]').forEach((control) => control.addEventListener('click', () => showRestoreDialog(control.dataset.restoreStage)));
-    showRestoreDialog('preview');
+    const stage = new URLSearchParams(location.search).get('restore-stage');
+    showRestoreDialog(['file-error', 'preview', 'current-data', 'confirm', 'committing', 'success', 'recoverable-error', 'safe-stop'].includes(stage) ? stage : 'preview');
   } else if (dialog) showDialog(dialog);
   requestAnimationFrame(() => {
     const element = document.querySelector(target);
