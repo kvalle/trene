@@ -1,9 +1,11 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { TextInput } from 'react-native';
 
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
 import { addExerciseToWorkout, countExercises, listAvailableExercises } from '../../database/workouts';
+import { AppThemeProvider } from '../../ui/AppThemeProvider';
 import { ExercisePickerScreen } from '../ExercisePickerScreen';
 
 jest.mock('@react-navigation/native', () => ({
@@ -88,7 +90,7 @@ test('retains picker choices after a failed selection write', async () => {
 
   fireEvent.press(await screen.findByRole('button', { name: 'Knebøy' }));
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke legge til øvelsen. Prøv igjen.');
+  expect(await screen.findByText('Kunne ikke legge til øvelsen. Prøv igjen.')).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Knebøy' })).toBeOnTheScreen();
   expect(popTo).not.toHaveBeenCalled();
 });
@@ -102,22 +104,43 @@ test('shows progress on the selected exercise while storage is pending', async (
 
   fireEvent.press(await screen.findByRole('button', { name: 'Knebøy' }));
 
-  expect(await screen.findByRole('button', { name: 'Legger til…' })).toHaveProp(
+  expect(await screen.findByRole('button', { name: 'Knebøy' })).toHaveProp(
     'accessibilityState',
     { busy: true, disabled: true },
   );
   await act(async () => finishAdd());
 });
 
+test('focuses search when choices are available and blocks every competing control while saving', async () => {
+  let finishAdd: () => void = () => undefined;
+  const focus = jest.spyOn(TextInput.prototype, 'focus');
+  mockedCount.mockResolvedValue(2);
+  mockedList.mockResolvedValue([{ id: 1, name: 'Knebøy' }, { id: 2, name: 'Markløft' }]);
+  mockedAdd.mockImplementation(() => new Promise<void>((resolve) => { finishAdd = resolve; }));
+  renderScreen();
+
+  const search = await screen.findByLabelText('Søk i øvelser');
+  await waitFor(() => expect(focus).toHaveBeenCalled());
+  fireEvent.press(screen.getByRole('button', { name: 'Knebøy' }));
+
+  expect(search).toHaveProp('editable', false);
+  expect(screen.getByRole('button', { name: 'Markløft' })).toHaveProp('accessibilityState', { busy: false, disabled: true });
+  expect(screen.getByRole('button', { name: 'Opprett øvelse' })).toHaveProp('accessibilityState', { busy: false, disabled: true });
+  expect(screen.getByRole('button', { name: 'Avbryt' })).toHaveProp('accessibilityState', { busy: false, disabled: true });
+  await act(async () => finishAdd());
+});
+
 function renderScreen(navigation: Record<string, jest.Mock> = {}) {
   return render(
-    <DatabaseProvider database={database}>
-      <NavigationContainer>
-        <ExercisePickerScreen
-          navigation={{ popTo: jest.fn(), ...navigation } as never}
-          route={{ params: { workoutId: 9 } } as never}
-        />
-      </NavigationContainer>
-    </DatabaseProvider>,
+    <AppThemeProvider scheme="light">
+      <DatabaseProvider database={database}>
+        <NavigationContainer>
+          <ExercisePickerScreen
+            navigation={{ popTo: jest.fn(), ...navigation } as never}
+            route={{ params: { workoutId: 9 } } as never}
+          />
+        </NavigationContainer>
+      </DatabaseProvider>
+    </AppThemeProvider>,
   );
 }

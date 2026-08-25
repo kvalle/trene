@@ -16,6 +16,7 @@ import { ListContainer } from '../ui/ListContainer';
 import { NavigationRow } from '../ui/NavigationRow';
 import { PageStatus } from '../ui/PageStatus';
 import { SearchField } from '../ui/SearchField';
+import { SelectionRow } from '../ui/SelectionRow';
 import { TextField } from '../ui/TextField';
 
 type CatalogStackParamList = {
@@ -31,6 +32,7 @@ type CatalogStackParamList = {
   ListContainerDetail: undefined;
   NavigationRowDetail: undefined;
   SearchFieldDetail: undefined;
+  SelectionRowDetail: undefined;
   StackExample: undefined;
   ModalExample: undefined;
 };
@@ -131,6 +133,14 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         route: 'SearchFieldDetail',
         testID: 'catalog-item-searchfield',
       },
+      {
+        id: 'selectionrow',
+        name: 'SelectionRow',
+        description: 'Trykkbar rad for å velge ett element, med valgfri fremdrift i etterfølgende plass.',
+        usage: 'Bruk når brukeren skal velge ett eksisterende element fra en liste uten å navigere videre.',
+        route: 'SelectionRowDetail',
+        testID: 'catalog-item-selectionrow',
+      },
     ],
   },
   {
@@ -204,6 +214,7 @@ function CatalogNavigator({
         <Stack.Screen name="ListContainerDetail" component={ListContainerDetailScreen} options={{ title: 'ListContainer' }} />
         <Stack.Screen name="NavigationRowDetail" component={NavigationRowDetailScreen} options={{ title: 'NavigationRow' }} />
         <Stack.Screen name="SearchFieldDetail" component={SearchFieldDetailScreen} options={{ title: 'SearchField' }} />
+        <Stack.Screen name="SelectionRowDetail" component={SelectionRowDetailScreen} options={{ title: 'SelectionRow' }} />
         <Stack.Screen name="StackExample" component={StackExampleScreen} options={{ title: 'Stack' }} />
         <Stack.Screen name="ModalExample" component={ModalExampleScreen} options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack.Navigator>
@@ -756,6 +767,27 @@ function SearchFieldDetailScreen() {
           <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Fokus (trykk for å se)</Text>
           <SearchField autoFocus label="Søk i liste" value="" onChangeText={() => {}} testID="catalog-searchfield-focus" />
         </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+function SelectionRowDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-selectionrow">
+      <DetailHeader
+        name="SelectionRow"
+        description="Trykkbar rad for å velge ett element, med valgfri fremdrift i etterfølgende plass. Tittelen beholdes også mens raden er opptatt."
+        usage="Bruk når brukeren skal velge ett eksisterende element fra en liste uten å navigere videre. Bruk opptatt tilstand mens valget lagres."
+      />
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Tilstander</Text>
+        <ListContainer>
+          <SelectionRow title="Normal" showSeparator onPress={() => {}} testID="catalog-selectionrow-normal" />
+          <SelectionRow title="Deaktivert" disabled showSeparator onPress={() => {}} testID="catalog-selectionrow-disabled" />
+          <SelectionRow title="Opptatt" busy onPress={() => {}} testID="catalog-selectionrow-busy" />
+        </ListContainer>
       </View>
     </ScrollView>
   );
