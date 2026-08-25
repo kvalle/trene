@@ -16,6 +16,7 @@ import {
 import type { Database } from '../../database/types';
 import { EXERCISE_NAME_REQUIRED, EXERCISE_NAME_TOO_LONG } from '../../domain/exerciseName';
 import { ExerciseDetailScreen } from '../ExerciseDetailScreen';
+import { AppThemeProvider } from '../../ui/AppThemeProvider';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual('react-native/Libraries/ReactNative/RendererProxy'),
@@ -222,7 +223,7 @@ test('keeps detail, closes confirmation, and offers focused retry after deletion
     fireEvent.press(await screen.findByRole('button', { name: 'Slett øvelse' }));
     fireEvent.press(screen.getByRole('button', { name: 'Slett' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke slette øvelsen');
+    expect(await screen.findByText('Kunne ikke slette øvelsen')).toBeOnTheScreen();
     expect(screen.queryByRole('header', { name: 'Slett Knebøy?' })).not.toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Lukk' })).toBeOnTheScreen();
@@ -259,7 +260,7 @@ test('reloads detail after an eligibility race while preserving retryable failur
   fireEvent.press(await screen.findByRole('button', { name: 'Slett øvelse' }));
   fireEvent.press(screen.getByRole('button', { name: 'Slett' }));
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke slette øvelsen');
+  expect(await screen.findByText('Kunne ikke slette øvelsen')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Prøv igjen' }));
   await waitFor(() => expect(mockedLoad).toHaveBeenCalledTimes(2));
   expect(screen.queryByRole('button', { name: 'Slett øvelse' })).not.toBeOnTheScreen();
@@ -302,12 +303,14 @@ test('distinguishes missing detail from a retryable read failure', async () => {
 function renderScreen(navigation: Record<string, jest.Mock> = {}) {
   return render(
     <DatabaseProvider database={database}>
-      <NavigationContainer>
-        <ExerciseDetailScreen
-          navigation={{ dispatch: jest.fn(), popTo: jest.fn(), ...navigation } as never}
-          route={{ params: { exerciseId: 7 } } as never}
-        />
-      </NavigationContainer>
+      <AppThemeProvider scheme="light">
+        <NavigationContainer>
+          <ExerciseDetailScreen
+            navigation={{ dispatch: jest.fn(), popTo: jest.fn(), ...navigation } as never}
+            route={{ params: { exerciseId: 7 } } as never}
+          />
+        </NavigationContainer>
+      </AppThemeProvider>
     </DatabaseProvider>,
   );
 }

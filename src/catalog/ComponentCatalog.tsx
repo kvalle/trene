@@ -39,6 +39,7 @@ type CatalogStackParamList = {
   NavigationRowDetail: undefined;
   SearchFieldDetail: undefined;
   SelectionRowDetail: undefined;
+  SectionedDetailDetail: undefined;
   StackExample: undefined;
   ModalExample: undefined;
 };
@@ -176,6 +177,14 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         route: 'SelectionRowDetail',
         testID: 'catalog-item-selectionrow',
       },
+      {
+        id: 'sectioneddetail',
+        name: 'Seksjonert detalj',
+        description: 'Komposisjon av felt, kort, datarader og lokale feiltilstander.',
+        usage: 'Bruk når én ressurs kan endres og samtidig har lesbar, relatert historikk.',
+        route: 'SectionedDetailDetail',
+        testID: 'catalog-item-sectioneddetail',
+      },
     ],
   },
   {
@@ -253,6 +262,7 @@ function CatalogNavigator({
         <Stack.Screen name="NavigationRowDetail" component={NavigationRowDetailScreen} options={{ title: 'NavigationRow' }} />
         <Stack.Screen name="SearchFieldDetail" component={SearchFieldDetailScreen} options={{ title: 'SearchField' }} />
         <Stack.Screen name="SelectionRowDetail" component={SelectionRowDetailScreen} options={{ title: 'SelectionRow' }} />
+        <Stack.Screen name="SectionedDetailDetail" component={SectionedDetailDetailScreen} options={{ title: 'Seksjonert detalj' }} />
         <Stack.Screen name="StackExample" component={StackExampleScreen} options={{ title: 'Stack' }} />
         <Stack.Screen name="ModalExample" component={ModalExampleScreen} options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack.Navigator>
@@ -869,6 +879,39 @@ function SelectionRowDetailScreen() {
           <SelectionRow title="Deaktivert" disabled showSeparator onPress={() => {}} testID="catalog-selectionrow-disabled" />
           <SelectionRow title="Opptatt" busy onPress={() => {}} testID="catalog-selectionrow-busy" />
         </ListContainer>
+      </View>
+    </ScrollView>
+  );
+}
+
+function SectionedDetailDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-sectioneddetail">
+      <DetailHeader
+        name="Seksjonert detalj"
+        description="Komponerer et redigerbart felt med en lesbar historikk uten domenespesifikke komponenter."
+        usage="Bruk når én ressurs har en kort redigeringsoppgave og grupperte, statiske data."
+      />
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Normal</Text>
+        <Text style={[typography.sectionTitle, { color: colors.text }]}>Eksempelnavn</Text>
+        <Text style={[typography.sectionTitle, { color: colors.text }]}>Endre navn</Text>
+        <TextField label="Navn" value="Eksempelnavn" onChangeText={() => {}} testID="catalog-sectioneddetail-field" />
+        <Button title="Lagre navn" onPress={() => {}} />
+        <Text style={[typography.sectionTitle, { color: colors.text }]}>Historikk</Text>
+        <Card>
+          <Text style={[typography.sectionTitle, { color: colors.text }]}>5. august 2026</Text>
+          <DataRow label="Sett 1" value="80 kg · 5 repetisjoner" showSeparator />
+          <DataRow label="Sett 2" value="82,5 kg · 4 repetisjoner" showSeparator />
+        </Card>
+      </View>
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Tom historikk og lokal feil</Text>
+        <Text style={[typography.body, { color: colors.text }]}>Ingen fullførte elementer ennå</Text>
+        <ErrorAlert message="Kunne ikke slette elementet" />
+        <Button title="Prøv igjen" onPress={() => {}} />
+        <Button title="Slett element" variant="destructive" busy onPress={() => {}} />
       </View>
     </ScrollView>
   );
