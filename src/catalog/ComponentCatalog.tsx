@@ -419,14 +419,16 @@ function DataRowDetailScreen() {
 function DialogDetailScreen() {
   const { colors } = useAppTheme();
   const [visible, setVisible] = useState(true);
+  const [busy, setBusy] = useState(false);
   return (
     <ScrollView contentContainerStyle={styles.detail}>
       <DetailHeader name="Dialog" description="Modal beholder for bekreftelse og destruktive handlinger." usage="Bruk når brukeren må ta stilling før den underliggende skjermen kan brukes videre." />
-      <Button title="Vis dialog" variant="secondary" onPress={() => setVisible(true)} />
-      <Dialog visible={visible} title="Slett element?" onRequestClose={() => setVisible(false)}>
+      <Text style={[typography.metadata, { color: colors.muted }]}>Bekreftelsesdialogen viser trygg handling først og destruktiv handling sist. Velg Slett for opptatt tilstand.</Text>
+      <Button title="Vis dialog" variant="secondary" onPress={() => { setBusy(false); setVisible(true); }} />
+      <Dialog visible={visible} title="Slett element?" onRequestClose={() => { if (!busy) setVisible(false); }}>
         <Text style={[typography.body, { color: colors.text }]}>Denne handlingen kan ikke angres.</Text>
-        <Button title="Avbryt" variant="secondary" onPress={() => setVisible(false)} />
-        <Button title="Slett" variant="destructive" onPress={() => setVisible(false)} />
+        <Button title="Avbryt" variant="secondary" disabled={busy} onPress={() => setVisible(false)} />
+        <Button title={busy ? 'Sletter' : 'Slett'} variant="destructive" busy={busy} onPress={() => setBusy(true)} />
       </Dialog>
     </ScrollView>
   );

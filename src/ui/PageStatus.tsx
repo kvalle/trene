@@ -57,7 +57,7 @@ export const PageStatus = forwardRef<View, PageStatusProps>(function PageStatus(
           </Text>
         ) : null}
         {message ? (
-          <Text style={[typography.body, { color: colors.text, textAlign: 'center' }]} allowFontScaling>
+          <Text accessibilityRole={isError ? 'alert' : undefined} style={[typography.body, { color: colors.text, textAlign: 'center' }]} allowFontScaling>
             {message}
           </Text>
         ) : null}

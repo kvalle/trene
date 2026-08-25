@@ -92,6 +92,7 @@ describe('PageStatus', () => {
     expect(el.props.accessibilityLiveRegion).toBe('assertive');
     expect(screen.getByRole('header', { name: 'Trene kunne ikke starte' })).toBeOnTheScreen();
     expect(screen.getByText('Dataene dine er ikke endret.')).toBeOnTheScreen();
+    expect(screen.getByText('Dataene dine er ikke endret.')).toHaveProp('accessibilityRole', 'alert');
     expect(screen.getByText('Hvis problemet fortsetter')).toBeOnTheScreen();
     expect(screen.getByTestId('ps-retry')).toBeOnTheScreen();
     expect(ref.current).not.toBeNull();
