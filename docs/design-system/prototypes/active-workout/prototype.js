@@ -25,7 +25,7 @@ function exercise(name, summary, open, options = {}) {
   const planned = Array.from({ length: plannedCount }, (_, index) => plannedSet(index + 3, index === 0 ? status : '', options.busy && index === 0)).join('');
   return `<article class="card"><button class="exercise-header" data-action="toggle" type="button" aria-expanded="${open}"><span><b>${name}</b><small>${summary}</small></span><span class="disclosure">${open ? '-' : '+'}</span></button><div class="exercise-content"${open ? '' : ' hidden'}><div class="exercise-toolbar">${compactAction('×', 'Fjern øvelse', 'remove-exercise', 'remove-exercise')}</div>${rows}${planned}<div class="add-set-row">${compactAction('+', 'Legg til sett', 'add-set', 'add-set')}</div></div></article>`;
 }
-function setRow(number, value) { return `<div class="set-row" data-set-number="${number}"><span><b>Sett ${number}</b><small>${value}</small></span><span class="set-status"><small>Bekreftet</small>${compactAction('✎', 'Endre', 'edit-set')}</span></div>`; }
+function setRow(number, value) { return `<div class="set-row" data-set-number="${number}"><span><b>Sett ${number}</b><small>${value}</small></span>${compactAction('✎', 'Endre', 'edit-set')}</div>`; }
 function dense() {
   return `<p class="workout-meta">Tirsdag 25. august - startet 09:12</p>${exercise('Benkpress', '2 sett utført, 2 planlagt', true, { rows: setRow(1, '80 kg - 8 repetisjoner') + setRow(2, '80 kg - 8 repetisjoner'), planned: 2 })}${exercise('Knebøy', '0 av 3 sett gjennomført', false)}${exercise('Sittende roing', '1 av 3 sett gjennomført', false)}<div class="workout-actions">${button('Legg til øvelse', 'secondary', 'add')}${button('Fullfør økt', 'primary', 'complete')}${button('Avbryt økt', 'text', 'cancel')}</div>`;
 }
@@ -61,9 +61,19 @@ function bindActions() {
     if (action === 'complete-set') { const form = item.closest('.form-section'); form.outerHTML = setRow(form.dataset.setNumber, '80 kg - 8 repetisjoner'); bindActions(); }
     if (action === 'edit-set') { const row = item.closest('.set-row'); row.outerHTML = plannedSet(row.dataset.setNumber); bindActions(); }
     if (action === 'add-set') { const content = item.closest('.exercise-content'); const count = content.querySelectorAll('[data-set-number]').length + 1; item.closest('.add-set-row').insertAdjacentHTML('beforebegin', plannedSet(count)); bindActions(); }
-    if (action === 'delete-planned') { item.closest('.form-section').remove(); }
+    if (action === 'delete-planned') { item.closest('.form-section').remove(); renumberSets(item.closest('.exercise-content')); }
     if (action === 'toggle') { const expanded = item.getAttribute('aria-expanded') !== 'true'; item.setAttribute('aria-expanded', expanded); item.querySelector('.disclosure').textContent = expanded ? '-' : '+'; item.closest('.card').querySelector('.exercise-content').hidden = !expanded; }
   }));
+}
+function renumberSets(content) {
+  content.querySelectorAll('[data-set-number]').forEach((set, index) => {
+    const number = index + 1;
+    set.dataset.setNumber = number;
+    const rowTitle = set.querySelector('.set-row b');
+    if (rowTitle) rowTitle.textContent = `Sett ${number}`;
+    const numberLabel = set.querySelector('.form-heading span');
+    if (numberLabel) numberLabel.textContent = `Sett ${number}`;
+  });
 }
 function updateScenarioButtons() { document.querySelectorAll('.scenario').forEach((button) => button.classList.toggle('active', button.dataset.scenario === scenario)); }
 document.querySelectorAll('.scenario').forEach((button) => button.addEventListener('click', () => { scenario = button.dataset.scenario; updateScenarioButtons(); render(); }));
