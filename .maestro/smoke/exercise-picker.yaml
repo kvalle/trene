@@ -18,6 +18,7 @@ tags:
 - tapOn:
     id: "create-exercise-submit"
 - pressKey: BACK
+- pressKey: BACK
 
 - tapOn: "Start økt"
 - tapOn: "Legg til øvelse"
