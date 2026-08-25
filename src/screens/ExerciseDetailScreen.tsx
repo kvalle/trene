@@ -1,12 +1,9 @@
-import { usePreventRemove, useTheme } from '@react-navigation/native';
+import { usePreventRemove } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
-  ActivityIndicator,
   findNodeHandle,
-  Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,6 +25,15 @@ import {
 } from '../database/exercises';
 import { validateExerciseName } from '../domain/exerciseName';
 import { formatDateTime, formatLoad } from '../locale';
+import { typography } from '../theme';
+import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
+import { DataRow } from '../ui/DataRow';
+import { Dialog } from '../ui/Dialog';
+import { ErrorAlert } from '../ui/ErrorAlert';
+import { PageStatus } from '../ui/PageStatus';
+import { TextField } from '../ui/TextField';
+import { useAppTheme } from '../ui/AppThemeProvider';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExerciseDetail'>;
 type State =
@@ -38,7 +44,7 @@ type State =
 
 export function ExerciseDetailScreen({ navigation, route }: Props) {
   const database = useDatabase();
-  const { colors } = useTheme();
+  const { colors } = useAppTheme();
   const [state, setState] = useState<State>({ status: 'loading' });
   const [reload, setReload] = useState(0);
   const [draft, setDraft] = useState('');
@@ -151,136 +157,97 @@ export function ExerciseDetailScreen({ navigation, route }: Props) {
   }
 
   if (state.status === 'loading') {
-    return <ActivityIndicator accessibilityLabel="Laster øvelse" style={styles.center} />;
+    return <PageStatus variant="loading" loaderLabel="Laster øvelse" />;
   }
   if (state.status === 'failed') return (
-    <View style={styles.center}>
-      <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>Kunne ikke laste inn</Text>
-      <Text accessibilityRole="alert" style={{ color: colors.notification }}>Kunne ikke laste inn øvelsen.</Text>
-      <Action actionRef={retryRef} label="Prøv igjen" onPress={() => setReload((value) => value + 1)} />
-    </View>
+    <PageStatus
+      variant="error"
+      title="Kunne ikke laste inn"
+      message="Kunne ikke laste inn øvelsen."
+      actionRef={retryRef}
+      actionTitle="Prøv igjen"
+      onAction={() => setReload((value) => value + 1)}
+    />
   );
   if (state.status === 'missing') return (
-    <View style={styles.center}>
-      <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>Finnes ikke lenger</Text>
-      <Action label="Tilbake til øvelser" onPress={() => navigation.popTo('Exercises')} />
-    </View>
+    <PageStatus variant="missing" title="Finnes ikke lenger" actionTitle="Tilbake til øvelser" onAction={() => navigation.popTo('Exercises')} />
   );
 
   const { exercise } = state;
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>{exercise.name}</Text>
+      <Text accessibilityRole="header" style={[typography.screenTitle, { color: colors.text }]}>{exercise.name}</Text>
 
       <View style={styles.section}>
-        <Text accessibilityRole="header" style={[styles.sectionTitle, { color: colors.text }]}>Endre navn</Text>
-        <TextInput
-          accessibilityLabel={renameError ? `Navn. Feil: ${renameError}` : 'Navn'}
-          accessibilityHint={renameError ? 'Rett navnet og prøv igjen' : undefined}
-          accessibilityState={{ disabled: saving || deleting }}
+        <Text accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>Endre navn</Text>
+        <TextField
+          label="Navn"
+          error={renameError}
           editable={!saving && !deleting}
           onChangeText={(value) => { setDraft(value); setRenameError(undefined); }}
           onSubmitEditing={() => void saveName(exercise)}
           ref={inputRef}
           returnKeyType="done"
-          style={[styles.input, { borderColor: renameError ? colors.notification : colors.border, color: colors.text }]}
           value={draft}
         />
-        {renameError && <Text accessibilityRole="alert" style={{ color: colors.notification }}>{renameError}</Text>}
-        <Action disabled={saving || deleting} label={saving ? 'Lagrer navn' : 'Lagre navn'} onPress={() => void saveName(exercise)} />
+        <Button busy={saving} disabled={deleting} title={saving ? 'Lagrer navn' : 'Lagre navn'} onPress={() => void saveName(exercise)} />
       </View>
 
       <View style={styles.section}>
-        <Text accessibilityRole="header" style={[styles.sectionTitle, { color: colors.text }]}>Historikk</Text>
+        <Text accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>Historikk</Text>
         {exercise.history.length === 0 ? (
-          <Text style={{ color: colors.text }}>Ingen fullførte økter med denne øvelsen ennå</Text>
+          <Text style={[typography.body, { color: colors.text }]}>Ingen fullførte økter med denne øvelsen ennå</Text>
         ) : exercise.history.map((workout) => (
-          <View key={workout.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text accessibilityRole="header" style={[styles.workoutTitle, { color: colors.text }]}>
+          <Card key={workout.id}>
+            <Text accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>
               {formatDateTime(new Date(workout.completedAt))}
             </Text>
             {workout.sets.map((set, index) => (
-              <View
-                accessible
-                accessibilityLabel={`Sett ${index + 1}, ${set.repetitions} repetisjoner med ${formatLoad(set.loadKg)} kilogram`}
+              <DataRow
                 key={set.id}
-                style={[styles.set, { borderColor: colors.border }]}
-              >
-                <Text style={[styles.setTitle, { color: colors.text }]}>Sett {index + 1}</Text>
-                <Text style={{ color: colors.text }}>{formatLoad(set.loadKg)} kg · {set.repetitions} repetisjoner</Text>
-              </View>
+                label={`Sett ${index + 1}`}
+                value={`${formatLoad(set.loadKg)} kg · ${set.repetitions} repetisjoner`}
+                accessibilityLabel={`Sett ${index + 1}, ${set.repetitions} repetisjoner med ${formatLoad(set.loadKg)} kilogram`}
+                showSeparator
+              />
             ))}
-          </View>
+          </Card>
         ))}
       </View>
 
       {exercise.canDelete && (
-        <Action actionRef={deleteRef} destructive disabled={saving || deleting} label="Slett øvelse" onPress={() => {
+        <Button ref={deleteRef} variant="destructive" disabled={saving || deleting} title="Slett øvelse" onPress={() => {
           setDeleteFailed(false);
           setDeleteDialogOpen(true);
         }} />
       )}
       {deleteFailed && (
         <View style={styles.failure}>
-          <Text accessibilityRole="alert" style={{ color: colors.notification }}>Kunne ikke slette øvelsen</Text>
-          <Action actionRef={retryRef} label="Prøv igjen" onPress={() => {
+          <ErrorAlert message="Kunne ikke slette øvelsen" />
+          <Button ref={retryRef} title="Prøv igjen" onPress={() => {
             setDeleteFailed(false);
             setReload((value) => value + 1);
           }} />
-          <Action label="Lukk" onPress={() => {
+          <Button title="Lukk" variant="secondary" onPress={() => {
             setDeleteFailed(false);
             requestAnimationFrame(() => focus(deleteRef));
           }} />
         </View>
       )}
-      <Modal animationType="none" onRequestClose={closeDeleteDialog} onShow={() => focus(confirmDeleteRef)} transparent visible={deleteDialogOpen}>
-        <View accessibilityViewIsModal style={styles.modalBackdrop}>
-          <View style={[styles.dialog, { backgroundColor: colors.card }]}>
-            <Text accessibilityRole="header" style={[styles.dialogTitle, { color: colors.text }]}>Slett {exercise.name}?</Text>
-            <Text style={{ color: colors.text }}>Øvelsen slettes permanent. Dette kan ikke angres.</Text>
-            <Action disabled={deleting} label="Avbryt" onPress={closeDeleteDialog} />
-            <Action actionRef={confirmDeleteRef} destructive disabled={deleting} label={deleting ? 'Sletter øvelse' : 'Slett'} onPress={() => void confirmDeletion(exercise)} />
-          </View>
+      <Dialog onRequestClose={closeDeleteDialog} visible={deleteDialogOpen} initialFocusRef={confirmDeleteRef} title={`Slett ${exercise.name}?`}>
+        <Text style={[typography.body, { color: colors.text }]}>Øvelsen slettes permanent. Dette kan ikke angres.</Text>
+        <View style={styles.dialogActions}>
+          <Button disabled={deleting} title="Avbryt" variant="secondary" onPress={closeDeleteDialog} />
+          <Button ref={confirmDeleteRef} busy={deleting} title={deleting ? 'Sletter øvelse' : 'Slett'} variant="destructive" onPress={() => void confirmDeletion(exercise)} />
         </View>
-      </Modal>
+      </Dialog>
     </ScrollView>
-  );
-}
-
-function Action({ actionRef, destructive = false, disabled = false, label, onPress }: {
-  actionRef?: React.RefObject<View | null>; destructive?: boolean; disabled?: boolean; label: string; onPress: () => void;
-}) {
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ busy: disabled && /Lagrer|Sletter/.test(label), disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      ref={actionRef}
-      style={[styles.button, { backgroundColor: destructive ? colors.notification : colors.primary }, disabled && styles.disabled]}
-    >
-      <Text style={[styles.buttonText, { color: colors.background }]}>{label}</Text>
-    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, gap: 24, padding: 20 },
-  center: { alignItems: 'center', flex: 1, gap: 20, justifyContent: 'center', padding: 24 },
-  title: { fontSize: 30, fontWeight: '700' },
   section: { gap: 12 },
-  sectionTitle: { fontSize: 22, fontWeight: '700' },
-  input: { borderRadius: 12, borderWidth: 1, fontSize: 18, minHeight: 52, paddingHorizontal: 14 },
-  card: { borderRadius: 16, borderWidth: 1, gap: 12, padding: 16 },
-  workoutTitle: { fontSize: 18, fontWeight: '700' },
-  set: { borderTopWidth: 1, gap: 4, paddingTop: 12 },
-  setTitle: { fontSize: 16, fontWeight: '600' },
-  button: { alignItems: 'center', borderRadius: 13, justifyContent: 'center', minHeight: 50, paddingHorizontal: 18 },
-  buttonText: { fontSize: 17, fontWeight: '700' },
-  disabled: { opacity: 0.45 },
   failure: { gap: 10 },
-  modalBackdrop: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.55)', flex: 1, justifyContent: 'center', padding: 24 },
-  dialog: { borderRadius: 16, gap: 16, maxWidth: 440, padding: 24, width: '100%' },
-  dialogTitle: { fontSize: 24, fontWeight: '700' },
+  dialogActions: { gap: 12 },
 });
