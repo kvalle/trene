@@ -9,6 +9,7 @@
     "catalog:android": "sh scripts/run-catalog.sh --android",
     "catalog:ios": "sh scripts/run-catalog.sh --ios",
     "prototype:components": "printf 'Designsystemet kjorer pa http://localhost:4174\n' && python3 -m http.server 4174 --directory docs/design-system/catalog",
+    "prototype:active-workout": "printf 'Active Workout-prototypen kjorer pa http://localhost:4175\n' && python3 -m http.server 4175 --directory docs/design-system/prototypes/active-workout",
     "start:android": "sh scripts/start-android-metro.sh",
     "android": "expo run:android",
     "ios": "expo run:ios",

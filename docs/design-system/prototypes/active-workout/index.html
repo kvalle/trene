@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="nb" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trene - Active Workout prototype</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="prototype-shell">
+    <aside class="control-panel">
+      <p class="eyebrow">Trene designsystem</p>
+      <h1>Active Workout</h1>
+      <p class="summary">Interaktiv prototype for godkjenning. Den endrer ikke produksjonsappen.</p>
+
+      <fieldset>
+        <legend>Eksempel</legend>
+        <button class="scenario active" data-scenario="dense" type="button">Full treningsøkt</button>
+        <button class="scenario" data-scenario="empty" type="button">Tom treningsøkt</button>
+        <button class="scenario" data-scenario="error" type="button">Lagringsfeil</button>
+        <button class="scenario" data-scenario="busy" type="button">Lokal lagring</button>
+        <button class="scenario" data-scenario="large" type="button">Stor tekst</button>
+      </fieldset>
+
+      <fieldset>
+        <legend>Visning</legend>
+        <button id="theme-toggle" class="control-button" type="button">Mørk modus</button>
+        <button id="keyboard-toggle" class="control-button" type="button">Vis tastatur</button>
+      </fieldset>
+
+      <section class="review-notes">
+        <h2>Se etter</h2>
+        <ul>
+          <li>Tydelige handlinger for sett, øvelse og økt</li>
+          <li>Hva som kan endres mens noe lagres</li>
+          <li>Dialogenes rekkefølge og konsekvenser</li>
+          <li>Lesbarhet med tett innhold og stor tekst</li>
+        </ul>
+      </section>
+    </aside>
+
+    <section class="preview-panel">
+      <header class="preview-header">
+        <div>
+          <p class="eyebrow">Prototype - ticket #165</p>
+          <h2 id="scenario-title">Full treningsøkt</h2>
+          <p id="scenario-description">Flere øvelser, utvidede og kollapsede kort, og planlagte sett.</p>
+        </div>
+        <p class="prototype-status">Kun forslag. Krever eksplisitt godkjenning.</p>
+      </header>
+
+      <div class="phone-wrap">
+        <section class="phone" aria-label="Trene Active Workout prototype">
+          <div class="status-bar"><span>09:41</span><span>5G 100%</span></div>
+          <header class="app-header"><button class="icon-button" data-action="back" type="button" aria-label="Tilbake">‹</button><h3>Treningsøkt</h3><span></span></header>
+          <div id="screen" class="screen"></div>
+          <div id="keyboard" class="keyboard" hidden><div>q w e r t y u i o p å</div><div>a s d f g h j k l ø æ</div><div>⇧ z x c v b n m ⌫</div><div class="keyboard-actions"><span>123</span><span>mellomrom</span><span>ferdig</span></div></div>
+          <div id="dialog-layer" class="dialog-layer" hidden></div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script src="prototype.js"></script>
+</body>
+</html>
