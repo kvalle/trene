@@ -47,6 +47,7 @@ const groups = [
 const screen = document.querySelector('#screen');
 const dialogLayer = document.querySelector('#dialog-layer');
 let selected = 'stack-header';
+let restoreTimer;
 
 const button = (label, kind = 'primary', extra = '') => `<button class="button ${kind} ${extra}" type="button"${extra.includes('disabled') ? ' disabled' : ''}>${label}</button>`;
 const row = (name, meta, extra = '') => `<button class="list-row ${extra}" type="button"><span><b>${name}</b>${meta ? `<small>${meta}</small>` : ''}</span><i class="chevron">›</i></button>`;
@@ -138,6 +139,7 @@ function restoreDialog(stage) {
 }
 
 function showRestoreDialog(stage) {
+  window.clearTimeout(restoreTimer);
   dialogLayer.innerHTML = restoreDialog(stage);
   dialogLayer.hidden = false;
   const primary = dialogLayer.querySelector('.primary, .danger');
@@ -147,11 +149,17 @@ function showRestoreDialog(stage) {
   if (stage === 'preview' && primary) primary.addEventListener('click', () => showRestoreDialog('current-data'));
   if (stage === 'current-data' && primary) primary.addEventListener('click', () => showRestoreDialog('confirm'));
   if (stage === 'confirm' && primary) primary.addEventListener('click', () => showRestoreDialog('committing'));
-  if (stage === 'committing') window.setTimeout(() => showRestoreDialog('success'), 1300);
+  if (stage === 'committing') {
+    const result = new URLSearchParams(location.search).get('restore-result');
+    restoreTimer = window.setTimeout(() => showRestoreDialog(
+      result === 'recoverable-error' || result === 'safe-stop' ? result : 'success',
+    ), 1300);
+  }
   if ((stage === 'success' || stage === 'recoverable-error') && primary) primary.addEventListener('click', closeRestoreDialog);
 }
 
 function closeRestoreDialog() {
+  window.clearTimeout(restoreTimer);
   dialogLayer.hidden = true;
 }
 function showDialog(kind) {
@@ -196,6 +204,7 @@ function selectComponent(id) {
   const entry = groups.flatMap(([, items]) => items).find(([itemId]) => itemId === id);
   if (!entry) return;
   selected = id;
+  window.clearTimeout(restoreTimer);
   const [, name, description, usage, exampleId, target] = entry;
   const [title, hasBack, render, dialog] = examples[exampleId];
   document.querySelector('#component-category').textContent = groups.find(([, items]) => items.includes(entry))[0];
