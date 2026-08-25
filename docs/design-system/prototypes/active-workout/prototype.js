@@ -13,22 +13,23 @@ const scenarioCopy = {
 };
 
 function button(label, kind, action = '') { return `<button class="button ${kind}" ${action ? `data-action="${action}"` : ''} type="button">${label}</button>`; }
+function compactAction(icon, label, action, extra = '') { return `<button class="compact-action ${extra}" data-action="${action}" type="button"><span aria-hidden="true">${icon}</span>${label}</button>`; }
 function plannedSet(number, status = '', busy = false) {
   const complete = busy ? '<button class="button primary busy" type="button" disabled><span class="spinner"></span>Lagrer</button>' : '<button class="button primary" data-action="complete-set" type="button">Utført</button>';
-  return `<section class="form-section" data-set-number="${number}"><div class="form-heading"><b>Planlagt sett</b><span>Sett ${number}</span></div><div class="fields"><label class="field"><span>Belastning (kg)</span><input inputmode="decimal" value="80"></label><label class="field"><span>Repetisjoner</span><input inputmode="numeric" value="8"></label></div>${status}<div class="set-actions"><button class="compact-action remove-set" data-action="delete-planned" type="button">Fjern sett</button>${complete}</div></section>`;
+  return `<section class="form-section" data-set-number="${number}"><div class="form-heading"><b>Planlagt sett</b><span>Sett ${number}</span></div><div class="fields"><label class="field"><span>Belastning (kg)</span><input inputmode="decimal" value="80"></label><label class="field"><span>Repetisjoner</span><input inputmode="numeric" value="8"></label></div>${status}<div class="set-actions">${compactAction('×', 'Fjern sett', 'delete-planned', 'remove-set')}${complete}</div></section>`;
 }
 function exercise(name, summary, open, options = {}) {
   const rows = options.rows || '';
   const status = options.error ? '<aside class="set-feedback failure" role="alert"><h2>Kunne ikke lagre sett 3</h2><p>Settet er fortsatt planlagt. Prøv igjen når du er klar.</p></aside>' : '';
   const plannedCount = options.planned || 0;
   const planned = Array.from({ length: plannedCount }, (_, index) => plannedSet(index + 3, index === 0 ? status : '', options.busy && index === 0)).join('');
-  return `<article class="card"><button class="exercise-header" data-action="toggle" type="button" aria-expanded="${open}"><span><b>${name}</b><small>${summary}</small></span><span class="disclosure">${open ? '-' : '+'}</span></button><div class="exercise-content"${open ? '' : ' hidden'}><div class="exercise-toolbar"><button class="compact-action remove-exercise" data-action="remove-exercise" type="button">Fjern øvelse</button></div>${rows}${planned}<button class="compact-action add-set" data-action="add-set" type="button">+ Legg til sett</button></div></article>`;
+  return `<article class="card"><button class="exercise-header" data-action="toggle" type="button" aria-expanded="${open}"><span><b>${name}</b><small>${summary}</small></span><span class="disclosure">${open ? '-' : '+'}</span></button><div class="exercise-content"${open ? '' : ' hidden'}><div class="exercise-toolbar">${compactAction('×', 'Fjern øvelse', 'remove-exercise', 'remove-exercise')}</div>${rows}${planned}<div class="add-set-row">${compactAction('+', 'Legg til sett', 'add-set', 'add-set')}</div></div></article>`;
 }
-function setRow(number, value) { return `<div class="set-row" data-set-number="${number}"><span><b>Sett ${number}</b><small>${value}</small></span><span class="set-status"><small>Bekreftet</small><button class="compact-action" data-action="edit-set" type="button">Endre</button></span></div>`; }
+function setRow(number, value) { return `<div class="set-row" data-set-number="${number}"><span><b>Sett ${number}</b><small>${value}</small></span><span class="set-status"><small>Bekreftet</small>${compactAction('✎', 'Endre', 'edit-set')}</span></div>`; }
 function dense() {
   return `<p class="workout-meta">Tirsdag 25. august - startet 09:12</p>${exercise('Benkpress', '2 bekreftede og 2 planlagte sett', true, { rows: setRow(1, '80 kg - 8 repetisjoner') + setRow(2, '80 kg - 8 repetisjoner'), planned: 2 })}${exercise('Knebøy', '0 av 3 sett gjennomført', false)}${exercise('Sittende roing', '1 av 3 sett gjennomført', false)}<div class="workout-actions">${button('Legg til øvelse', 'secondary', 'add')}${button('Fullfør økt', 'primary', 'complete')}${button('Avbryt økt', 'text', 'cancel')}</div>`;
 }
-function empty() { return `<section class="empty"><h2>Hva vil du trene?</h2><p>Legg til den første øvelsen for å starte registreringen av sett.</p>${button('Legg til øvelse', 'primary', 'add')}<button class="compact-action" data-action="cancel" type="button">Avbryt økt</button></section>`; }
+function empty() { return `<section class="empty"><h2>Hva vil du trene?</h2><p>Legg til den første øvelsen for å starte registreringen av sett.</p>${button('Legg til øvelse', 'primary', 'add')}${compactAction('×', 'Avbryt økt', 'cancel')}</section>`; }
 function error() { return `<p class="workout-meta">Tirsdag 25. august - startet 09:12</p>${exercise('Benkpress', '2 bekreftede og 1 planlagt sett', true, { rows: setRow(1, '80 kg - 8 repetisjoner') + setRow(2, '80 kg - 8 repetisjoner'), planned: 1, error: true })}${exercise('Knebøy', '0 av 3 sett gjennomført', false)}<div class="workout-actions">${button('Legg til øvelse', 'secondary', 'add')}${button('Fullfør økt', 'primary', 'complete')}${button('Avbryt økt', 'text', 'cancel')}</div>`; }
 function busy() { return `<p class="workout-meta">Tirsdag 25. august - startet 09:12</p>${exercise('Benkpress', '2 bekreftede og 1 planlagt sett', true, { rows: setRow(1, '80 kg - 8 repetisjoner') + setRow(2, '80 kg - 8 repetisjoner'), planned: 1, busy: true })}${exercise('Knebøy', '0 av 3 sett gjennomført', false)}<div class="workout-actions">${button('Legg til øvelse', 'secondary', 'add')}${button('Fullfør økt', 'primary', 'complete')}${button('Avbryt økt', 'text', 'cancel')}</div>`; }
 function render() {
@@ -60,6 +61,7 @@ function bindActions() {
     if (action === 'retry') { scenario = 'busy'; updateScenarioButtons(); render(); }
     if (action === 'complete-set') { const form = item.closest('.form-section'); form.outerHTML = setRow(form.dataset.setNumber, '80 kg - 8 repetisjoner'); bindActions(); }
     if (action === 'edit-set') { const row = item.closest('.set-row'); row.outerHTML = plannedSet(row.dataset.setNumber); bindActions(); }
+    if (action === 'add-set') { const content = item.closest('.exercise-content'); const count = content.querySelectorAll('[data-set-number]').length + 1; item.closest('.add-set-row').insertAdjacentHTML('beforebegin', plannedSet(count)); bindActions(); }
     if (action === 'toggle') { const expanded = item.getAttribute('aria-expanded') !== 'true'; item.setAttribute('aria-expanded', expanded); item.querySelector('.disclosure').textContent = expanded ? '-' : '+'; item.closest('.card').querySelector('.exercise-content').hidden = !expanded; }
   }));
 }
