@@ -27,11 +27,11 @@ function exercise(name, summary, open, options = {}) {
 }
 function setRow(number, value) { return `<div class="set-row" data-set-number="${number}"><span><b>Sett ${number}</b><small>${value}</small></span><span class="set-status"><small>Bekreftet</small>${compactAction('✎', 'Endre', 'edit-set')}</span></div>`; }
 function dense() {
-  return `<p class="workout-meta">Tirsdag 25. august - startet 09:12</p>${exercise('Benkpress', '2 bekreftede og 2 planlagte sett', true, { rows: setRow(1, '80 kg - 8 repetisjoner') + setRow(2, '80 kg - 8 repetisjoner'), planned: 2 })}${exercise('Knebøy', '0 av 3 sett gjennomført', false)}${exercise('Sittende roing', '1 av 3 sett gjennomført', false)}<div class="workout-actions">${button('Legg til øvelse', 'secondary', 'add')}${button('Fullfør økt', 'primary', 'complete')}${button('Avbryt økt', 'text', 'cancel')}</div>`;
+  return `<p class="workout-meta">Tirsdag 25. august - startet 09:12</p>${exercise('Benkpress', '2 sett utført, 2 planlagt', true, { rows: setRow(1, '80 kg - 8 repetisjoner') + setRow(2, '80 kg - 8 repetisjoner'), planned: 2 })}${exercise('Knebøy', '0 av 3 sett gjennomført', false)}${exercise('Sittende roing', '1 av 3 sett gjennomført', false)}<div class="workout-actions">${button('Legg til øvelse', 'secondary', 'add')}${button('Fullfør økt', 'primary', 'complete')}${button('Avbryt økt', 'text', 'cancel')}</div>`;
 }
 function empty() { return `<section class="empty"><h2>Hva vil du trene?</h2><p>Legg til den første øvelsen for å starte registreringen av sett.</p>${button('Legg til øvelse', 'primary', 'add')}${compactAction('×', 'Avbryt økt', 'cancel')}</section>`; }
-function error() { return `<p class="workout-meta">Tirsdag 25. august - startet 09:12</p>${exercise('Benkpress', '2 bekreftede og 1 planlagt sett', true, { rows: setRow(1, '80 kg - 8 repetisjoner') + setRow(2, '80 kg - 8 repetisjoner'), planned: 1, error: true })}${exercise('Knebøy', '0 av 3 sett gjennomført', false)}<div class="workout-actions">${button('Legg til øvelse', 'secondary', 'add')}${button('Fullfør økt', 'primary', 'complete')}${button('Avbryt økt', 'text', 'cancel')}</div>`; }
-function busy() { return `<p class="workout-meta">Tirsdag 25. august - startet 09:12</p>${exercise('Benkpress', '2 bekreftede og 1 planlagt sett', true, { rows: setRow(1, '80 kg - 8 repetisjoner') + setRow(2, '80 kg - 8 repetisjoner'), planned: 1, busy: true })}${exercise('Knebøy', '0 av 3 sett gjennomført', false)}<div class="workout-actions">${button('Legg til øvelse', 'secondary', 'add')}${button('Fullfør økt', 'primary', 'complete')}${button('Avbryt økt', 'text', 'cancel')}</div>`; }
+function error() { return `<p class="workout-meta">Tirsdag 25. august - startet 09:12</p>${exercise('Benkpress', '2 sett utført, 1 planlagt', true, { rows: setRow(1, '80 kg - 8 repetisjoner') + setRow(2, '80 kg - 8 repetisjoner'), planned: 1, error: true })}${exercise('Knebøy', '0 av 3 sett gjennomført', false)}<div class="workout-actions">${button('Legg til øvelse', 'secondary', 'add')}${button('Fullfør økt', 'primary', 'complete')}${button('Avbryt økt', 'text', 'cancel')}</div>`; }
+function busy() { return `<p class="workout-meta">Tirsdag 25. august - startet 09:12</p>${exercise('Benkpress', '2 sett utført, 1 planlagt', true, { rows: setRow(1, '80 kg - 8 repetisjoner') + setRow(2, '80 kg - 8 repetisjoner'), planned: 1, busy: true })}${exercise('Knebøy', '0 av 3 sett gjennomført', false)}<div class="workout-actions">${button('Legg til øvelse', 'secondary', 'add')}${button('Fullfør økt', 'primary', 'complete')}${button('Avbryt økt', 'text', 'cancel')}</div>`; }
 function render() {
   const [title, description] = scenarioCopy[scenario];
   document.querySelector('#scenario-title').textContent = title;
@@ -45,7 +45,6 @@ function showDialog(kind) {
     complete: ['Fullfør økten?', 'To øvelser har planlagte sett som ikke blir med i historikken.', 'Fortsett økten', 'Fullfør økt', 'primary'],
     cancel: ['Avbryt treningsøkten?', 'Alle registrerte sett i denne økten slettes. Dette kan ikke angres.', 'Fortsett økten', 'Avbryt og slett', 'danger'],
     add: ['Legg til øvelse', 'Øvelsesvelgeren er utenfor denne prototypen. Handlingen er plassert her for å vurdere øktens hierarki.', 'Avbryt', 'Vis valg', 'primary'],
-    'delete-planned': ['Fjern planlagt sett?', 'Det planlagte settet er ikke bekreftet og fjernes fra denne øvelsen.', 'Behold plan', 'Fjern plan', 'secondary'],
     'remove-exercise': ['Fjern øvelse fra økten?', 'Øvelsen og settene i denne pågående økten fjernes. Historikken endres ikke.', 'Behold øvelse', 'Fjern øvelse', 'danger'],
   };
   const [title, copy, safe, confirm, kindClass] = dialogs[kind];
@@ -57,11 +56,12 @@ function closeDialog() { dialogLayer.hidden = true; }
 function bindActions() {
   screen.querySelectorAll('[data-action]').forEach((item) => item.addEventListener('click', () => {
     const action = item.dataset.action;
-    if (['complete', 'cancel', 'add', 'delete-planned', 'remove-exercise'].includes(action)) showDialog(action);
+    if (['complete', 'cancel', 'add', 'remove-exercise'].includes(action)) showDialog(action);
     if (action === 'retry') { scenario = 'busy'; updateScenarioButtons(); render(); }
     if (action === 'complete-set') { const form = item.closest('.form-section'); form.outerHTML = setRow(form.dataset.setNumber, '80 kg - 8 repetisjoner'); bindActions(); }
     if (action === 'edit-set') { const row = item.closest('.set-row'); row.outerHTML = plannedSet(row.dataset.setNumber); bindActions(); }
     if (action === 'add-set') { const content = item.closest('.exercise-content'); const count = content.querySelectorAll('[data-set-number]').length + 1; item.closest('.add-set-row').insertAdjacentHTML('beforebegin', plannedSet(count)); bindActions(); }
+    if (action === 'delete-planned') { item.closest('.form-section').remove(); }
     if (action === 'toggle') { const expanded = item.getAttribute('aria-expanded') !== 'true'; item.setAttribute('aria-expanded', expanded); item.querySelector('.disclosure').textContent = expanded ? '-' : '+'; item.closest('.card').querySelector('.exercise-content').hidden = !expanded; }
   }));
 }
