@@ -7,6 +7,8 @@ import { TextField } from '../TextField';
 import { FieldError } from '../FieldError';
 import { ListContainer } from '../ListContainer';
 import { NavigationRow } from '../NavigationRow';
+import { Card } from '../Card';
+import { DataRow } from '../DataRow';
 import { AppThemeProvider } from '../AppThemeProvider';
 
 function renderWithTheme(ui: React.ReactElement) {
@@ -174,5 +176,13 @@ describe('NavigationRow', () => {
 
     expect(screen.getByTestId('metadata-row')).toHaveProp('accessibilityLabel', 'Benkpress, Brukt i 1 økt');
     expect(screen.getByText('Brukt i 1 økt')).toBeOnTheScreen();
+  });
+});
+
+describe('Card and DataRow', () => {
+  it('groups static data and exposes its accessible summary', () => {
+    renderWithTheme(<Card testID="card"><DataRow label="Sett 1" value="80 kg · 5 repetisjoner" testID="row" /></Card>);
+    expect(screen.getByTestId('card')).toBeOnTheScreen();
+    expect(screen.getByTestId('row')).toHaveProp('accessibilityLabel', 'Sett 1, 80 kg · 5 repetisjoner');
   });
 });

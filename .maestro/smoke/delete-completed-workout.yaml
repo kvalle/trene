@@ -1,0 +1,39 @@
+appId: com.kjetilvalle.trene
+name: Delete a completed workout
+tags:
+  - smoke
+  - android
+---
+- launchApp
+
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Start økt"
+- tapOn: "Legg til øvelse"
+- tapOn: "Opprett første øvelse"
+- tapOn:
+    id: "exercise-name-input"
+- setClipboard: "Knebøy"
+- pasteText
+- tapOn:
+    id: "create-exercise-submit"
+- tapOn: "Belastning"
+- inputText: "80"
+- tapOn: "Repetisjoner"
+- inputText: "5"
+- tapOn: "Bekreft"
+- tapOn: "Ferdig"
+- tapOn: "Fullfør økt"
+- assertVisible: "Fullført økt"
+
+# Cancellation keeps the completed workout available.
+- tapOn: "Slett økt"
+- assertVisible: "Slett fullført økt?"
+- tapOn: "Avbryt"
+- assertVisible: "Fullført økt"
+
+# The destructive confirmation removes it and returns to empty history.
+- tapOn: "Slett økt"
+- tapOn: "Slett"
+- assertVisible: "Ingen fullførte økter ennå"

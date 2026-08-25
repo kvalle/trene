@@ -6,6 +6,7 @@ import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
 import { deleteCompletedWorkout, loadCompletedWorkout } from '../../database/workouts';
 import { CompletedWorkoutScreen } from '../CompletedWorkoutScreen';
+import { AppThemeProvider } from '../../ui/AppThemeProvider';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual('react-native/Libraries/ReactNative/RendererProxy'),
@@ -117,7 +118,7 @@ test('keeps detail, closes confirmation, and offers focused retry after deletion
   fireEvent.press(await screen.findByRole('button', { name: 'Slett økt' }));
   fireEvent.press(screen.getByRole('button', { name: 'Slett' }));
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke slette økten');
+  expect(await screen.findByText('Kunne ikke slette økten')).toBeOnTheScreen();
   expect(screen.queryByRole('header', { name: 'Slett fullført økt?' })).not.toBeOnTheScreen();
   expect(screen.getByRole('header', { name: 'Fullført økt' })).toBeOnTheScreen();
   expect(announce).toHaveBeenCalledWith('Kunne ikke slette økten. Prøv igjen.');
@@ -172,13 +173,15 @@ test('uses ordinary stack Back when opened from history', async () => {
 
 function renderScreen(navigation: Record<string, jest.Mock> = {}, fromCompletion = true) {
   return render(
-    <DatabaseProvider database={database}>
-      <NavigationContainer>
-        <CompletedWorkoutScreen
-          navigation={{ dispatch: jest.fn(), popTo: jest.fn(), replace: jest.fn(), ...navigation } as never}
-          route={{ params: { workoutId: 3, fromCompletion } } as never}
-        />
-      </NavigationContainer>
-    </DatabaseProvider>,
+    <AppThemeProvider>
+      <DatabaseProvider database={database}>
+        <NavigationContainer>
+          <CompletedWorkoutScreen
+            navigation={{ dispatch: jest.fn(), popTo: jest.fn(), replace: jest.fn(), ...navigation } as never}
+            route={{ params: { workoutId: 3, fromCompletion } } as never}
+          />
+        </NavigationContainer>
+      </DatabaseProvider>
+    </AppThemeProvider>,
   );
 }

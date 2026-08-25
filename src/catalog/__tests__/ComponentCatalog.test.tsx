@@ -29,6 +29,7 @@ it('renders production theme contexts and switches theme', () => {
   // overview groups and components
   expect(screen.getByText('HANDLINGER')).toBeOnTheScreen();
   expect(screen.getByText('Button')).toBeOnTheScreen();
+  expect(screen.getByText('Dialog')).toBeOnTheScreen();
   expect(screen.getByText('SKJEMA')).toBeOnTheScreen();
   expect(screen.getByText('TextField')).toBeOnTheScreen();
   expect(screen.getByText('FieldError')).toBeOnTheScreen();
@@ -41,9 +42,15 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('Loader')).toBeOnTheScreen();
   expect(screen.getByText('ErrorAlert')).toBeOnTheScreen();
   expect(screen.getByText('SIDEVISNINGER')).toBeOnTheScreen();
+  expect(screen.getByText('LISTER OG BEHOLDERE')).toBeOnTheScreen();
+  expect(screen.getByText('Card')).toBeOnTheScreen();
+  expect(screen.getByText('DataRow')).toBeOnTheScreen();
   expect(screen.getByText('PageStatus')).toBeOnTheScreen();
   // detail screens are mounted via mock as text fallbacks
   expect(screen.getByText('ButtonDetail')).toBeOnTheScreen();
+  expect(screen.getByText('CardDetail')).toBeOnTheScreen();
+  expect(screen.getByText('DataRowDetail')).toBeOnTheScreen();
+  expect(screen.getByText('DialogDetail')).toBeOnTheScreen();
   expect(screen.getByText('TextFieldDetail')).toBeOnTheScreen();
   expect(screen.getByText('FieldErrorDetail')).toBeOnTheScreen();
   expect(screen.getByText('AppShellDetail')).toBeOnTheScreen();
