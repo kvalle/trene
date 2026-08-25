@@ -223,7 +223,7 @@ test('keeps detail, closes confirmation, and offers focused retry after deletion
     fireEvent.press(await screen.findByRole('button', { name: 'Slett øvelse' }));
     fireEvent.press(screen.getByRole('button', { name: 'Slett' }));
 
-    expect(await screen.findByText('Kunne ikke slette øvelsen')).toBeOnTheScreen();
+    expect(await screen.findByRole('alert')).toHaveTextContent('!Kunne ikke slette øvelsen');
     expect(screen.queryByRole('header', { name: 'Slett Knebøy?' })).not.toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Lukk' })).toBeOnTheScreen();
@@ -260,7 +260,7 @@ test('reloads detail after an eligibility race while preserving retryable failur
   fireEvent.press(await screen.findByRole('button', { name: 'Slett øvelse' }));
   fireEvent.press(screen.getByRole('button', { name: 'Slett' }));
 
-  expect(await screen.findByText('Kunne ikke slette øvelsen')).toBeOnTheScreen();
+  expect(await screen.findByRole('alert')).toHaveTextContent('!Kunne ikke slette øvelsen');
   fireEvent.press(screen.getByRole('button', { name: 'Prøv igjen' }));
   await waitFor(() => expect(mockedLoad).toHaveBeenCalledTimes(2));
   expect(screen.queryByRole('button', { name: 'Slett øvelse' })).not.toBeOnTheScreen();
