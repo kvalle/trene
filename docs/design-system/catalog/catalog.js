@@ -47,6 +47,7 @@ const groups = [
 const screen = document.querySelector('#screen');
 const dialogLayer = document.querySelector('#dialog-layer');
 let selected = 'stack-header';
+let restoreTimer;
 
 const button = (label, kind = 'primary', extra = '') => `<button class="button ${kind} ${extra}" type="button"${extra.includes('disabled') ? ' disabled' : ''}>${label}</button>`;
 const row = (name, meta, extra = '') => `<button class="list-row ${extra}" type="button"><span><b>${name}</b>${meta ? `<small>${meta}</small>` : ''}</span><i class="chevron">›</i></button>`;
@@ -80,7 +81,7 @@ function completed() {
   return `<h1 class="page-title">Fullført økt</h1><p class="timestamp">Lørdag 22. august 2026 kl. 08:42</p><article class="card result-card"><h3>Benkpress</h3><div class="result-set"><b>Sett 1</b><span>80 kg · 8 repetisjoner</span></div><div class="result-set"><b>Sett 2</b><span>80 kg · 8 repetisjoner</span></div><div class="result-set"><b>Sett 3</b><span>80 kg · 7 repetisjoner</span></div></article>${button('Slett økt', 'danger')}${button('Tilbake til forsiden')}`;
 }
 function data(busy = false) {
-  return `<h1 class="page-title">Dine data</h1><p class="intro">Lag en fil med alle øvelser og treningsøkter i Trene.</p><aside class="notice"><h3>Filen inneholder treningsdata</h3><p>Sikkerhetskopien er ikke kryptert av Trene. Oppbevar og del den på en trygg måte.</p></aside>${button(busy ? '<span class="spinner"></span>Lager sikkerhetskopi' : 'Lag sikkerhetskopi', 'primary', busy ? 'busy' : '')}${button('Gjenopprett fra fil', 'secondary', busy ? 'disabled' : '')}`;
+  return `<h1 class="page-title">Dine data</h1><p class="intro">Lag en fil med alle øvelser og treningsøkter i Trene.</p><aside class="notice"><h3>Filen inneholder treningsdata</h3><p>Sikkerhetskopien er ikke kryptert av Trene. Oppbevar og del den på en trygg måte.</p></aside>${button(busy ? '<span class="spinner"></span>Lager sikkerhetskopi' : 'Lag sikkerhetskopi', 'primary', busy ? 'busy' : '')}<button class="button secondary" type="button" data-restore-open>Gjenopprett fra fil</button>`;
 }
 function detail() {
   return `<h1 class="page-title">Benkpress</h1><section><h2>Endre navn</h2>${field('Navn', 'Benkpress')}${button('Lagre navn')}</section><section><h2>Historikk</h2><article class="card"><h3>22. august 2026</h3><div class="result-set"><b>Sett 1</b><span>80 kg · 8 repetisjoner</span></div><div class="result-set"><b>Sett 2</b><span>80 kg · 8 repetisjoner</span></div></article></section>${button('Slett øvelse', 'danger')}`;
@@ -116,7 +117,50 @@ function pageStates() {
   return `<h1 class="page-title">Sidestatus</h1><p class="intro">Samme sentrerte oppsett med innhold tilpasset årsaken.</p><div class="page-state-gallery"><section class="state-sample"><span class="state-kind">Laster</span><span class="spinner large-spinner"></span><b>Laster øvelser</b></section><section class="state-sample"><span class="state-kind">Tom</span><b>Ingen fullførte økter ennå</b><small>Fullfør en økt for å se den her.</small><span class="sample-action">Start økt</span></section><section class="state-sample"><span class="state-kind">Ingen treff</span><b>Ingen øvelser funnet</b><small>Prøv et annet søk eller opprett en ny øvelse.</small><span class="sample-action">Opprett øvelse</span></section><section class="state-sample error-sample"><span class="state-kind">Feil</span>${errorIcon}<b>Kunne ikke laste inn</b><small>Dataene dine er ikke endret.</small><span class="sample-action">Prøv igjen</span></section><section class="state-sample"><span class="state-kind">Mangler</span><b>Økten finnes ikke lenger</b><small>Den kan ha blitt slettet.</small><span class="sample-action">Tilbake</span></section></div>`;
 }
 function dialogAnatomy() {
-  return `<h1 class="page-title">Dialog</h1><p class="intro">Grunnkomponenten kan komponeres for ulike arbeidsflyter.</p><section class="card dialog-examples"><div><span class="variant-label">Flertrinns eksempel</span><h3>Kontroller sikkerhetskopien</h3><p>Opprettet fredag 21. august 2026 kl. 20:14</p><div class="counts"><b>24 treningsøkter</b><b>8 øvelser</b></div><p>Ingenting er gjenopprettet ennå.</p><div class="button-row">${button('Avbryt', 'secondary')}${button('Fortsett')}</div></div><div class="locked-example"><span class="variant-label">Ikke-avvisbart feileksempel</span>${errorIcon}<h3>Trene kan ikke åpne dataene trygt</h3><p>Gjenopprettingen ble avbrutt. Ikke slett eller installer appen på nytt.</p><small>Ingen handlinger vises når videre bruk kan skade data.</small></div></section>`;
+  return data();
+}
+
+function restoreDialog(stage) {
+  const backupCounts = '<div class="restore-data-rows"><div class="data-row"><span><b>Treningsøkter</b><small>24 i sikkerhetskopien</small></span></div><div class="data-row"><span><b>Øvelser</b><small>8 i sikkerhetskopien</small></span></div></div>';
+  const preview = `<p>Opprettet fredag 21. august 2026 kl. 20:14</p>${backupCounts}`;
+  const current = `<p>Nåværende data som blir erstattet:</p><div class="restore-data-rows"><div class="data-row"><span><b>Treningsøkter</b><small>12 i Trene nå</small></span></div><div class="data-row"><span><b>Øvelser</b><small>6 i Trene nå</small></span></div></div><p>Sikkerhetskopien som gjenopprettes:</p>${backupCounts}`;
+  const dialogs = {
+    'file-error': ['Sikkerhetskopien kan ikke brukes', `${errorIcon}<p>Sikkerhetskopien er skadet eller kan ikke leses. Dataene dine er ikke endret.</p>`, button('Velg en annen fil', 'primary')],
+    preview: ['Kontroller sikkerhetskopien', `${preview}<p>Ingenting er gjenopprettet ennå.</p>`, button('Avbryt', 'secondary') + button('Fortsett', 'primary')],
+    'current-data': ['Nåværende data blir erstattet', `${current}<p>Ingenting er endret ennå.</p>`, button('Avbryt', 'secondary') + button('Fortsett til bekreftelse', 'primary')],
+    confirm: ['Erstatt alle data?', `${current}<p class="danger-copy">Dette erstatter alle data i Trene og kan ikke angres.</p>`, button('Avbryt', 'secondary') + button('Erstatt og gjenopprett', 'danger')],
+    committing: ['Gjenoppretter data', '<div class="loader-row page-loader"><span class="spinner large-spinner"></span><span>Ikke lukk Trene mens dataene erstattes.</span></div><p>Avbryt er ikke tilgjengelig etter at gjenopprettingen har startet.</p>', button('<span class="spinner compact-spinner"></span>Gjenoppretter', 'danger', 'disabled')],
+    success: ['Gjenopprettingen er fullført', '<p>24 treningsøkter og 8 øvelser er gjenopprettet.</p><p>De tidligere dataene er erstattet.</p>', button('Ferdig', 'primary')],
+    'recoverable-error': ['Gjenopprettingen mislyktes', `${errorIcon}<p>De opprinnelige dataene er kontrollert og gjenopprettet. Dataene dine er ikke endret.</p>`, button('Ferdig', 'primary')],
+    'safe-stop': ['Trene kan ikke åpne dataene trygt', `${errorIcon}<p>Gjenopprettingen ble avbrutt, og ingen av databasene kunne bekreftes. Dataene er bevart for hjelp med gjenoppretting.</p><p class="danger-copy">Ikke slett eller installer appen på nytt.</p><small>Ingen handlinger vises når videre bruk kan skade data.</small>`, ''],
+  };
+  const [title, copy, actions] = dialogs[stage];
+  return `<section class="dialog restore-dialog ${stage === 'safe-stop' ? 'locked-dialog' : ''}" role="dialog" aria-modal="true" aria-labelledby="restore-title"><span class="variant-label">${stage === 'safe-stop' ? 'Låst sikkerhetsstopp' : 'Gjenoppretting'}</span><h2 id="restore-title">${title}</h2>${copy}<div class="restore-actions">${actions}</div></section>`;
+}
+
+function showRestoreDialog(stage) {
+  window.clearTimeout(restoreTimer);
+  dialogLayer.innerHTML = restoreDialog(stage);
+  dialogLayer.hidden = false;
+  const primary = dialogLayer.querySelector('.primary, .danger');
+  const secondary = dialogLayer.querySelector('.secondary');
+  if (secondary) secondary.addEventListener('click', closeRestoreDialog);
+  if (stage === 'file-error' && primary) primary.addEventListener('click', () => showRestoreDialog('preview'));
+  if (stage === 'preview' && primary) primary.addEventListener('click', () => showRestoreDialog('current-data'));
+  if (stage === 'current-data' && primary) primary.addEventListener('click', () => showRestoreDialog('confirm'));
+  if (stage === 'confirm' && primary) primary.addEventListener('click', () => showRestoreDialog('committing'));
+  if (stage === 'committing') {
+    const result = new URLSearchParams(location.search).get('restore-result');
+    restoreTimer = window.setTimeout(() => showRestoreDialog(
+      result === 'recoverable-error' || result === 'safe-stop' ? result : 'success',
+    ), 1300);
+  }
+  if ((stage === 'success' || stage === 'recoverable-error') && primary) primary.addEventListener('click', closeRestoreDialog);
+}
+
+function closeRestoreDialog() {
+  window.clearTimeout(restoreTimer);
+  dialogLayer.hidden = true;
 }
 function showDialog(kind) {
   const dialogs = {
@@ -160,6 +204,7 @@ function selectComponent(id) {
   const entry = groups.flatMap(([, items]) => items).find(([itemId]) => itemId === id);
   if (!entry) return;
   selected = id;
+  window.clearTimeout(restoreTimer);
   const [, name, description, usage, exampleId, target] = entry;
   const [title, hasBack, render, dialog] = examples[exampleId];
   document.querySelector('#component-category').textContent = groups.find(([, items]) => items.includes(entry))[0];
@@ -172,7 +217,11 @@ function selectComponent(id) {
   document.querySelector('#app-header').classList.remove('highlight');
   dialogLayer.hidden = true;
   screen.innerHTML = render();
-  if (dialog) showDialog(dialog);
+  if (exampleId === 'dialog-anatomy') {
+    const stage = new URLSearchParams(location.search).get('restore-stage');
+    showRestoreDialog(['file-error', 'preview', 'current-data', 'confirm', 'committing', 'success', 'recoverable-error', 'safe-stop'].includes(stage) ? stage : 'preview');
+    screen.querySelector('[data-restore-open]').addEventListener('click', () => showRestoreDialog('preview'));
+  } else if (dialog) showDialog(dialog);
   requestAnimationFrame(() => {
     const element = document.querySelector(target);
     if (element) {
