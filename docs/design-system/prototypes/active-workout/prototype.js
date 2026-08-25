@@ -59,23 +59,44 @@ function bindActions() {
     const action = item.dataset.action;
     if (['complete', 'cancel', 'add', 'remove-exercise'].includes(action)) showDialog(action);
     if (action === 'retry') { scenario = 'busy'; updateScenarioButtons(); render(); }
-    if (action === 'complete-set') { replaceSet(item.closest('.form-section'), setRow(item.closest('.form-section').dataset.setNumber, '80 kg - 8 repetisjoner'), 'set-row-enter'); }
-    if (action === 'edit-set') { replaceSet(item.closest('.set-row'), plannedSet(item.closest('.set-row').dataset.setNumber), 'form-section-enter'); }
-    if (action === 'add-set') { const content = item.closest('.exercise-content'); const count = content.querySelectorAll('[data-set-number]').length + 1; item.closest('.add-set-row').insertAdjacentHTML('beforebegin', plannedSet(count)); content.querySelector(`[data-set-number="${count}"]`).classList.add('form-section-enter'); bindActions(); }
-    if (action === 'delete-planned') { const form = item.closest('.form-section'); form.classList.add('set-leave'); window.setTimeout(() => { const content = form.closest('.exercise-content'); form.remove(); renumberSets(content); }, 180); }
+    if (action === 'complete-set') { replaceSet(item.closest('.form-section'), setRow(item.closest('.form-section').dataset.setNumber, '80 kg - 8 repetisjoner')); }
+    if (action === 'edit-set') { replaceSet(item.closest('.set-row'), plannedSet(item.closest('.set-row').dataset.setNumber)); }
+    if (action === 'add-set') { const content = item.closest('.exercise-content'); const count = content.querySelectorAll('[data-set-number]').length + 1; item.closest('.add-set-row').insertAdjacentHTML('beforebegin', plannedSet(count)); animateHeight(content.querySelector(`[data-set-number="${count}"]`), 0); bindActions(); }
+    if (action === 'delete-planned') { const form = item.closest('.form-section'); const content = form.closest('.exercise-content'); animateHeight(form, form.offsetHeight, 0, () => { form.remove(); renumberSets(content); }); }
     if (action === 'back') { screen.classList.remove('large-text'); screen.innerHTML = home(); bindActions(); }
     if (action === 'continue-workout') { render(); }
     if (action === 'toggle') { const expanded = item.getAttribute('aria-expanded') !== 'true'; item.setAttribute('aria-expanded', expanded); item.querySelector('.disclosure').textContent = expanded ? '-' : '+'; item.closest('.card').querySelector('.exercise-content').hidden = !expanded; }
   }));
 }
-function replaceSet(source, replacement, enterClass) {
-  source.classList.add('set-leave');
+function replaceSet(source, replacement) {
+  const parent = source.parentElement;
+  const number = source.dataset.setNumber;
+  const sourceHeight = source.offsetHeight;
+  source.outerHTML = replacement;
+  const next = Array.from(parent.children).find((child) => child.dataset.setNumber === number);
+  animateHeight(next, sourceHeight);
+  bindActions();
+}
+function animateHeight(element, fromHeight, toHeight = element.scrollHeight, onComplete) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (toHeight === 0 && onComplete) onComplete();
+    return;
+  }
+  element.style.height = `${fromHeight}px`;
+  element.style.overflow = 'hidden';
+  element.style.transition = 'none';
+  requestAnimationFrame(() => {
+    element.style.transition = 'height 220ms ease, opacity 180ms ease';
+    element.style.height = `${toHeight}px`;
+    element.style.opacity = toHeight === 0 ? '0' : '1';
+  });
   window.setTimeout(() => {
-    source.outerHTML = replacement;
-    const replacementElement = screen.querySelector(`[data-set-number="${source.dataset.setNumber}"]`);
-    replacementElement.classList.add(enterClass);
-    bindActions();
-  }, 180);
+    element.style.height = '';
+    element.style.overflow = '';
+    element.style.transition = '';
+    element.style.opacity = '';
+    if (onComplete) onComplete();
+  }, 240);
 }
 function renumberSets(content) {
   content.querySelectorAll('[data-set-number]').forEach((set, index) => {
