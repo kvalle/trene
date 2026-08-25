@@ -15,6 +15,7 @@ import { Loader } from '../ui/Loader';
 import { ListContainer } from '../ui/ListContainer';
 import { NavigationRow } from '../ui/NavigationRow';
 import { PageStatus } from '../ui/PageStatus';
+import { SearchField } from '../ui/SearchField';
 import { TextField } from '../ui/TextField';
 
 type CatalogStackParamList = {
@@ -29,6 +30,7 @@ type CatalogStackParamList = {
   PageStatusDetail: undefined;
   ListContainerDetail: undefined;
   NavigationRowDetail: undefined;
+  SearchFieldDetail: undefined;
   StackExample: undefined;
   ModalExample: undefined;
 };
@@ -121,6 +123,14 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         route: 'NavigationRowDetail',
         testID: 'catalog-item-navigationrow',
       },
+      {
+        id: 'searchfield',
+        name: 'SearchField',
+        description: 'Filtrerer en liste fortløpende med fokusmarkering og søketastatur.',
+        usage: 'Bruk når en liste kan bli lang nok til at visuell skanning ikke er effektiv.',
+        route: 'SearchFieldDetail',
+        testID: 'catalog-item-searchfield',
+      },
     ],
   },
   {
@@ -193,6 +203,7 @@ function CatalogNavigator({
         <Stack.Screen name="PageStatusDetail" component={PageStatusDetailScreen} options={{ title: 'PageStatus' }} />
         <Stack.Screen name="ListContainerDetail" component={ListContainerDetailScreen} options={{ title: 'ListContainer' }} />
         <Stack.Screen name="NavigationRowDetail" component={NavigationRowDetailScreen} options={{ title: 'NavigationRow' }} />
+        <Stack.Screen name="SearchFieldDetail" component={SearchFieldDetailScreen} options={{ title: 'SearchField' }} />
         <Stack.Screen name="StackExample" component={StackExampleScreen} options={{ title: 'Stack' }} />
         <Stack.Screen name="ModalExample" component={ModalExampleScreen} options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack.Navigator>
@@ -712,8 +723,34 @@ function NavigationRowDetailScreen() {
         <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Varianter</Text>
         <ListContainer>
           <NavigationRow title="Med beskrivelse" description="Forklarer valget" showSeparator onPress={() => {}} testID="catalog-navigationrow-description" />
+          <NavigationRow title="Med metadata" metadata="12 elementer" showSeparator onPress={() => {}} testID="catalog-navigationrow-metadata" />
           <NavigationRow title="Uten beskrivelse" onPress={() => {}} testID="catalog-navigationrow-title" />
         </ListContainer>
+      </View>
+    </ScrollView>
+  );
+}
+
+function SearchFieldDetailScreen() {
+  const { colors } = useAppTheme();
+  const [value, setValue] = useState('');
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-searchfield">
+      <DetailHeader
+        name="SearchField"
+        description="Filtrerer en liste fortløpende med fokusmarkering og søketastatur."
+        usage="Bruk når en liste kan bli lang nok til at visuell skanning ikke er effektiv."
+      />
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Tilstander</Text>
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Tom</Text>
+          <SearchField label="Søk i liste" value={value} onChangeText={setValue} testID="catalog-searchfield-empty" />
+        </View>
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Med søk</Text>
+          <SearchField label="Søk i liste" value="eksempel" onChangeText={() => {}} testID="catalog-searchfield-value" />
+        </View>
       </View>
     </ScrollView>
   );

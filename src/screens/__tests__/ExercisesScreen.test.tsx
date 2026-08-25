@@ -5,6 +5,7 @@ import { AccessibilityInfo } from 'react-native';
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import { listExercises } from '../../database/exercises';
 import type { Database } from '../../database/types';
+import { AppThemeProvider } from '../../ui/AppThemeProvider';
 import { ExercisesScreen } from '../ExercisesScreen';
 
 jest.mock('../../database/exercises', () => ({
@@ -29,6 +30,18 @@ test('shows first creation as the only empty-state action', async () => {
   expect(screen.queryByLabelText('Søk i øvelser')).not.toBeOnTheScreen();
 });
 
+test('keeps loading separate from the empty catalog', () => {
+  let resolveExercises: (exercises: []) => void;
+  mockedListExercises.mockImplementation(() => new Promise((resolve) => {
+    resolveExercises = resolve;
+  }));
+  renderScreen();
+
+  expect(screen.getByLabelText('Laster øvelser')).toBeOnTheScreen();
+  expect(screen.queryByRole('button', { name: 'Opprett første øvelse' })).not.toBeOnTheScreen();
+  resolveExercises!([]);
+});
+
 test('searches substrings and prefills creation when there are no matches', async () => {
   const navigate = jest.fn();
   mockedListExercises.mockResolvedValue([{ id: 1, name: 'Knebøy', workoutCount: 1 }]);
@@ -38,6 +51,18 @@ test('searches substrings and prefills creation when there are no matches', asyn
   expect(screen.getByText('Ingen øvelser funnet')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Opprett «mark»' }));
   expect(navigate).toHaveBeenCalledWith('CreateExercise', { initialName: 'mark' });
+});
+
+test('keeps locale-aware search order', async () => {
+  mockedListExercises.mockResolvedValue([
+    { id: 1, name: 'Benkpress', workoutCount: 0 },
+    { id: 2, name: 'Knebøy', workoutCount: 0 },
+  ]);
+  renderScreen();
+
+  fireEvent.changeText(await screen.findByLabelText('Søk i øvelser'), 'kNeBØy');
+  expect(screen.getByText('Knebøy')).toBeOnTheScreen();
+  expect(screen.queryByText('Benkpress')).not.toBeOnTheScreen();
 });
 
 test('shows the exact usage phrase and opens detail from each whole row', async () => {
@@ -82,14 +107,16 @@ test('clears a preserved search when it hides the requested deletion focus targe
   fireEvent.changeText(await screen.findByLabelText('Søk i øvelser'), 'benk');
 
   view.rerender(
-    <DatabaseProvider database={database}>
-      <NavigationContainer>
-        <ExercisesScreen
-          navigation={{ navigate: jest.fn(), setParams } as never}
-          route={{ params: { focusExerciseId: 2 } } as never}
-        />
-      </NavigationContainer>
-    </DatabaseProvider>,
+    <AppThemeProvider scheme="light">
+      <DatabaseProvider database={database}>
+        <NavigationContainer>
+          <ExercisesScreen
+            navigation={{ navigate: jest.fn(), setParams } as never}
+            route={{ params: { focusExerciseId: 2 } } as never}
+          />
+        </NavigationContainer>
+      </DatabaseProvider>
+    </AppThemeProvider>,
   );
 
   await waitFor(() => expect(focus).toHaveBeenCalled());
@@ -128,13 +155,15 @@ function renderScreen(
     ? { navigate: navigation }
     : navigation;
   return render(
-    <DatabaseProvider database={database}>
-      <NavigationContainer>
-        <ExercisesScreen
-          navigation={{ navigate: jest.fn(), setParams: jest.fn(), ...mergedNavigation } as never}
-          route={{ params } as never}
-        />
-      </NavigationContainer>
-    </DatabaseProvider>,
+    <AppThemeProvider scheme="light">
+      <DatabaseProvider database={database}>
+        <NavigationContainer>
+          <ExercisesScreen
+            navigation={{ navigate: jest.fn(), setParams: jest.fn(), ...mergedNavigation } as never}
+            route={{ params } as never}
+          />
+        </NavigationContainer>
+      </DatabaseProvider>
+    </AppThemeProvider>,
   );
 }
