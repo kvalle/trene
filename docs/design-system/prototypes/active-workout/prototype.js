@@ -30,6 +30,7 @@ function dense() {
   return `<p class="workout-meta">Tirsdag 25. august - startet 09:12</p>${exercise('Benkpress', '2 sett utført, 2 planlagt', true, { rows: setRow(1, '80 kg - 8 repetisjoner') + setRow(2, '80 kg - 8 repetisjoner'), planned: 2 })}${exercise('Knebøy', '0 av 3 sett gjennomført', false)}${exercise('Sittende roing', '1 av 3 sett gjennomført', false)}<div class="workout-actions">${button('Legg til øvelse', 'secondary', 'add')}${button('Fullfør økt', 'primary', 'complete')}${button('Avbryt økt', 'text', 'cancel')}</div>`;
 }
 function empty() { return `<section class="empty"><h2>Hva vil du trene?</h2><p>Legg til den første øvelsen for å starte registreringen av sett.</p>${button('Legg til øvelse', 'primary', 'add')}${compactAction('×', 'Avbryt økt', 'cancel')}</section>`; }
+function home() { return `<section class="home"><p class="workout-meta">Pågående treningsøkt</p><h2>Fortsett der du slapp</h2><p>2 sett utført, 2 planlagt. Startet 09:12.</p>${button('Fortsett økt', 'primary', 'continue-workout')}${button('Start ny økt', 'secondary', 'new-workout')}</section>`; }
 function error() { return `<p class="workout-meta">Tirsdag 25. august - startet 09:12</p>${exercise('Benkpress', '2 sett utført, 1 planlagt', true, { rows: setRow(1, '80 kg - 8 repetisjoner') + setRow(2, '80 kg - 8 repetisjoner'), planned: 1, error: true })}${exercise('Knebøy', '0 av 3 sett gjennomført', false)}<div class="workout-actions">${button('Legg til øvelse', 'secondary', 'add')}${button('Fullfør økt', 'primary', 'complete')}${button('Avbryt økt', 'text', 'cancel')}</div>`; }
 function busy() { return `<p class="workout-meta">Tirsdag 25. august - startet 09:12</p>${exercise('Benkpress', '2 sett utført, 1 planlagt', true, { rows: setRow(1, '80 kg - 8 repetisjoner') + setRow(2, '80 kg - 8 repetisjoner'), planned: 1, busy: true })}${exercise('Knebøy', '0 av 3 sett gjennomført', false)}<div class="workout-actions">${button('Legg til øvelse', 'secondary', 'add')}${button('Fullfør økt', 'primary', 'complete')}${button('Avbryt økt', 'text', 'cancel')}</div>`; }
 function render() {
@@ -62,6 +63,8 @@ function bindActions() {
     if (action === 'edit-set') { const row = item.closest('.set-row'); row.outerHTML = plannedSet(row.dataset.setNumber); bindActions(); }
     if (action === 'add-set') { const content = item.closest('.exercise-content'); const count = content.querySelectorAll('[data-set-number]').length + 1; item.closest('.add-set-row').insertAdjacentHTML('beforebegin', plannedSet(count)); bindActions(); }
     if (action === 'delete-planned') { item.closest('.form-section').remove(); renumberSets(item.closest('.exercise-content')); }
+    if (action === 'back') { screen.classList.remove('large-text'); screen.innerHTML = home(); bindActions(); }
+    if (action === 'continue-workout') { render(); }
     if (action === 'toggle') { const expanded = item.getAttribute('aria-expanded') !== 'true'; item.setAttribute('aria-expanded', expanded); item.querySelector('.disclosure').textContent = expanded ? '-' : '+'; item.closest('.card').querySelector('.exercise-content').hidden = !expanded; }
   }));
 }
@@ -79,5 +82,5 @@ function updateScenarioButtons() { document.querySelectorAll('.scenario').forEac
 document.querySelectorAll('.scenario').forEach((button) => button.addEventListener('click', () => { scenario = button.dataset.scenario; updateScenarioButtons(); render(); }));
 document.querySelector('#theme-toggle').addEventListener('click', (event) => { const dark = document.documentElement.dataset.theme === 'dark'; document.documentElement.dataset.theme = dark ? 'light' : 'dark'; event.currentTarget.textContent = dark ? 'Mørk modus' : 'Lys modus'; });
 document.querySelector('#keyboard-toggle').addEventListener('click', (event) => { keyboardOpen = !keyboardOpen; keyboard.hidden = !keyboardOpen; event.currentTarget.textContent = keyboardOpen ? 'Skjul tastatur' : 'Vis tastatur'; });
-document.querySelectorAll('[data-dialog]').forEach((button) => button.addEventListener('click', () => showDialog(button.dataset.dialog)));
+document.querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', () => { if (button.dataset.action === 'back') { screen.innerHTML = home(); bindActions(); } }));
 render();
