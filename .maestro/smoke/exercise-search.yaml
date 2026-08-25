@@ -1,0 +1,28 @@
+appId: com.kjetilvalle.trene
+name: Search exercises and show no results
+tags:
+  - smoke
+  - android
+---
+- launchApp
+
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Øvelser"
+- tapOn: "Opprett første øvelse"
+- tapOn:
+    id: "exercise-name-input"
+- setClipboard: "Knebøy"
+- pasteText
+- tapOn:
+    id: "create-exercise-submit"
+- pressKey: BACK
+- tapOn: "Søk i øvelser"
+- inputText: "kneb"
+- assertVisible: "Knebøy"
+- tapOn: "Søk i øvelser"
+- eraseText
+- inputText: "mark"
+- assertVisible: "Ingen øvelser funnet"
+- assertVisible: "Opprett «mark»"

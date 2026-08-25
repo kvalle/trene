@@ -168,4 +168,11 @@ describe('NavigationRow', () => {
     fireEvent.press(row);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  it('renders trailing metadata without a description', () => {
+    renderWithTheme(<NavigationRow title="Benkpress" metadata="Brukt i 1 økt" onPress={() => {}} testID="metadata-row" />);
+
+    expect(screen.getByTestId('metadata-row')).toHaveProp('accessibilityLabel', 'Benkpress, Brukt i 1 økt');
+    expect(screen.getByText('Brukt i 1 økt')).toBeOnTheScreen();
+  });
 });
