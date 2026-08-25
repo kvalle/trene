@@ -1,5 +1,5 @@
 import { NavigationContainer } from '@react-navigation/native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { AccessibilityInfo } from 'react-native';
 
 import { DatabaseProvider } from '../../database/DatabaseContext';
@@ -30,16 +30,17 @@ test('shows first creation as the only empty-state action', async () => {
   expect(screen.queryByLabelText('Søk i øvelser')).not.toBeOnTheScreen();
 });
 
-test('keeps loading separate from the empty catalog', () => {
-  let resolveExercises: (exercises: []) => void;
+test('keeps loading separate from the empty catalog', async () => {
+  let resolveLoading: (exercises: []) => void;
   mockedListExercises.mockImplementation(() => new Promise((resolve) => {
-    resolveExercises = resolve;
+    resolveLoading = resolve;
   }));
   renderScreen();
 
   expect(screen.getByLabelText('Laster øvelser')).toBeOnTheScreen();
   expect(screen.queryByRole('button', { name: 'Opprett første øvelse' })).not.toBeOnTheScreen();
-  resolveExercises!([]);
+  await act(async () => resolveLoading!([]));
+  expect(await screen.findByRole('button', { name: 'Opprett første øvelse' })).toBeOnTheScreen();
 });
 
 test('searches substrings and prefills creation when there are no matches', async () => {

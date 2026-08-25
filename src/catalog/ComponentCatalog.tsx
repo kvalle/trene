@@ -734,6 +734,7 @@ function NavigationRowDetailScreen() {
 function SearchFieldDetailScreen() {
   const { colors } = useAppTheme();
   const [value, setValue] = useState('');
+  const focusRef = useRef<TextInput>(null);
   return (
     <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-searchfield">
       <DetailHeader
@@ -750,6 +751,10 @@ function SearchFieldDetailScreen() {
         <View style={styles.controlGroup}>
           <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Med søk</Text>
           <SearchField label="Søk i liste" value="eksempel" onChangeText={() => {}} testID="catalog-searchfield-value" />
+        </View>
+        <View style={styles.controlGroup}>
+          <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Fokus (trykk for å se)</Text>
+          <SearchField autoFocus label="Søk i liste" value="" onChangeText={() => {}} testID="catalog-searchfield-focus" />
         </View>
       </View>
     </ScrollView>

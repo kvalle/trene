@@ -100,7 +100,7 @@ export function ExercisesScreen({ navigation, route }: Props) {
       {isEmpty ? (
         <Button ref={emptyActionRef} title="Opprett første øvelse" onPress={() => navigation.navigate('CreateExercise')} />
       ) : matches.length === 0 ? (
-        <View style={styles.emptyState}>
+        <View style={styles.noResultsState}>
           <Text accessibilityRole="header" style={typography.sectionTitle}>Ingen øvelser funnet</Text>
           <Button
             title={`Opprett «${query}»`}
@@ -134,5 +134,5 @@ export function ExercisesScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, gap: 20, padding: 20 },
-  emptyState: { alignItems: 'center', flex: 1, gap: 24, justifyContent: 'center' },
+  noResultsState: { alignItems: 'center', gap: 24, paddingVertical: 24 },
 });
