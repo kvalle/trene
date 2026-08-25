@@ -65,7 +65,18 @@ function bindActions() {
     if (action === 'delete-planned') { const form = item.closest('.form-section'); const content = form.closest('.exercise-content'); animateHeight(form, form.offsetHeight, 0, () => { form.remove(); renumberSets(content); }); }
     if (action === 'back') { screen.classList.remove('large-text'); screen.innerHTML = home(); bindActions(); }
     if (action === 'continue-workout') { render(); }
-    if (action === 'toggle') { const expanded = item.getAttribute('aria-expanded') !== 'true'; item.setAttribute('aria-expanded', expanded); item.querySelector('.disclosure').textContent = expanded ? '-' : '+'; item.closest('.card').querySelector('.exercise-content').hidden = !expanded; }
+    if (action === 'toggle') {
+      const expanded = item.getAttribute('aria-expanded') !== 'true';
+      const content = item.closest('.card').querySelector('.exercise-content');
+      item.setAttribute('aria-expanded', expanded);
+      item.querySelector('.disclosure').textContent = expanded ? '-' : '+';
+      if (expanded) {
+        content.hidden = false;
+        animateHeight(content, 0);
+      } else {
+        animateHeight(content, content.offsetHeight, 0, () => { content.hidden = true; });
+      }
+    }
   }));
 }
 function replaceSet(source, replacement) {
@@ -85,6 +96,7 @@ function animateHeight(element, fromHeight, toHeight = element.scrollHeight, onC
   element.style.height = `${fromHeight}px`;
   element.style.overflow = 'hidden';
   element.style.transition = 'none';
+  void element.offsetHeight;
   requestAnimationFrame(() => {
     element.style.transition = 'height 220ms ease, opacity 180ms ease';
     element.style.height = `${toHeight}px`;
