@@ -5,6 +5,7 @@ import { AccessibilityInfo, Modal } from 'react-native';
 import { DataScreen } from '../DataScreen';
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import { DatabaseRuntime } from '../../database/DatabaseRuntime';
+import { AppThemeProvider } from '../../ui/AppThemeProvider';
 import { createAndShareBackup } from '../../backup/createBackup';
 import { RestoreCommitError } from '../../backup/commitRestore';
 import { prepareRestore, RestorePreparationError } from '../../backup/prepareRestore';
@@ -31,6 +32,7 @@ test('discloses backup sensitivity and does not claim sharing saved it', async (
 
   expect(screen.getByText('Sikkerhetskopien er ikke kryptert av Trene. Oppbevar og del den på en trygg måte.')).toBeOnTheScreen();
   expect(screen.getByTestId('create-backup')).toHaveProp('accessibilityState', { disabled: false, busy: false });
+  expect(screen.getByTestId('data-notice')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Lag sikkerhetskopi' }));
   await act(async () => undefined);
 
@@ -99,8 +101,10 @@ test('previews validated creation time and database-derived counts, then cancels
   fireEvent.press(screen.getByRole('button', { name: 'Fortsett' }));
   expect(await screen.findByRole('header', { name: 'Erstatt alle data?' })).toBeOnTheScreen();
   expect(screen.getByTestId('restore-confirmation')).toBeOnTheScreen();
-  expect(screen.getByText('2 treningsøkter og 3 øvelser')).toBeOnTheScreen();
-  expect(screen.getByText('5 treningsøkter og 7 øvelser')).toBeOnTheScreen();
+  expect(screen.getByLabelText('2 treningsøkter, I Trene nå')).toBeOnTheScreen();
+  expect(screen.getByLabelText('3 øvelser, I Trene nå')).toBeOnTheScreen();
+  expect(screen.getByLabelText('5 treningsøkter, I sikkerhetskopien')).toBeOnTheScreen();
+  expect(screen.getByLabelText('7 øvelser, I sikkerhetskopien')).toBeOnTheScreen();
 
   fireEvent.press(screen.getByRole('button', { name: 'Avbryt' }));
   expect(cancel).toHaveBeenCalled();
@@ -164,6 +168,7 @@ test('locks the restore dialog on unrecoverable failure guidance', async () => {
   fireEvent.press(await screen.findByRole('button', { name: 'Erstatt og gjenopprett' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent(/Gjenopprettingen kunne ikke fullføres trygt/);
+  expect(screen.getByRole('header', { name: 'Trene kan ikke åpne dataene trygt' })).toBeOnTheScreen();
   expect(screen.queryByRole('button', { name: 'Erstatt og gjenopprett' })).not.toBeOnTheScreen();
   expect(screen.queryByRole('button', { name: 'Avbryt' })).not.toBeOnTheScreen();
   fireEvent(view.UNSAFE_getByType(Modal), 'requestClose');
@@ -214,7 +219,7 @@ function renderScreen() {
   const runtime = new DatabaseRuntime(jest.fn());
   return render(
     <DatabaseProvider database={runtime}>
-      <NavigationContainer><DataScreen /></NavigationContainer>
+      <AppThemeProvider><NavigationContainer><DataScreen /></NavigationContainer></AppThemeProvider>
     </DatabaseProvider>,
   );
 }

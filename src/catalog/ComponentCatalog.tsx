@@ -17,6 +17,7 @@ import { Hero } from '../ui/Hero';
 import { Loader } from '../ui/Loader';
 import { ListContainer } from '../ui/ListContainer';
 import { NavigationRow } from '../ui/NavigationRow';
+import { Notice } from '../ui/Notice';
 import { PageStatus } from '../ui/PageStatus';
 import { SearchField } from '../ui/SearchField';
 import { SelectionRow } from '../ui/SelectionRow';
@@ -33,6 +34,7 @@ type CatalogStackParamList = {
   AppShellDetail: undefined;
   HeroDetail: undefined;
   LoaderDetail: undefined;
+  NoticeDetail: undefined;
   ErrorAlertDetail: undefined;
   PageStatusDetail: undefined;
   ListContainerDetail: undefined;
@@ -199,6 +201,14 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         testID: 'catalog-item-loader',
       },
       {
+        id: 'notice',
+        name: 'Notice',
+        description: 'Avgrenset forklaring som ikke signaliserer feil.',
+        usage: 'Bruk når viktig kontekst, personvern eller konsekvenser må leses før en handling.',
+        route: 'NoticeDetail',
+        testID: 'catalog-item-notice',
+      },
+      {
         id: 'erroralert',
         name: 'ErrorAlert',
         description: 'Lokal feilmelding med fareikon, svak fareflate og valgfri gjenopprettingshandling.',
@@ -256,6 +266,7 @@ function CatalogNavigator({
         <Stack.Screen name="AppShellDetail" component={AppShellDetailScreen} options={{ title: 'App-shell' }} />
         <Stack.Screen name="HeroDetail" component={HeroDetailScreen} options={{ title: 'Hero' }} />
         <Stack.Screen name="LoaderDetail" component={LoaderDetailScreen} options={{ title: 'Loader' }} />
+        <Stack.Screen name="NoticeDetail" component={NoticeDetailScreen} options={{ title: 'Notice' }} />
         <Stack.Screen name="ErrorAlertDetail" component={ErrorAlertDetailScreen} options={{ title: 'ErrorAlert' }} />
         <Stack.Screen name="PageStatusDetail" component={PageStatusDetailScreen} options={{ title: 'PageStatus' }} />
         <Stack.Screen name="ListContainerDetail" component={ListContainerDetailScreen} options={{ title: 'ListContainer' }} />
@@ -720,6 +731,27 @@ function ErrorAlertDetailScreen() {
           <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Ulagret varsel</Text>
           <ErrorAlert message="Økten har endringer som ikke er lagret" testID="catalog-erroralert-unsaved" />
         </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+function NoticeDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-notice">
+      <DetailHeader
+        name="Notice"
+        description="Avgrenset forklaring som ikke signaliserer feil."
+        usage="Bruk når viktig kontekst, personvern eller konsekvenser må leses før en handling."
+      />
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Informasjon</Text>
+        <Notice
+          title="Viktig informasjon"
+          message="Dette eksempelet forklarer en konsekvens før brukeren velger en handling."
+          testID="catalog-notice"
+        />
       </View>
     </ScrollView>
   );

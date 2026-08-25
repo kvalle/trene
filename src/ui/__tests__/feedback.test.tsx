@@ -5,6 +5,7 @@ import { render, screen } from '@testing-library/react-native';
 import { ErrorAlert } from '../ErrorAlert';
 import { Hero } from '../Hero';
 import { Loader } from '../Loader';
+import { Notice } from '../Notice';
 import { PageStatus } from '../PageStatus';
 import { AppThemeProvider } from '../AppThemeProvider';
 
@@ -61,6 +62,16 @@ describe('ErrorAlert', () => {
     expect(screen.getByTestId('retry')).toBeOnTheScreen();
     // action inside ErrorAlert should be secondary variant (checked via rendered)
     expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
+  });
+});
+
+describe('Notice', () => {
+  it('renders contextual information without an error role', () => {
+    renderWithTheme(<Notice title="Viktig informasjon" message="Les dette før du fortsetter." testID="notice" />);
+    expect(screen.getByTestId('notice')).toBeOnTheScreen();
+    expect(screen.getByText('Viktig informasjon')).toBeOnTheScreen();
+    expect(screen.getByText('Les dette før du fortsetter.')).toBeOnTheScreen();
+    expect(screen.queryByRole('alert')).not.toBeOnTheScreen();
   });
 });
 
