@@ -40,6 +40,7 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('SearchField')).toBeOnTheScreen();
   expect(screen.getByText('FEEDBACK')).toBeOnTheScreen();
   expect(screen.getByText('Loader')).toBeOnTheScreen();
+  expect(screen.getByText('Notice')).toBeOnTheScreen();
   expect(screen.getByText('ErrorAlert')).toBeOnTheScreen();
   expect(screen.getByText('SIDEVISNINGER')).toBeOnTheScreen();
   expect(screen.getByText('LISTER OG BEHOLDERE')).toBeOnTheScreen();
@@ -56,6 +57,7 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('AppShellDetail')).toBeOnTheScreen();
   expect(screen.getByText('HeroDetail')).toBeOnTheScreen();
   expect(screen.getByText('LoaderDetail')).toBeOnTheScreen();
+  expect(screen.getByText('NoticeDetail')).toBeOnTheScreen();
   expect(screen.getByText('ErrorAlertDetail')).toBeOnTheScreen();
   expect(screen.getByText('PageStatusDetail')).toBeOnTheScreen();
   expect(screen.getByText('ListContainerDetail')).toBeOnTheScreen();

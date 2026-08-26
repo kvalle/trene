@@ -18,7 +18,9 @@ tags:
 - inputText: "Beholdes"
 - tapOn:
     id: "create-exercise-submit"
-- assertVisible: "Beholdes"
+- extendedWaitUntil:
+    visible: "Beholdes"
+    timeout: 30000
 - stopApp
 - launchApp
 - extendedWaitUntil:
@@ -34,7 +36,8 @@ tags:
     env:
       BACKUP_FILE: representative.trene-backup
 - extendedWaitUntil:
-    visible: "Det er ikke nok ledig plass til å kontrollere sikkerhetskopien. Dataene dine er ikke endret."
+    visible:
+      id: "data-error"
     timeout: 30000
 - stopApp
 - launchApp

@@ -1,5 +1,5 @@
 import { createRef } from 'react';
-import { AccessibilityInfo, Modal, View } from 'react-native';
+import { AccessibilityInfo, Modal, Text, View } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { AppThemeProvider } from '../AppThemeProvider';
@@ -21,4 +21,10 @@ it('focuses its requested initial action when shown', () => {
   expect(focus).toHaveBeenCalled();
   fireEvent(view.UNSAFE_getByType(Modal), 'requestClose');
   expect(onRequestClose).toHaveBeenCalled();
+});
+
+it('forwards a ref to its title for focus changes within an open dialog', () => {
+  const titleRef = createRef<Text>();
+  render(<AppThemeProvider><Dialog visible titleRef={titleRef} onRequestClose={() => {}} title="Bekreft"><View /></Dialog></AppThemeProvider>);
+  expect(titleRef.current).not.toBeNull();
 });

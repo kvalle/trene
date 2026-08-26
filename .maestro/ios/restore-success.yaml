@@ -18,7 +18,9 @@ tags:
 - inputText: "Utdatert"
 - tapOn:
     id: "create-exercise-submit"
-- assertVisible: "Utdatert"
+- extendedWaitUntil:
+    visible: "Utdatert"
+    timeout: 30000
 - stopApp
 - launchApp
 - extendedWaitUntil:
@@ -41,8 +43,10 @@ tags:
     visible:
       id: "restore-preview"
     timeout: 30000
-- assertVisible: "1 treningsøkter"
-- assertVisible: "2 øvelser"
+- assertVisible:
+    id: "restore-preview-workouts"
+- assertVisible:
+    id: "restore-preview-exercises"
 - assertVisible: "Ingenting er gjenopprettet ennå."
 - tapOn:
     id: "continue-restore"

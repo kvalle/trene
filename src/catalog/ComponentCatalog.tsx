@@ -17,6 +17,7 @@ import { Hero } from '../ui/Hero';
 import { Loader } from '../ui/Loader';
 import { ListContainer } from '../ui/ListContainer';
 import { NavigationRow } from '../ui/NavigationRow';
+import { Notice } from '../ui/Notice';
 import { PageStatus } from '../ui/PageStatus';
 import { SearchField } from '../ui/SearchField';
 import { SelectionRow } from '../ui/SelectionRow';
@@ -33,6 +34,7 @@ type CatalogStackParamList = {
   AppShellDetail: undefined;
   HeroDetail: undefined;
   LoaderDetail: undefined;
+  NoticeDetail: undefined;
   ErrorAlertDetail: undefined;
   PageStatusDetail: undefined;
   ListContainerDetail: undefined;
@@ -199,6 +201,14 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         testID: 'catalog-item-loader',
       },
       {
+        id: 'notice',
+        name: 'Notice',
+        description: 'Avgrenset forklaring som ikke signaliserer feil.',
+        usage: 'Bruk når viktig kontekst, personvern eller konsekvenser må leses før en handling.',
+        route: 'NoticeDetail',
+        testID: 'catalog-item-notice',
+      },
+      {
         id: 'erroralert',
         name: 'ErrorAlert',
         description: 'Lokal feilmelding med fareikon, svak fareflate og valgfri gjenopprettingshandling.',
@@ -256,6 +266,7 @@ function CatalogNavigator({
         <Stack.Screen name="AppShellDetail" component={AppShellDetailScreen} options={{ title: 'App-shell' }} />
         <Stack.Screen name="HeroDetail" component={HeroDetailScreen} options={{ title: 'Hero' }} />
         <Stack.Screen name="LoaderDetail" component={LoaderDetailScreen} options={{ title: 'Loader' }} />
+        <Stack.Screen name="NoticeDetail" component={NoticeDetailScreen} options={{ title: 'Notice' }} />
         <Stack.Screen name="ErrorAlertDetail" component={ErrorAlertDetailScreen} options={{ title: 'ErrorAlert' }} />
         <Stack.Screen name="PageStatusDetail" component={PageStatusDetailScreen} options={{ title: 'PageStatus' }} />
         <Stack.Screen name="ListContainerDetail" component={ListContainerDetailScreen} options={{ title: 'ListContainer' }} />
@@ -440,6 +451,32 @@ function DialogDetailScreen() {
         <Button title="Avbryt" variant="secondary" disabled={busy} onPress={() => setVisible(false)} />
         <Button title={busy ? 'Sletter' : 'Slett'} variant="destructive" busy={busy} onPress={() => setBusy(true)} />
       </Dialog>
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Gjenopprettingskomposisjoner</Text>
+        <Text style={[typography.metadata, { color: colors.muted }]}>Preview, bekreftelse, opptatt arbeid, gjenopprettbar feil og låst sikkerhetsstopp bruker samme Dialog, DataRow, ErrorAlert og Button.</Text>
+        <Card style={styles.dialogExample}>
+          <Text style={[typography.control, { color: colors.text }]}>Forhåndsvisning</Text>
+          <DataRow label="24 elementer" value="I sikkerhetskopien" />
+          <Button title="Fortsett" onPress={() => {}} />
+        </Card>
+        <Card style={styles.dialogExample}>
+          <Text style={[typography.control, { color: colors.text }]}>Destruktiv bekreftelse</Text>
+          <Text style={[typography.body, { color: colors.danger }]}>Denne handlingen erstatter eksisterende data.</Text>
+          <Button title="Avbryt" variant="secondary" onPress={() => {}} />
+          <Button title="Erstatt" variant="destructive" onPress={() => {}} />
+        </Card>
+        <Card style={styles.dialogExample}>
+          <Text style={[typography.control, { color: colors.text }]}>Opptatt</Text>
+          <Button title="Erstatter" variant="destructive" busy onPress={() => {}} />
+        </Card>
+        <Card style={styles.dialogExample}>
+          <ErrorAlert title="Gjenopprettingen mislyktes" message="De opprinnelige dataene er fortsatt tilgjengelige." />
+          <Button title="Ferdig" onPress={() => {}} />
+        </Card>
+        <Card style={styles.dialogExample}>
+          <ErrorAlert title="Kan ikke fortsette trygt" message="Dataene er bevart for gjenoppretting." secondaryMessage="Ingen handlinger vises når videre bruk kan skade data." />
+        </Card>
+      </View>
     </ScrollView>
   );
 }
@@ -720,6 +757,27 @@ function ErrorAlertDetailScreen() {
           <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Ulagret varsel</Text>
           <ErrorAlert message="Økten har endringer som ikke er lagret" testID="catalog-erroralert-unsaved" />
         </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+function NoticeDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-notice">
+      <DetailHeader
+        name="Notice"
+        description="Avgrenset forklaring som ikke signaliserer feil."
+        usage="Bruk når viktig kontekst, personvern eller konsekvenser må leses før en handling."
+      />
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Informasjon</Text>
+        <Notice
+          title="Viktig informasjon"
+          message="Dette eksempelet forklarer en konsekvens før brukeren velger en handling."
+          testID="catalog-notice"
+        />
       </View>
     </ScrollView>
   );
@@ -1038,4 +1096,5 @@ const styles = StyleSheet.create({
   variantCell: { gap: 6 },
   variantLabel: { fontWeight: '600' },
   errorPreview: { borderRadius: radii.control, borderWidth: 1, padding: 12 },
+  dialogExample: { gap: 12 },
 });

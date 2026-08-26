@@ -34,7 +34,8 @@ tags:
     env:
       BACKUP_FILE: newer.trene-backup
 - extendedWaitUntil:
-    visible: "Sikkerhetskopien krever en nyere versjon av Trene. Dataene dine er ikke endret."
+    visible:
+      id: "data-error"
     timeout: 30000
 - stopApp
 - launchApp

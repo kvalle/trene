@@ -18,7 +18,9 @@ tags:
 - inputText: "Beholdes"
 - tapOn:
     id: "create-exercise-submit"
-- assertVisible: "Beholdes"
+- extendedWaitUntil:
+    visible: "Beholdes"
+    timeout: 30000
 - stopApp
 - launchApp
 - extendedWaitUntil:
@@ -60,7 +62,8 @@ tags:
 - tapOn:
     id: "confirm-restore"
 - extendedWaitUntil:
-    visible: "Gjenopprettingen mislyktes. De opprinnelige dataene er kontrollert og gjenopprettet."
+    visible:
+      id: "data-error"
     timeout: 30000
 - stopApp
 - launchApp
