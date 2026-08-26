@@ -22,6 +22,7 @@ tags:
 - inputText: "80"
 - tapOn: "Repetisjoner"
 - inputText: "5"
+- pressKey: back
 - tapOn: "Bekreft"
 - tapOn: "Ferdig"
 - tapOn: "Fullfør økt"
