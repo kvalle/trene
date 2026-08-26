@@ -27,6 +27,7 @@ tags:
     element:
       text: "Bekreft"
     direction: DOWN
+    centerElement: true
 - tapOn: "Bekreft"
 - assertVisible: "Sett 1"
 - tapOn: "Legg til sett"
@@ -40,8 +41,9 @@ tags:
     enabled: true
 - scrollUntilVisible:
     element:
-      text: "Avbryt"
+      id: "cancel-active-workout"
     direction: DOWN
+    centerElement: true
 - assertVisible:
     id: "cancel-active-workout"
     enabled: true
@@ -55,8 +57,9 @@ tags:
     direction: UP
 - scrollUntilVisible:
     element:
-      text: "Avbryt"
+      id: "cancel-active-workout"
     direction: DOWN
+    centerElement: true
 - tapOn:
     id: "cancel-active-workout"
 - tapOn: "Avbryt økten"
