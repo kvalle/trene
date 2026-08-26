@@ -42,6 +42,9 @@ tags:
     element:
       text: "Avbryt"
     direction: DOWN
+- assertVisible:
+    text: "Avbryt"
+    enabled: true
 - tapOn: "Avbryt"
 - assertVisible: "Avbryt økten?"
 - tapOn: "Behold økten"
