@@ -164,13 +164,13 @@ export function DataScreen() {
         visible={restore !== null}
       >
         {restore && (safeStop ? (
-          <ErrorAlert message={failure ?? ''} />
+          <ErrorAlert testID="restore-error" message={failure ?? ''} />
         ) : <>
               {!confirmationOpen && <>
                 <Text style={[typography.body, { color: colors.text }]}>Opprettet {formatDateTime(new Date(restore.createdAt))}</Text>
                 <Card style={styles.counts}>
-                  <DataRow label={`${restore.previewCounts.workouts} treningsøkter`} value="I sikkerhetskopien" />
-                  <DataRow label={`${restore.previewCounts.exercises} øvelser`} value="I sikkerhetskopien" showSeparator />
+                  <DataRow label={`${restore.previewCounts.workouts} treningsøkter`} value="I sikkerhetskopien" testID="restore-preview-workouts" />
+                  <DataRow label={`${restore.previewCounts.exercises} øvelser`} value="I sikkerhetskopien" showSeparator testID="restore-preview-exercises" />
                 </Card>
                 <Text style={[typography.body, { color: colors.text }]}>Ingenting er gjenopprettet ennå.</Text>
               </>}
