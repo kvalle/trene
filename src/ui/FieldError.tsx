@@ -6,13 +6,15 @@ import { useAppTheme } from './AppThemeProvider';
 type Props = {
   message: string;
   testID?: string;
+  nativeID?: string;
 };
 
-export function FieldError({ message, testID }: Props) {
+export function FieldError({ message, nativeID, testID }: Props) {
   const { colors } = useAppTheme();
   return (
     <Text
       testID={testID}
+      nativeID={nativeID}
       accessibilityRole="alert"
       style={[typography.metadata, styles.error, { color: colors.danger }]}
       allowFontScaling

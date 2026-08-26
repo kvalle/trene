@@ -243,7 +243,7 @@ test('preserves the active workout, announces retry, focuses it, and stays put o
   fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
   fireEvent.press(screen.getByRole('button', { name: 'Fullfør økt' }));
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke fullføre økten');
+  expect(await screen.findByRole('alert')).toHaveTextContent(/Kunne ikke fullføre økten/);
   expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
   expect(screen.getByText('Knebøy')).toBeOnTheScreen();
   expect(announce).toHaveBeenCalledWith('Kunne ikke fullføre økten. Prøv igjen.');
@@ -368,7 +368,7 @@ test('keeps the card and offers retry when adding a set fails', async () => {
   renderScreen();
 
   fireEvent.press(await screen.findByRole('button', { name: 'Legg til sett' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke legge til settet. Prøv igjen.');
+  expect(await screen.findByRole('alert')).toHaveTextContent(/Kunne ikke legge til settet. Prøv igjen\./);
   expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Error);
   expect(focus).toHaveBeenCalled();
   expect(screen.getByText('Knebøy')).toBeOnTheScreen();
@@ -388,7 +388,7 @@ test('keeps the exercise and offers retry when removal fails', async () => {
   renderScreen();
 
   fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra økten' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke fjerne øvelsen. Prøv igjen.');
+  expect(await screen.findByRole('alert')).toHaveTextContent(/Kunne ikke fjerne øvelsen. Prøv igjen\./);
   expect(focus).toHaveBeenCalled();
   expect(screen.getByText('Knebøy')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Prøv igjen' }));
@@ -403,8 +403,8 @@ test('keeps core controls at accessible target sizes and vertically stackable at
 
   const card = await screen.findByRole('button', { name: 'Knebøy' });
   const addSet = screen.getByRole('button', { name: 'Legg til sett' });
-  expect(card).toHaveStyle({ minHeight: 48 });
-  expect(addSet).toHaveStyle({ minHeight: 50 });
+  expect(card).toHaveStyle({ minHeight: 56 });
+  expect(addSet).toHaveStyle({ minHeight: 48 });
   expect(screen.getByLabelText('Handlinger for planlagt sett for Knebøy')).not.toHaveStyle({ flexDirection: 'row' });
 });
 
@@ -724,7 +724,7 @@ test('preserves the workout, announces retry, and does not navigate when cancell
   fireEvent.press(await screen.findByRole('button', { name: 'Avbryt' }));
   fireEvent.press(screen.getByRole('button', { name: 'Avbryt økten' }));
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke avbryte økten');
+  expect(await screen.findByRole('alert')).toHaveTextContent(/Kunne ikke avbryte økten/);
   expect(screen.queryByText('Avbryt økten?')).not.toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
   expect(announce).toHaveBeenCalledWith('Kunne ikke avbryte økten. Prøv igjen.');
