@@ -1,4 +1,4 @@
-import { AccessibilityInfo, findNodeHandle, Modal, StyleSheet, Text, View, type ModalProps, type View as ViewType } from 'react-native';
+import { AccessibilityInfo, findNodeHandle, Modal, StyleSheet, Text, View, type ModalProps, type Text as TextType, type View as ViewType } from 'react-native';
 
 import { radii, typography } from '../theme';
 import { useAppTheme } from './AppThemeProvider';
@@ -6,11 +6,12 @@ import { useAppTheme } from './AppThemeProvider';
 type DialogProps = Omit<ModalProps, 'children' | 'onShow'> & {
   title: string;
   children: React.ReactNode;
-  initialFocusRef?: React.RefObject<ViewType | null>;
+  initialFocusRef?: React.RefObject<ViewType | TextType | null>;
+  titleRef?: React.RefObject<TextType | null>;
   testID?: string;
 };
 
-export function Dialog({ title, children, initialFocusRef, testID, ...modalProps }: DialogProps) {
+export function Dialog({ title, children, initialFocusRef, titleRef, testID, ...modalProps }: DialogProps) {
   const { colors } = useAppTheme();
 
   function handleShow() {
@@ -24,7 +25,7 @@ export function Dialog({ title, children, initialFocusRef, testID, ...modalProps
     <Modal {...modalProps} animationType="none" transparent onShow={handleShow}>
       <View accessibilityViewIsModal style={styles.backdrop}>
         <View testID={testID} style={[styles.dialog, { backgroundColor: colors.surface }]}>
-          <Text accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>{title}</Text>
+          <Text ref={titleRef} accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>{title}</Text>
           {children}
         </View>
       </View>

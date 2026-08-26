@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { usePreventRemove } from '@react-navigation/native';
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, findNodeHandle, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, findNodeHandle, ScrollView, StyleSheet, Text, View, type Text as TextType } from 'react-native';
 
 import { createAndShareBackup } from '../backup/createBackup';
 import { createNativeBackupPlatform } from '../backup/nativeBackupPlatform';
@@ -30,7 +30,7 @@ export function DataScreen() {
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [currentCounts, setCurrentCounts] = useState<PreparedRestore['previewCounts'] | null>(null);
   const restoreButtonRef = useRef<View>(null);
-  const dialogActionRef = useRef<View>(null);
+  const dialogTitleRef = useRef<TextType>(null);
   const busy = operation !== 'idle';
   usePreventRemove(operation === 'commit', () => undefined);
 
@@ -87,7 +87,7 @@ export function DataScreen() {
     try {
       setCurrentCounts(await restore.currentCounts(runtime));
       setConfirmationOpen(true);
-      requestAnimationFrame(() => focus(dialogActionRef));
+      requestAnimationFrame(() => focus(dialogTitleRef));
     } catch {
       const message = 'Kunne ikke kontrollere dataene som skal erstattes. Dataene dine er ikke endret.';
       setFailure(message);
@@ -155,11 +155,12 @@ export function DataScreen() {
       />
       {failure && !safeStop && <ErrorAlert testID="data-error" message={failure} />}
       <Dialog
-        initialFocusRef={dialogActionRef}
+        initialFocusRef={dialogTitleRef}
         onRequestClose={() => { if (!safeStop) closePreview(); }}
         testID={safeStop ? 'restore-safe-stop' : confirmationOpen ? 'restore-confirmation' : 'restore-preview'}
         title={safeStop ? 'Trene kan ikke åpne dataene trygt' : confirmationOpen ? 'Erstatt alle data?' : 'Kontroller sikkerhetskopien'}
         transparent
+        titleRef={dialogTitleRef}
         visible={restore !== null}
       >
         {restore && (safeStop ? (
@@ -186,7 +187,7 @@ export function DataScreen() {
                 </Card>
                 <Text style={[typography.control, { color: colors.danger }]}>Dette erstatter alle data i Trene og kan ikke angres.</Text>
               </>}
-              <Button ref={dialogActionRef} disabled={operation === 'commit'} onPress={closePreview} testID="cancel-restore" title="Avbryt" variant="secondary" />
+              <Button disabled={operation === 'commit'} onPress={closePreview} testID="cancel-restore" title="Avbryt" variant="secondary" />
               {!confirmationOpen && <Button accessibilityHint="Åpner neste steg uten å endre data" busy={operation === 'restore'} onPress={() => void continueRestore()} testID="continue-restore" title={operation === 'restore' ? 'Kontrollerer nåværende data' : 'Fortsett'} />}
               {confirmationOpen && <Button accessibilityHint="Erstatter alle data i Trene og kan ikke angres" busy={operation === 'commit'} onPress={() => void commitRestore()} testID="confirm-restore" title={operation === 'commit' ? 'Gjenoppretter' : 'Erstatt og gjenopprett'} variant="destructive" />}
             </>
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
   counts: { gap: 0, paddingVertical: 4 },
 });
 
-function focus(ref: React.RefObject<View | null>): void {
+function focus(ref: React.RefObject<View | TextType | null>): void {
   const handle = findNodeHandle(ref.current);
   if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
 }

@@ -451,6 +451,32 @@ function DialogDetailScreen() {
         <Button title="Avbryt" variant="secondary" disabled={busy} onPress={() => setVisible(false)} />
         <Button title={busy ? 'Sletter' : 'Slett'} variant="destructive" busy={busy} onPress={() => setBusy(true)} />
       </Dialog>
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Gjenopprettingskomposisjoner</Text>
+        <Text style={[typography.metadata, { color: colors.muted }]}>Preview, bekreftelse, opptatt arbeid, gjenopprettbar feil og låst sikkerhetsstopp bruker samme Dialog, DataRow, ErrorAlert og Button.</Text>
+        <Card style={styles.dialogExample}>
+          <Text style={[typography.control, { color: colors.text }]}>Forhåndsvisning</Text>
+          <DataRow label="24 elementer" value="I sikkerhetskopien" />
+          <Button title="Fortsett" onPress={() => {}} />
+        </Card>
+        <Card style={styles.dialogExample}>
+          <Text style={[typography.control, { color: colors.text }]}>Destruktiv bekreftelse</Text>
+          <Text style={[typography.body, { color: colors.danger }]}>Denne handlingen erstatter eksisterende data.</Text>
+          <Button title="Avbryt" variant="secondary" onPress={() => {}} />
+          <Button title="Erstatt" variant="destructive" onPress={() => {}} />
+        </Card>
+        <Card style={styles.dialogExample}>
+          <Text style={[typography.control, { color: colors.text }]}>Opptatt</Text>
+          <Button title="Erstatter" variant="destructive" busy onPress={() => {}} />
+        </Card>
+        <Card style={styles.dialogExample}>
+          <ErrorAlert title="Gjenopprettingen mislyktes" message="De opprinnelige dataene er fortsatt tilgjengelige." />
+          <Button title="Ferdig" onPress={() => {}} />
+        </Card>
+        <Card style={styles.dialogExample}>
+          <ErrorAlert title="Kan ikke fortsette trygt" message="Dataene er bevart for gjenoppretting." secondaryMessage="Ingen handlinger vises når videre bruk kan skade data." />
+        </Card>
+      </View>
     </ScrollView>
   );
 }
@@ -1070,4 +1096,5 @@ const styles = StyleSheet.create({
   variantCell: { gap: 6 },
   variantLabel: { fontWeight: '600' },
   errorPreview: { borderRadius: radii.control, borderWidth: 1, padding: 12 },
+  dialogExample: { gap: 12 },
 });
