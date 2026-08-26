@@ -22,6 +22,11 @@ tags:
 - inputText: "80"
 - tapOn: "Repetisjoner"
 - inputText: "5"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Bekreft"
+    direction: DOWN
 - tapOn: "Bekreft"
 - assertVisible: "Sett 1"
 - tapOn: "Legg til sett"
