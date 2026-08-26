@@ -34,7 +34,17 @@ tags:
 - tapOn: "Repetisjoner"
 - inputText: "6"
 - tapOn: "Bekreft planlagt sett for Beholdes"
-- tapOn: "Ferdig"
+- extendedWaitUntil:
+    visible: "Sett 1, 6 repetisjoner med 42,5 kilogram"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      text: "Ferdig"
+      enabled: true
+    timeout: 30000
+- tapOn:
+    text: "Ferdig"
+    enabled: true
 - extendedWaitUntil:
     visible: "Fullfør økt"
     timeout: 30000
