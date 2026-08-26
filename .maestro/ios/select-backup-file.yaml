@@ -55,7 +55,12 @@ appId: com.kjetilvalle.trene
     timeout: 60000
 - tapOn:
     id: "${BACKUP_FILE}, trene-backup"
-- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "${BACKUP_FILE}"
+    commands:
+      - tapOn:
+          id: "${BACKUP_FILE}, trene-backup"
 - runFlow:
     when:
       visible: "${BACKUP_FILE}"
