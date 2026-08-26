@@ -33,6 +33,13 @@ tags:
 - assertVisible: "Planlagt sett"
 - scrollUntilVisible:
     element:
+      text: "Legg til sett"
+    direction: DOWN
+- assertVisible:
+    text: "Legg til sett"
+    enabled: true
+- scrollUntilVisible:
+    element:
       text: "Avbryt"
     direction: DOWN
 - tapOn: "Avbryt"
