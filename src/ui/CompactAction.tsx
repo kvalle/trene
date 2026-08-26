@@ -8,11 +8,13 @@ type CompactActionProps = Omit<PressableProps, 'children'> & {
   icon: string;
   label: string;
   busy?: boolean;
+  tone?: 'accent' | 'neutral';
 };
 
-export const CompactAction = forwardRef<ViewType, CompactActionProps>(function CompactAction({ icon, label, accessibilityLabel, busy, disabled, style, ...rest }, ref) {
+export const CompactAction = forwardRef<ViewType, CompactActionProps>(function CompactAction({ icon, label, accessibilityLabel, busy, disabled, style, tone = 'accent', ...rest }, ref) {
   const { colors } = useAppTheme();
   const isDisabled = Boolean(disabled || busy);
+  const color = isDisabled ? colors.muted : tone === 'accent' ? colors.primary : colors.text;
   return (
     <Pressable
       {...rest}
@@ -21,11 +23,16 @@ export const CompactAction = forwardRef<ViewType, CompactActionProps>(function C
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ busy: Boolean(busy), disabled: isDisabled }}
       disabled={isDisabled}
-      style={({ pressed }) => [styles.action, pressed && !isDisabled && styles.pressed, isDisabled && styles.disabled, style as object]}
+      style={(state) => [
+        styles.action,
+        state.pressed && !isDisabled && styles.pressed,
+        isDisabled && styles.disabled,
+        typeof style === 'function' ? style(state) : style,
+      ]}
     >
       <View accessible={false} style={styles.content}>
-        {busy ? <ActivityIndicator color={colors.text} size="small" /> : <Text accessible={false} style={[styles.icon, { color: colors.text }]}>{icon}</Text>}
-        <Text style={[typography.metadata, styles.label, { color: colors.text }]}>{label}</Text>
+        {busy ? <ActivityIndicator color={color} size="small" /> : <Text accessible={false} style={[styles.icon, { color }]}>{icon}</Text>}
+        <Text style={[typography.metadata, styles.label, { color }]}>{label}</Text>
       </View>
     </Pressable>
   );
@@ -37,5 +44,5 @@ const styles = StyleSheet.create({
   icon: { fontSize: 18, lineHeight: 20 },
   label: { fontWeight: '700' },
   pressed: { opacity: 0.72 },
-  disabled: { opacity: 0.55 },
+  disabled: { opacity: 1 },
 });

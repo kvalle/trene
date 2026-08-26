@@ -46,10 +46,10 @@ Domain documentation uses a single-context layout. See `docs/agents/domain.md`.
 ### Design system
 
 The first draft of the design system is documented in
-`docs/design-system/README.md`, with an interactive component catalog in
-`docs/design-system/catalog/`. Read these before implementing or reviewing any
-user-interface change. Reuse the documented components, variants, tokens, and
-interaction patterns.
+`docs/design-system/README.md`, with an interactive runtime component catalog in
+`src/catalog/ComponentCatalog.tsx`. Read these before implementing or reviewing
+any user-interface change. Reuse the documented components, variants, tokens,
+and interaction patterns.
 
 If a requested change needs a new component or variant, or needs to deviate from
 the design system, stop and discuss that design decision with the user before

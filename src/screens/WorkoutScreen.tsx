@@ -6,6 +6,8 @@ import {
   AccessibilityInfo,
   AppState,
   findNodeHandle,
+  LayoutAnimation,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -76,6 +78,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const [exerciseFailure, setExerciseFailure] = useState<{
     workoutExerciseId: number; message: string; operation: 'add-set' | 'remove-exercise';
   }>();
+  const [reduceMotion, setReduceMotion] = useState(true);
   const addExerciseRef = useRef<View>(null);
   const cancelRef = useRef<View>(null);
   const completeRef = useRef<View>(null);
@@ -119,6 +122,12 @@ export function WorkoutScreen({ navigation, route }: Props) {
       );
     }
   }, [drafts, state]);
+
+  useEffect(() => {
+    void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     if (state.status !== 'ready') return;
@@ -226,6 +235,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   }
 
   function updateWorkoutSet(setId: number, update: (set: WorkoutSet) => WorkoutSet | null) {
+    if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
     setState((current) => current.status !== 'ready' ? current : ({
       status: 'ready',
       workout: {
@@ -243,6 +253,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   }
 
   function updateWorkoutExercise(workoutExerciseId: number, update: (sets: WorkoutSet[]) => WorkoutSet[] | null) {
+    if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
     setState((current) => current.status !== 'ready' ? current : ({
       status: 'ready',
       workout: {
@@ -476,7 +487,11 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const workoutBusy = completing || pendingSetId !== undefined || pendingExerciseOperation !== undefined;
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
       {state.workout.exercises.length === 0 && (
         <Text style={[styles.empty, { color: colors.text }]}>Ingen øvelser lagt til ennå</Text>
       )}
@@ -489,9 +504,22 @@ export function WorkoutScreen({ navigation, route }: Props) {
             expanded={expanded}
             headerRef={(node) => { if (node) cardRefs.current.set(exercise.exerciseId, node); }}
             onPress={() => setExpandedId(expanded ? undefined : exercise.exerciseId)}
-            summary={!expanded ? `${completed} av ${exercise.sets.length} sett gjennomført` : undefined}
+            summary={`${completed} av ${exercise.sets.length} sett gjennomført`}
             title={exercise.name}
           >
+            {expanded && (
+              <CompactAction
+                accessibilityLabel={`Fjern ${exercise.name} fra økten`}
+                disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
+                icon="×"
+                label="Fjern øvelse"
+                onPress={() => {
+                  if (completed > 0) setRemoveExerciseId(exercise.id);
+                  else void removeExercise(state.workout.id, exercise.id, exercise.name);
+                }}
+                ref={(node) => { if (node) removeExerciseRefs.current.set(exercise.id, node); }}
+              />
+            )}
             {exercise.sets.map((set, index) => set.confirmedAt ? (
               <View key={set.id} style={[styles.receipt, { borderColor: colors.border }]}>
                 <View
@@ -506,7 +534,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                   accessibilityLabel={`Rediger sett ${index + 1}`}
                   disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
                   icon="✎"
-                  label="Rediger"
+                  label="Endre"
                   onPress={() => void mutateSet(
                     set.id,
                     () => unconfirmWorkoutSet(database, state.workout.id, set.id),
@@ -525,7 +553,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
               const draft = draftFor(set);
               const busy = pendingSetId === set.id;
               return (
-                <FormSection key={set.id} title="Planlagt sett">
+                <FormSection key={set.id} title="Planlagt sett" detail={`Sett ${index + 1}`}>
                   <View style={styles.fields}>
                     <NumericField
                         aria-describedby={draft.loadError ? `load-error-${set.id}` : undefined}
@@ -575,18 +603,12 @@ export function WorkoutScreen({ navigation, route }: Props) {
                     </View>
                   )}
                   <View accessibilityLabel={`Handlinger for planlagt sett for ${exercise.name}`} style={styles.setActions}>
-                    <Button
-                      accessibilityLabel={`Bekreft planlagt sett for ${exercise.name}`}
-                      disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || draft.unsaved || draft.confirmationFailed}
-                      busy={busy}
-                      title={busy ? 'Lagrer' : 'Bekreft'}
-                      onPress={() => void confirmSet(state.workout.id, set, exercise.name)}
-                    />
                     <CompactAction
                       accessibilityLabel={`Slett planlagt sett for ${exercise.name}`}
                       disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
                       icon="×"
                       label="Fjern sett"
+                      tone="neutral"
                       onPress={() => void mutateSet(
                         set.id,
                         () => deletePlannedWorkoutSet(database, state.workout.id, set.id),
@@ -594,6 +616,14 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         'Kunne ikke slette settet. Prøv igjen.',
                         true,
                       )}
+                    />
+                    <Button
+                      accessibilityLabel={`Bekreft planlagt sett for ${exercise.name}`}
+                      disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || draft.unsaved || draft.confirmationFailed}
+                      busy={busy}
+                      style={styles.completeSet}
+                      title={busy ? 'Lagrer' : 'Utført'}
+                      onPress={() => void confirmSet(state.workout.id, set, exercise.name)}
                     />
                   </View>
                   {setFailure?.setId === set.id && (
@@ -616,17 +646,6 @@ export function WorkoutScreen({ navigation, route }: Props) {
                     if (saved) void addSet(state.workout.id, exercise.id, exercise.name);
                   })}
                 />
-                <CompactAction
-                  accessibilityLabel={`Fjern ${exercise.name} fra økten`}
-                  disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
-                  icon="×"
-                  label="Fjern øvelse"
-                  onPress={() => {
-                    if (completed > 0) setRemoveExerciseId(exercise.id);
-                    else void removeExercise(state.workout.id, exercise.id, exercise.name);
-                  }}
-                  ref={(node) => { if (node) removeExerciseRefs.current.set(exercise.id, node); }}
-                />
               </View>
             )}
             {exerciseFailure?.workoutExerciseId === exercise.id && (
@@ -645,28 +664,37 @@ export function WorkoutScreen({ navigation, route }: Props) {
         ref={addExerciseRef}
         disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || hasUnsavedDraft}
         title="Legg til øvelse"
-        variant="secondary"
+        variant={state.workout.exercises.length === 0 ? 'primary' : 'secondary'}
         onPress={() => void flushDrafts().then((saved) => { if (saved) {
           navigation.setParams({ focusAddExercise: true });
           navigation.navigate('ExercisePicker', { workoutId: state.workout.id });
         } })}
       />
-      <Button
-        ref={completeRef}
-        disabled={!hasCompletedSet || workoutBusy || hasDirtyDraft || hasUnsavedDraft}
-        title="Ferdig"
-        onPress={() => { setCompleteFailed(false); setCompleteDialogOpen(true); }}
-      />
+      {state.workout.exercises.length > 0 && (
+        <Button
+          ref={completeRef}
+          disabled={!hasCompletedSet || workoutBusy || hasDirtyDraft || hasUnsavedDraft}
+          title="Ferdig"
+          onPress={() => { setCompleteFailed(false); setCompleteDialogOpen(true); }}
+        />
+      )}
       {completeFailed && (
         <View style={styles.failure}>
           <ErrorAlert message="Kunne ikke fullføre økten" />
           <Button ref={retryCompleteRef} title="Prøv igjen" variant="secondary" onPress={() => setCompleteDialogOpen(true)} />
         </View>
       )}
-      <Button ref={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} testID="cancel-active-workout" title="Avbryt" variant="text" onPress={() => {
-        setCancelFailed(false);
-        setCancelDialogOpen(true);
-      }} />
+      {state.workout.exercises.length === 0 ? (
+        <CompactAction ref={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} icon="×" label="Avbryt" testID="cancel-active-workout" onPress={() => {
+          setCancelFailed(false);
+          setCancelDialogOpen(true);
+        }} />
+      ) : (
+        <Button ref={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} testID="cancel-active-workout" title="Avbryt" variant="text" onPress={() => {
+          setCancelFailed(false);
+          setCancelDialogOpen(true);
+        }} />
+      )}
       {cancelFailed && (
         <View style={styles.failure}>
           <ErrorAlert message="Kunne ikke avbryte økten" />
@@ -732,10 +760,11 @@ const styles = StyleSheet.create({
   container: { flexGrow: 1, gap: 16, padding: 20 },
   empty: { fontSize: 18, paddingVertical: 36, textAlign: 'center' },
   fields: { gap: 10 },
-  receipt: { alignItems: 'stretch', borderBottomWidth: 1, gap: 12, paddingBottom: 12 },
+  receipt: { alignItems: 'center', borderBottomWidth: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingBottom: 12 },
   receiptTitle: { fontSize: 16, fontWeight: '600' },
   receiptText: { flex: 1, gap: 4 },
-  setActions: { gap: 10 },
+  setActions: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
+  completeSet: { flexGrow: 1, minWidth: 180 },
   exerciseActions: { gap: 10 },
   failure: { gap: 10 },
 });

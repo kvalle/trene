@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import ComponentCatalog from '../ComponentCatalog';
+import ComponentCatalog, { CompactActionDetailScreen, NumericFieldDetailScreen } from '../ComponentCatalog';
+import { AppThemeProvider } from '../../ui/AppThemeProvider';
 
 jest.mock('@react-navigation/native', () => ({
   NavigationContainer: ({ children }: { children: React.ReactNode }) => (
@@ -74,4 +75,22 @@ it('renders production theme contexts and switches theme', () => {
 
   fireEvent(screen.getByLabelText('Mørk modus'), 'valueChange', true);
   expect(screen.getByLabelText('Mørk modus')).toBeOnTheScreen();
+});
+
+it('shows every CompactAction state', () => {
+  render(<AppThemeProvider><CompactActionDetailScreen /></AppThemeProvider>);
+  expect(screen.getByTestId('catalog-compactaction-normal')).toBeEnabled();
+  expect(screen.getByTestId('catalog-compactaction-add')).toBeEnabled();
+  expect(screen.getByTestId('catalog-compactaction-remove')).toBeEnabled();
+  expect(screen.getByTestId('catalog-compactaction-disabled')).toBeDisabled();
+  expect(screen.getByTestId('catalog-compactaction-busy')).toHaveProp('accessibilityState', { busy: true, disabled: true });
+});
+
+it('shows every NumericField state and keyboard kind', () => {
+  render(<AppThemeProvider><NumericFieldDetailScreen /></AppThemeProvider>);
+  expect(screen.getByTestId('catalog-numericfield-decimal')).toHaveProp('keyboardType', 'decimal-pad');
+  expect(screen.getByTestId('catalog-numericfield-integer')).toHaveProp('keyboardType', 'number-pad');
+  expect(screen.getByTestId('catalog-numericfield-error-error')).toBeOnTheScreen();
+  expect(screen.getByTestId('catalog-numericfield-disabled')).toHaveProp('editable', false);
+  expect(screen.getByTestId('catalog-numericfield-focus')).toHaveProp('autoFocus', true);
 });

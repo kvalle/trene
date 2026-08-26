@@ -28,7 +28,7 @@ tags:
 - tapOn: "Repetisjoner"
 - inputText: "5"
 - pressKey: back
-- tapOn: "Bekreft"
+- tapOn: "Bekreft planlagt sett for Knebøy"
 - tapOn: "Ferdig"
 - assertVisible: "Fullfør økten?"
 - tapOn: "Fullfør økt"

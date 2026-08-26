@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View, type ViewProps } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AccessibilityInfo, LayoutAnimation, Pressable, StyleSheet, Text, View, type ViewProps } from 'react-native';
 
 import { radii, typography } from '../theme';
 import { useAppTheme } from './AppThemeProvider';
@@ -14,12 +15,27 @@ type DisclosureCardProps = ViewProps & {
 
 export function DisclosureCard({ title, summary, expanded, onPress, headerRef, children, style, ...rest }: DisclosureCardProps) {
   const { colors } = useAppTheme();
+  const [reduceMotion, setReduceMotion] = useState(true);
+
+  useEffect(() => {
+    void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  function toggle() {
+    if (!reduceMotion) {
+      LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
+    }
+    onPress();
+  }
+
   return (
     <View {...rest} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, style]}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded }}
-        onPress={onPress}
+        onPress={toggle}
         ref={headerRef}
         style={({ pressed }) => [styles.header, pressed && styles.pressed]}
       >

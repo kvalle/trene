@@ -1,4 +1,4 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, usePreventRemove } from '@react-navigation/native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { AccessibilityInfo, AppState, type AppStateStatus, Modal } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -85,11 +85,61 @@ test('shows an active workout and opens its cancellable exercise picker', async 
   renderScreen({ navigate, setParams });
 
   expect(await screen.findByText('Ingen øvelser lagt til ennå', {}, { timeout: 3000 })).toBeOnTheScreen();
-  expect(screen.getByRole('button', { name: 'Ferdig' })).toBeDisabled();
+  expect(screen.queryByRole('button', { name: 'Ferdig' })).not.toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Avbryt' })).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Legg til øvelse' }));
   await waitFor(() => expect(setParams).toHaveBeenCalledWith({ focusAddExercise: true }));
   expect(navigate).toHaveBeenCalledWith('ExercisePicker', { workoutId: 3 });
+});
+
+test('keeps loading and total failure distinct from an empty workout and retries loading', async () => {
+  let finishLoad: (workout: { id: number; exercises: never[] }) => void = () => undefined;
+  mockedLoad
+    .mockImplementationOnce(() => new Promise((resolve) => { finishLoad = resolve; }))
+    .mockRejectedValueOnce(new Error('read failed'))
+    .mockResolvedValueOnce({ id: 3, exercises: [] });
+  const initialView = renderScreen();
+
+  expect(screen.getByLabelText('Laster treningsøkt')).toBeOnTheScreen();
+  expect(screen.queryByText('Ingen øvelser lagt til ennå')).not.toBeOnTheScreen();
+  await act(async () => finishLoad({ id: 3, exercises: [] }));
+  expect(await screen.findByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
+  initialView.unmount();
+
+  const view = renderScreen();
+  expect(await screen.findByText('Kunne ikke laste inn')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: 'Prøv igjen' }));
+  expect(await screen.findByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
+  view.unmount();
+});
+
+test('opens and focuses the exercise requested by route params, then consumes them', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  const setParams = jest.fn();
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    exercises: [
+      ...workoutWithSets.exercises,
+      { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
+    ],
+  });
+  renderScreen({ setParams }, { focusExerciseId: 10 });
+
+  expect(await screen.findByRole('button', { name: 'Markløft' })).toHaveProp('accessibilityState', { expanded: true });
+  expect(screen.getByRole('button', { name: 'Knebøy' })).toHaveProp('accessibilityState', { expanded: false });
+  expect(focus).toHaveBeenCalled();
+  expect(setParams).toHaveBeenCalledWith({ focusExerciseId: undefined, focusAddExercise: undefined });
+});
+
+test('focuses the add-exercise action requested by route params, then consumes them', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  const setParams = jest.fn();
+  mockedLoad.mockResolvedValue({ id: 3, exercises: [] });
+  renderScreen({ setParams }, { focusAddExercise: true });
+
+  expect(await screen.findByRole('button', { name: 'Legg til øvelse' })).toBeOnTheScreen();
+  expect(focus).toHaveBeenCalled();
+  expect(setParams).toHaveBeenCalledWith({ focusExerciseId: undefined, focusAddExercise: undefined });
 });
 
 test('opens the selected exercise with an editable planned set', async () => {
@@ -107,6 +157,8 @@ test('opens the selected exercise with an editable planned set', async () => {
   expect(screen.getByLabelText('Belastning for Knebøy')).not.toHaveProp('editable', false);
   expect(screen.getByLabelText('Repetisjoner for Knebøy')).not.toHaveProp('editable', false);
   expect(screen.getByRole('button', { name: 'Legg til sett' })).toBeOnTheScreen();
+  expect(screen.getByLabelText('Belastning for Knebøy')).toHaveProp('keyboardType', 'decimal-pad');
+  expect(screen.getByLabelText('Repetisjoner for Knebøy')).toHaveProp('keyboardType', 'number-pad');
 });
 
 test('exposes every suggested set as editable labeled fields in suggestion order', async () => {
@@ -127,7 +179,8 @@ test('exposes every suggested set as editable labeled fields in suggestion order
   expect(loads.map((input) => input.props.value)).toEqual(['80', '90']);
   expect(repetitions.map((input) => input.props.value)).toEqual(['5', '3']);
   expect(screen.getAllByText('Planlagt sett')).toHaveLength(2);
-  expect(screen.queryByText('Sett 1')).not.toBeOnTheScreen();
+  expect(screen.getByText('Sett 1')).toBeOnTheScreen();
+  expect(screen.getByText('Sett 2')).toBeOnTheScreen();
 });
 
 test('shows completed receipts above planned sets with derived numbering', async () => {
@@ -224,12 +277,25 @@ test('opens completed detail only after the completion transaction succeeds', as
   fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
   fireEvent.press(screen.getByRole('button', { name: 'Fullfør økt' }));
   expect(replace).not.toHaveBeenCalled();
-  expect(screen.getByRole('button', { name: 'Fullfører' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Fullfører' })).toHaveProp('accessibilityState', { busy: true, disabled: true });
+  expect(screen.getByRole('button', { name: 'Fortsett økten' })).toBeDisabled();
 
   finish();
   await waitFor(() => expect(replace).toHaveBeenCalledWith('CompletedWorkout', {
     workoutId: 3, fromCompletion: true,
   }));
+});
+
+test('does not dismiss the completion dialog while completion is pending', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedComplete.mockImplementation(() => new Promise(() => {}));
+  const { UNSAFE_getAllByType } = renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Fullfør økt' }));
+  fireEvent(UNSAFE_getAllByType(Modal).find((modal) => modal.props.visible)!, 'requestClose');
+
+  expect(screen.getByRole('header', { name: 'Fullfør økten?' })).toBeOnTheScreen();
 });
 
 test('preserves the active workout, announces retry, focuses it, and stays put on completion failure', async () => {
@@ -263,6 +329,41 @@ test('adds a separately confirmable set returned by durable storage', async () =
   expect(screen.getAllByLabelText('Belastning for Knebøy')).toHaveLength(2);
   expect(mockedConfirm).not.toHaveBeenCalled();
   expect(Haptics.selectionAsync).toHaveBeenCalled();
+});
+
+test.each([
+  ['Legg til sett', 'add-set'],
+  ['Legg til øvelse', 'add-exercise'],
+] as const)('flushes a dirty draft before %s and waits for durability', async (actionName, action) => {
+  let finishSave: () => void = () => undefined;
+  const navigate = jest.fn();
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedSave.mockImplementation(() => new Promise<void>((resolve) => { finishSave = resolve; }));
+  mockedAddSet.mockResolvedValue({ id: 8, loadKg: null, repetitions: null, confirmedAt: null });
+  renderScreen({ navigate });
+  fireEvent.changeText(await screen.findByLabelText('Belastning for Knebøy'), '90');
+
+  fireEvent.press(screen.getByRole('button', { name: actionName }));
+  await waitFor(() => expect(mockedSave).toHaveBeenCalledWith(database, 3, 6, 90, null));
+  expect(mockedAddSet).not.toHaveBeenCalled();
+  expect(navigate).not.toHaveBeenCalled();
+
+  await act(async () => finishSave());
+  if (action === 'add-set') await waitFor(() => expect(mockedAddSet).toHaveBeenCalled());
+  else await waitFor(() => expect(navigate).toHaveBeenCalledWith('ExercisePicker', { workoutId: 3 }));
+});
+
+test('does not continue navigation when flushing a dirty draft fails', async () => {
+  const navigate = jest.fn();
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedSave.mockRejectedValue(new Error('write failed'));
+  renderScreen({ navigate });
+  fireEvent.changeText(await screen.findByLabelText('Belastning for Knebøy'), '90');
+
+  fireEvent.press(screen.getByRole('button', { name: 'Legg til øvelse' }));
+
+  expect(await screen.findByText('Endringene er ikke lagret')).toBeOnTheScreen();
+  expect(navigate).not.toHaveBeenCalled();
 });
 
 test('allows only one expanded card and lets it collapse independently', async () => {
@@ -352,7 +453,8 @@ test('shows busy removal state and restores focus when removal is cancelled', as
 
   fireEvent.press(screen.getByRole('button', { name: 'Fjern Knebøy fra økten' }));
   fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av øvelsen' }));
-  expect(await screen.findByRole('button', { name: 'Bekreft fjerning av øvelsen' })).toBeDisabled();
+  expect(await screen.findByRole('button', { name: 'Bekreft fjerning av øvelsen' })).toHaveProp('accessibilityState', { busy: true, disabled: true });
+  expect(screen.getByRole('button', { name: 'Behold øvelsen' })).toBeDisabled();
   expect(screen.getByText('Fjerner øvelse')).toBeOnTheScreen();
   fireEvent(UNSAFE_getAllByType(Modal)[0], 'requestClose');
   expect(screen.getByText('Fjern øvelsen?')).toBeOnTheScreen();
@@ -405,7 +507,7 @@ test('keeps core controls at accessible target sizes and vertically stackable at
   const addSet = screen.getByRole('button', { name: 'Legg til sett' });
   expect(card).toHaveStyle({ minHeight: 56 });
   expect(addSet).toHaveStyle({ minHeight: 48 });
-  expect(screen.getByLabelText('Handlinger for planlagt sett for Knebøy')).not.toHaveStyle({ flexDirection: 'row' });
+  expect(screen.getByLabelText('Handlinger for planlagt sett for Knebøy')).toHaveStyle({ flexDirection: 'row', flexWrap: 'wrap' });
 });
 
 test('validates input and atomically confirms comma decimals', async () => {
@@ -422,6 +524,10 @@ test('validates input and atomically confirms comma decimals', async () => {
   expect(await screen.findAllByRole('alert')).toHaveLength(2);
   expect(load).toHaveProp('aria-invalid', true);
   expect(repetitions).toHaveProp('aria-invalid', true);
+  expect(load).toHaveProp('aria-describedby', 'load-error-6');
+  expect(repetitions).toHaveProp('aria-describedby', 'repetitions-error-6');
+  expect(screen.getByText('Skriv inn en belastning fra 0 til 999,9 med maks én desimal')).toHaveProp('nativeID', 'load-error-6');
+  expect(screen.getByText('Skriv inn et helt antall repetisjoner fra 1 til 999')).toHaveProp('nativeID', 'repetitions-error-6');
   expect(focus).toHaveBeenCalled();
   expect(mockedConfirm).not.toHaveBeenCalled();
 
@@ -429,6 +535,40 @@ test('validates input and atomically confirms comma decimals', async () => {
   fireEvent.changeText(repetitions, '5');
   fireEvent.press(screen.getByRole('button', { name: 'Bekreft planlagt sett for Knebøy' }));
   await waitFor(() => expect(mockedConfirm).toHaveBeenCalledWith(database, 3, 6, 80.5, 5, expect.any(String)));
+});
+
+test('flushes a dirty draft before allowing stack navigation', async () => {
+  let preventRemove: ((event: { data: { action: object } }) => void) | undefined;
+  let finishSave: () => void = () => undefined;
+  const dispatch = jest.fn();
+  jest.mocked(usePreventRemove).mockImplementation((_, callback) => { preventRemove = callback as typeof preventRemove; });
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedSave.mockImplementation(() => new Promise<void>((resolve) => { finishSave = resolve; }));
+  renderScreen({ dispatch });
+  fireEvent.changeText(await screen.findByLabelText('Belastning for Knebøy'), '90');
+  await waitFor(() => expect(usePreventRemove).toHaveBeenLastCalledWith(true, expect.any(Function)));
+  const action = { type: 'GO_BACK' };
+
+  act(() => preventRemove?.({ data: { action } }));
+  expect(dispatch).not.toHaveBeenCalled();
+  await waitFor(() => expect(mockedSave).toHaveBeenCalled());
+  await act(async () => finishSave());
+  await waitFor(() => expect(dispatch).toHaveBeenCalledWith(action));
+});
+
+test('keeps stack navigation blocked when its draft flush fails', async () => {
+  let preventRemove: ((event: { data: { action: object } }) => void) | undefined;
+  const dispatch = jest.fn();
+  jest.mocked(usePreventRemove).mockImplementation((_, callback) => { preventRemove = callback as typeof preventRemove; });
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedSave.mockRejectedValue(new Error('write failed'));
+  renderScreen({ dispatch });
+  fireEvent.changeText(await screen.findByLabelText('Belastning for Knebøy'), '90');
+
+  act(() => preventRemove?.({ data: { action: { type: 'GO_BACK' } } }));
+
+  expect(await screen.findByText('Endringene er ikke lagret')).toBeOnTheScreen();
+  expect(dispatch).not.toHaveBeenCalled();
 });
 
 test('keeps a failed valid autosave visible until manual retry succeeds', async () => {
@@ -650,7 +790,8 @@ test('retains values with visible retry after confirmation fails', async () => {
   expect(await screen.findByText('Kunne ikke bekrefte settet')).toBeOnTheScreen();
   expect(load).toHaveProp('value', '80');
   expect(repetitions).toHaveProp('value', '5');
-  expect(screen.queryByText('Sett 1')).not.toBeOnTheScreen();
+  expect(screen.getByText('Sett 1')).toBeOnTheScreen();
+  expect(screen.queryByText('80 kg · 5 repetisjoner')).not.toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Prøv å bekrefte igjen' })).toBeOnTheScreen();
 });
 
@@ -713,6 +854,19 @@ test('platform Back closes the confirmation dialog first', async () => {
   expect(mockedCancel).not.toHaveBeenCalled();
 });
 
+test('exposes cancellation busy state and ignores dismissal while cancellation is pending', async () => {
+  mockedLoad.mockResolvedValue({ id: 3, exercises: [] });
+  mockedCancel.mockImplementation(() => new Promise(() => {}));
+  const { UNSAFE_getByType } = renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Avbryt' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Avbryt økten' }));
+  expect(screen.getByRole('button', { name: 'Avbryter' })).toHaveProp('accessibilityState', { busy: true, disabled: true });
+  expect(screen.getByRole('button', { name: 'Behold økten' })).toBeDisabled();
+  fireEvent(UNSAFE_getByType(Modal), 'requestClose');
+  expect(screen.getByRole('header', { name: 'Avbryt økten?' })).toBeOnTheScreen();
+});
+
 test('preserves the workout, announces retry, and does not navigate when cancellation fails', async () => {
   const popTo = jest.fn();
   const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
@@ -732,7 +886,10 @@ test('preserves the workout, announces retry, and does not navigate when cancell
   expect(popTo).not.toHaveBeenCalled();
 });
 
-function renderScreen(navigation: Record<string, jest.Mock> = {}) {
+function renderScreen(
+  navigation: Record<string, jest.Mock> = {},
+  params?: { focusExerciseId?: number; focusAddExercise?: boolean },
+) {
   const mergedNavigation = { navigate: jest.fn(), popTo: jest.fn(), replace: jest.fn(), setParams: jest.fn(), ...navigation };
   return render(
     <AppThemeProvider>
@@ -741,7 +898,7 @@ function renderScreen(navigation: Record<string, jest.Mock> = {}) {
           <NavigationContainer>
             <WorkoutScreen
             navigation={mergedNavigation as never}
-            route={{ params: undefined } as never}
+            route={{ params } as never}
           />
           </NavigationContainer>
         </WorkoutDraftProvider>

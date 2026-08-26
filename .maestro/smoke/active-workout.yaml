@@ -25,10 +25,10 @@ tags:
 - pressKey: back
 - scrollUntilVisible:
     element:
-      text: "Bekreft"
+      text: "Bekreft planlagt sett for Knebøy"
     direction: DOWN
     centerElement: true
-- tapOn: "Bekreft"
+- tapOn: "Bekreft planlagt sett for Knebøy"
 - assertVisible: "Sett 1"
 # Test cancellation dialog while the screen is short (single confirmed set).
 - tapOn: "Avbryt"

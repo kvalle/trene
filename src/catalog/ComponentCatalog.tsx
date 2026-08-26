@@ -456,14 +456,16 @@ function ButtonDetailScreen() {
   );
 }
 
-function CompactActionDetailScreen() {
+export function CompactActionDetailScreen() {
   return (
     <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-compactaction">
       <DetailHeader name="CompactAction" description="Kompakt lokal handling med ikon og synlig etikett." usage="Bruk når handlingen gjelder ett lite innholdselement og ikke skal konkurrere med primære handlinger." />
       <View style={styles.controlGroup}>
         <CompactAction icon="✎" label="Rediger" onPress={() => {}} testID="catalog-compactaction-normal" />
-        <CompactAction icon="＋" label="Legg til" onPress={() => {}} testID="catalog-compactaction-add" />
+        <CompactAction icon="+" label="Legg til" onPress={() => {}} testID="catalog-compactaction-add" />
+        <CompactAction icon="×" label="Fjern" tone="neutral" onPress={() => {}} testID="catalog-compactaction-remove" />
         <CompactAction disabled icon="✎" label="Rediger" onPress={() => {}} testID="catalog-compactaction-disabled" />
+        <CompactAction busy icon="+" label="Legger til" onPress={() => {}} testID="catalog-compactaction-busy" />
       </View>
     </ScrollView>
   );
@@ -729,7 +731,7 @@ function FormSectionDetailScreen() {
   );
 }
 
-function NumericFieldDetailScreen() {
+export function NumericFieldDetailScreen() {
   return (
     <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-numericfield">
       <DetailHeader name="NumericField" description="Tallfelt med riktig tastatur for desimaler eller heltall." usage="Bruk når verdien er numerisk og tastaturet kan redusere inntastingsfeil." />
@@ -737,6 +739,8 @@ function NumericFieldDetailScreen() {
         <NumericField kind="decimal" label="Desimalverdi" value="12,5" onChangeText={() => {}} testID="catalog-numericfield-decimal" />
         <NumericField kind="integer" label="Heltallsverdi" value="8" onChangeText={() => {}} testID="catalog-numericfield-integer" />
         <NumericField error="Skriv inn en gyldig verdi" kind="decimal" label="Verdi med feil" value="" onChangeText={() => {}} testID="catalog-numericfield-error" />
+        <NumericField editable={false} kind="decimal" label="Deaktivert verdi" value="12,5" onChangeText={() => {}} testID="catalog-numericfield-disabled" />
+        <NumericField autoFocus kind="decimal" label="Fokusert verdi" value="12,5" onChangeText={() => {}} testID="catalog-numericfield-focus" />
       </View>
     </ScrollView>
   );
