@@ -2,7 +2,7 @@ appId: com.kjetilvalle.trene
 ---
 - extendedWaitUntil:
     visible: "(Browse|${BACKUP_FILE}|On My iPhone|No Recents)"
-    timeout: 60000
+    timeout: 30000
 - runFlow:
     when:
       visible: "No Recents"
@@ -16,7 +16,7 @@ appId: com.kjetilvalle.trene
       - tapOn: "Browse"
 - extendedWaitUntil:
     visible: "(${BACKUP_FILE}|On My iPhone)"
-    timeout: 60000
+    timeout: 30000
 - runFlow:
     when:
       notVisible: "${BACKUP_FILE}"
@@ -41,26 +41,21 @@ appId: com.kjetilvalle.trene
             - extendedWaitUntil:
                 visible:
                   id: "DOC.sidebar.item.On My iPhone"
-                timeout: 60000
+                timeout: 30000
             - tapOn:
                 id: "DOC.sidebar.item.On My iPhone"
       - extendedWaitUntil:
           visible:
             id: "Trene, Container"
-          timeout: 60000
+          timeout: 30000
       - tapOn:
           id: "Trene, Container"
 - extendedWaitUntil:
     visible: "${BACKUP_FILE}"
-    timeout: 60000
+    timeout: 30000
 - tapOn:
     id: "${BACKUP_FILE}, trene-backup"
-- runFlow:
-    when:
-      visible: "${BACKUP_FILE}"
-    commands:
-      - tapOn:
-          id: "${BACKUP_FILE}, trene-backup"
+- waitForAnimationToEnd
 - runFlow:
     when:
       visible: "${BACKUP_FILE}"
