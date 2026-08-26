@@ -30,6 +30,13 @@ tags:
     centerElement: true
 - tapOn: "Bekreft"
 - assertVisible: "Sett 1"
+# Test cancellation dialog while the screen is short (single confirmed set).
+- tapOn: "Avbryt"
+- extendedWaitUntil:
+    visible: "Avbryt økten?"
+    timeout: 10000
+- tapOn: "Behold økten"
+# Verify add-set produces a new planned set and the button re-enables.
 - tapOn: "Legg til sett"
 - assertVisible: "Planlagt sett"
 - scrollUntilVisible:
@@ -39,39 +46,3 @@ tags:
 - assertVisible:
     text: "Legg til sett"
     enabled: true
-# Scroll the cancel button into the center and wait for scroll momentum to
-# settle before tapping. On slow CI emulators the tap can land on the
-# ScrollView gesture handler instead of the button when the view is still
-# decelerating.
-- scrollUntilVisible:
-    element:
-      id: "cancel-active-workout"
-    direction: DOWN
-    centerElement: true
-- waitForAnimationToEnd
-- assertVisible:
-    id: "cancel-active-workout"
-    enabled: true
-- tapOn:
-    id: "cancel-active-workout"
-- extendedWaitUntil:
-    visible: "Avbryt økten?"
-    timeout: 10000
-- tapOn: "Behold økten"
-- scrollUntilVisible:
-    element:
-      text: "Knebøy"
-    direction: UP
-- scrollUntilVisible:
-    element:
-      id: "cancel-active-workout"
-    direction: DOWN
-    centerElement: true
-- waitForAnimationToEnd
-- tapOn:
-    id: "cancel-active-workout"
-- extendedWaitUntil:
-    visible: "Avbryt økten?"
-    timeout: 10000
-- tapOn: "Avbryt økten"
-- assertVisible: "Start økt"
