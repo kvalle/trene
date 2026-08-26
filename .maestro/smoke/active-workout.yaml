@@ -1,5 +1,5 @@
 appId: com.kjetilvalle.trene
-name: Active workout dense, busy, and cancellation states
+name: Active workout editing and cancellation states
 tags:
   - smoke
   - android
