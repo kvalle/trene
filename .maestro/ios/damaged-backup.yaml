@@ -34,7 +34,8 @@ tags:
     env:
       BACKUP_FILE: damaged.trene-backup
 - extendedWaitUntil:
-    visible: "Sikkerhetskopien er skadet eller kan ikke leses. Dataene dine er ikke endret."
+    visible:
+      id: "data-error"
     timeout: 30000
 - stopApp
 - launchApp
