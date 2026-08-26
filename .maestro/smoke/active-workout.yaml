@@ -43,9 +43,10 @@ tags:
       text: "Avbryt"
     direction: DOWN
 - assertVisible:
-    text: "Avbryt"
+    id: "cancel-active-workout"
     enabled: true
-- tapOn: "Avbryt"
+- tapOn:
+    id: "cancel-active-workout"
 - assertVisible: "Avbryt økten?"
 - tapOn: "Behold økten"
 - scrollUntilVisible:
@@ -56,6 +57,7 @@ tags:
     element:
       text: "Avbryt"
     direction: DOWN
-- tapOn: "Avbryt"
+- tapOn:
+    id: "cancel-active-workout"
 - tapOn: "Avbryt økten"
 - assertVisible: "Start økt"

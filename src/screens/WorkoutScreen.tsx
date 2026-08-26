@@ -663,7 +663,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
           <Button ref={retryCompleteRef} title="Prøv igjen" variant="secondary" onPress={() => setCompleteDialogOpen(true)} />
         </View>
       )}
-      <Button ref={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} title="Avbryt" variant="text" onPress={() => {
+      <Button ref={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} testID="cancel-active-workout" title="Avbryt" variant="text" onPress={() => {
         setCancelFailed(false);
         setCancelDialogOpen(true);
       }} />
