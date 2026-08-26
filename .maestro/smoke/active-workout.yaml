@@ -26,10 +26,21 @@ tags:
 - assertVisible: "Sett 1"
 - tapOn: "Legg til sett"
 - assertVisible: "Planlagt sett"
+- scrollUntilVisible:
+    element:
+      text: "Avbryt"
+    direction: DOWN
 - tapOn: "Avbryt"
 - assertVisible: "Avbryt økten?"
 - tapOn: "Behold økten"
-- assertVisible: "Knebøy"
+- scrollUntilVisible:
+    element:
+      text: "Knebøy"
+    direction: UP
+- scrollUntilVisible:
+    element:
+      text: "Avbryt"
+    direction: DOWN
 - tapOn: "Avbryt"
 - tapOn: "Avbryt økten"
 - assertVisible: "Start økt"
