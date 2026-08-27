@@ -29,6 +29,11 @@ tags:
 
 - tapOn: "Belastning"
 - inputText: "80.5"
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Repetisjoner"
 - inputText: "5"
 
