@@ -206,3 +206,35 @@ ANDROID_BACKUP_INTERRUPTION_FLOW=<flow> npm run smoke:android:backup
 
 Supported flows are `export-cleanup`, `before-replacement`,
 `around-activation`, and `after-replacement`.
+
+## iOS smoke tests
+
+During ticket preflight, decide whether iOS runtime verification is required. If
+it is, check the iOS build broker before implementation:
+
+```sh
+python3 scripts/request-ios-smoke.py --broker-status
+```
+
+This status check does not queue a smoke test. If the broker is absent, stale, or
+targets another repository, ask the user to start it outside cplt and wait. Never
+start the broker from the agent session, nest cplt, grant Simulator access to the
+current session, or run Xcode, Simulator, or Maestro directly as a workaround.
+
+Submit the allowlisted flow from this repository:
+
+```sh
+python3 scripts/request-ios-smoke.py --flow restore-success
+```
+
+The client prints compact JSON containing a `requestId` and repository-relative
+`statusPath`. Poll that `status.json` until its `state` is `passed`, `failed`,
+`rejected`, or `stale`. On failure, rejection, or staleness, report the terminal
+state, `errorCode` when present, and only the relevant bounded output from the
+result directory's `build.log` or `smoke.log`.
+
+Requests are bound to the current Git `HEAD` and all tracked and non-ignored
+worktree files. Keep the worktree stable while a request runs and submit a new
+request after any source change. Use one focused allowlisted flow while
+iterating; when more flows become allowlisted, submit each required final flow as
+an individual request.

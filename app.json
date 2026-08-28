@@ -12,6 +12,10 @@
     "ios": {
       "bundleIdentifier": "com.kjetilvalle.trene",
       "deploymentTarget": "26.0",
+      "infoPlist": {
+        "LSSupportsOpeningDocumentsInPlace": true,
+        "UIFileSharingEnabled": true
+      },
       "supportsTablet": false
     },
     "android": {
