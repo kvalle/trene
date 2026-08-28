@@ -185,6 +185,7 @@ def main() -> None:
     root = repository / ".artifacts/ios-broker"
     request_id = str(uuid.uuid4())
     result_dir = root / "results" / request_id
+    identity = compute_source_identity(repository)
     for directory in (root, root / "requests", root / "claimed", root / "results", result_dir):
         directory.mkdir(mode=0o700, parents=True, exist_ok=True)
         info = directory.lstat()
@@ -193,7 +194,6 @@ def main() -> None:
     now = int(time.time())
     status_path = result_dir / "status.json"
     atomic_json(status_path, {"protocolVersion": 1, "requestId": request_id, "state": "queued", "updatedAt": now}, exclusive=True)
-    identity = compute_source_identity(repository)
     atomic_json(root / "requests" / f"{request_id}.json", {
         "protocolVersion": 1, "requestId": request_id, "createdAt": now,
         "brokerSessionId": broker["brokerSessionId"], "head": identity.head,

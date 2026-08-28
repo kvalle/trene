@@ -264,8 +264,6 @@ jobs:
         with:
           name: trene-ios-simulator-app
           path: .artifacts/ios/Trene.app
-      - name: Record downloaded app path
-        run: printf '%s\n' "$PWD/.artifacts/ios/Trene.app" > .artifacts/ios/app-path.txt
       - name: Run native backup and restore journeys
         env:
           IOS_SIMULATOR_DEVICE: iPhone 16
