@@ -221,11 +221,17 @@ targets another repository, ask the user to start it outside cplt and wait. Neve
 start the broker from the agent session, nest cplt, grant Simulator access to the
 current session, or run Xcode, Simulator, or Maestro directly as a workaround.
 
-Submit the allowlisted flow from this repository:
+Submit one allowlisted flow from this repository:
 
 ```sh
 python3 scripts/request-ios-smoke.py --flow restore-success
 ```
+
+Supported flows are `restore-success`, `damaged-backup`,
+`picker-cancellation`, `restore-failure`, `newer-backup`,
+`rollback-failure`, `storage-failure`, and `share-cancellation`.
+`select-backup-file` is an internal helper. Cross-platform round trips remain CI
+workflows and are not broker requests.
 
 The client prints compact JSON containing a `requestId` and repository-relative
 `statusPath`. Poll that `status.json` until its `state` is `passed`, `failed`,
@@ -238,3 +244,6 @@ worktree files. Keep the worktree stable while a request runs and submit a new
 request after any source change. Use one focused allowlisted flow while
 iterating; when more flows become allowlisted, submit each required final flow as
 an individual request.
+
+See `docs/ios-build-broker.md` for host operation, trust boundaries, and the
+required steps for adding or changing an iOS broker flow.

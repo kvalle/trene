@@ -111,7 +111,11 @@ def compute_source_identity(repo: str | bytes) -> SourceIdentity:
 ''', "<source_identity>", "exec"))
 
 PROTOCOL_VERSION = 1
-ALLOWED_FLOWS = ("restore-success",)
+ALLOWED_FLOWS = (
+    "restore-success", "damaged-backup", "picker-cancellation",
+    "restore-failure", "newer-backup", "rollback-failure",
+    "storage-failure", "share-cancellation",
+)
 UUID_PATTERN = __import__("re").compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
 
