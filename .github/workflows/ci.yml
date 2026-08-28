@@ -267,6 +267,7 @@ jobs:
       - name: Run native backup and restore journeys
         env:
           IOS_SIMULATOR_DEVICE: iPhone 16
+          IOS_SMOKE_APP: .artifacts/ios/Trene.app
           IOS_SIMULATOR_RUNTIME: '26'
           IOS_SMOKE_FLOWS: ${{ matrix.flows }}
           IOS_SMOKE_SHARD: ${{ matrix.shard }}
