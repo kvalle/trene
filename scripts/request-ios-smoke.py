@@ -111,11 +111,8 @@ def compute_source_identity(repo: str | bytes) -> SourceIdentity:
 ''', "<source_identity>", "exec"))
 
 PROTOCOL_VERSION = 1
-ALLOWED_FLOWS = (
-    "restore-success", "damaged-backup", "picker-cancellation",
-    "restore-failure", "newer-backup", "rollback-failure",
-    "storage-failure", "share-cancellation",
-)
+PROFILE_ID = 'trene'
+ALLOWED_FLOWS = ('damaged-backup', 'newer-backup', 'picker-cancellation', 'restore-failure', 'restore-success', 'rollback-failure', 'share-cancellation', 'storage-failure')
 UUID_PATTERN = __import__("re").compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
 
@@ -158,12 +155,14 @@ def heartbeat(repository: Path) -> dict[str, object]:
         value = json.loads((repository / ".artifacts/ios-broker/heartbeat.json").read_text())
     except (OSError, json.JSONDecodeError) as exc:
         fail(f"no running broker heartbeat: {exc}")
-    expected = {"protocolVersion", "brokerSessionId", "targetRepository", "pid", "updatedAt"}
+    expected = {"protocolVersion", "brokerSessionId", "profileId", "targetRepository", "pid", "updatedAt"}
     now = int(time.time())
     if type(value) is not dict or set(value) != expected:
         fail("invalid broker heartbeat")
     if value["protocolVersion"] != PROTOCOL_VERSION:
         fail("unsupported broker protocol")
+    if value["profileId"] != PROFILE_ID:
+        fail("broker heartbeat uses a different project profile")
     if type(value["brokerSessionId"]) is not str or not UUID_PATTERN.fullmatch(value["brokerSessionId"]):
         fail("invalid broker heartbeat session")
     if type(value["pid"]) is not int or value["pid"] <= 0:
@@ -184,7 +183,7 @@ def main() -> None:
     repository = repository_root()
     broker = heartbeat(repository)
     if args.broker_status:
-        print(json.dumps({"running": True, "brokerSessionId": broker["brokerSessionId"], "pid": broker["pid"], "updatedAt": broker["updatedAt"]}, separators=(",", ":")))
+        print(json.dumps({"running": True, "profileId": PROFILE_ID, "brokerSessionId": broker["brokerSessionId"], "pid": broker["pid"], "updatedAt": broker["updatedAt"]}, separators=(",", ":")))
         return
     root = repository / ".artifacts/ios-broker"
     request_id = str(uuid.uuid4())
