@@ -216,10 +216,11 @@ it is, check the iOS build broker before implementation:
 python3 scripts/request-ios-smoke.py --broker-status
 ```
 
-This status check does not queue a smoke test. If the broker is absent, stale, or
-targets another repository, ask the user to start it outside cplt and wait. Never
-start the broker from the agent session, nest cplt, grant Simulator access to the
-current session, or run Xcode, Simulator, or Maestro directly as a workaround.
+This status check does not queue a smoke test. If the broker is absent, stale,
+targets another repository, or uses another project profile, ask the user to
+start it outside cplt with the `trene` profile and wait. Never start the broker
+from the agent session, nest cplt, grant Simulator access to the current session,
+or run Xcode, Simulator, or Maestro directly as a workaround.
 
 Submit one allowlisted flow from this repository:
 
