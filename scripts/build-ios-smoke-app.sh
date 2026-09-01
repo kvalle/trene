@@ -4,12 +4,11 @@ set -euo pipefail
 
 artifacts="$PWD/.artifacts/ios"
 derived_data="$artifacts/derived-data"
-mkdir -p "$artifacts"
+mkdir -p "$artifacts" "$PWD/.artifacts/expo"
 export EXPO_PUBLIC_BACKUP_RESTORE_AUTOMATION=1
+export __UNSAFE_EXPO_HOME_DIRECTORY="$PWD/.artifacts/expo"
 
 npx expo prebuild --platform ios --no-install
-/usr/libexec/PlistBuddy -c 'Add :LSSupportsOpeningDocumentsInPlace bool true' ios/Trene/Info.plist
-/usr/libexec/PlistBuddy -c 'Add :UIFileSharingEnabled bool true' ios/Trene/Info.plist
 pod install --project-directory=ios
 xcodebuild \
   -workspace ios/Trene.xcworkspace \
@@ -23,4 +22,3 @@ xcodebuild \
 
 app="$derived_data/Build/Products/Release-iphonesimulator/Trene.app"
 test -d "$app"
-printf '%s\n' "$app" > "$artifacts/app-path.txt"

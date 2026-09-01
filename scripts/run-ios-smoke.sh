@@ -6,7 +6,7 @@ artifacts="$PWD/.artifacts"
 ios_artifacts="$artifacts/ios"
 maestro_artifacts="$artifacts/maestro-ios"
 fixtures="$ios_artifacts/fixtures"
-default_app="$(cat "$ios_artifacts/app-path.txt")"
+default_app="$ios_artifacts/derived-data/Build/Products/Release-iphonesimulator/Trene.app"
 app="${IOS_SMOKE_APP:-$default_app}"
 mkdir -p "$maestro_artifacts/home" "$maestro_artifacts/tmp" "$maestro_artifacts/debug" "$maestro_artifacts/screenshots"
 
