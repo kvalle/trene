@@ -8,6 +8,7 @@ import { FieldError } from '../FieldError';
 import { ListContainer } from '../ListContainer';
 import { NavigationRow } from '../NavigationRow';
 import { Card } from '../Card';
+import { CompactAction } from '../CompactAction';
 import { DataRow } from '../DataRow';
 import { AppThemeProvider } from '../AppThemeProvider';
 
@@ -69,6 +70,24 @@ describe('Button', () => {
       </AppThemeProvider>,
     );
     expect(screen.getByTestId('t')).toBeOnTheScreen();
+  });
+});
+
+describe('CompactAction', () => {
+  it('supports Pressable style objects and callbacks', () => {
+    const callbackStyle = jest.fn(() => ({ marginTop: 9 }));
+    const { rerender } = renderWithTheme(
+      <CompactAction icon="+" label="Legg til" style={{ marginBottom: 7 }} testID="compact" />,
+    );
+    expect(screen.getByTestId('compact')).toHaveStyle({ marginBottom: 7 });
+
+    rerender(
+      <AppThemeProvider>
+        <CompactAction icon="+" label="Legg til" style={callbackStyle} testID="compact" />
+      </AppThemeProvider>,
+    );
+    expect(callbackStyle).toHaveBeenCalledWith(expect.objectContaining({ pressed: false }));
+    expect(screen.getByTestId('compact')).toHaveStyle({ marginTop: 9 });
   });
 });
 

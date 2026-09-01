@@ -9,15 +9,19 @@ import { AppThemeProvider, useAppTheme } from '../ui/AppThemeProvider';
 import { getAppStackScreenOptions } from '../ui/appShell';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import { CompactAction } from '../ui/CompactAction';
 import { DataRow } from '../ui/DataRow';
 import { Dialog } from '../ui/Dialog';
+import { DisclosureCard } from '../ui/DisclosureCard';
 import { ErrorAlert } from '../ui/ErrorAlert';
 import { FieldError } from '../ui/FieldError';
+import { FormSection } from '../ui/FormSection';
 import { Hero } from '../ui/Hero';
 import { Loader } from '../ui/Loader';
 import { ListContainer } from '../ui/ListContainer';
 import { NavigationRow } from '../ui/NavigationRow';
 import { Notice } from '../ui/Notice';
+import { NumericField } from '../ui/NumericField';
 import { PageStatus } from '../ui/PageStatus';
 import { SearchField } from '../ui/SearchField';
 import { SelectionRow } from '../ui/SelectionRow';
@@ -26,11 +30,15 @@ import { TextField } from '../ui/TextField';
 type CatalogStackParamList = {
   Overview: undefined;
   ButtonDetail: undefined;
+  CompactActionDetail: undefined;
   CardDetail: undefined;
   DataRowDetail: undefined;
+  DisclosureCardDetail: undefined;
   DialogDetail: undefined;
   TextFieldDetail: undefined;
   FieldErrorDetail: undefined;
+  FormSectionDetail: undefined;
+  NumericFieldDetail: undefined;
   AppShellDetail: undefined;
   HeroDetail: undefined;
   LoaderDetail: undefined;
@@ -69,6 +77,14 @@ const CATALOG_GROUPS: CatalogGroup[] = [
     title: 'Handlinger',
     items: [
       {
+        id: 'compactaction',
+        name: 'CompactAction',
+        description: 'Kompakt lokal handling med ikon og synlig etikett.',
+        usage: 'Bruk når handlingen gjelder ett lite innholdselement og ikke skal konkurrere med primære handlinger.',
+        route: 'CompactActionDetail',
+        testID: 'catalog-item-compactaction',
+      },
+      {
         id: 'button',
         name: 'Button',
         description: 'Primær, sekundær, tekst og destruktiv handling med tydelig hierarki.',
@@ -90,6 +106,14 @@ const CATALOG_GROUPS: CatalogGroup[] = [
     title: 'Lister og beholdere',
     items: [
       {
+        id: 'disclosurecard',
+        name: 'DisclosureCard',
+        description: 'Utvidbart kort med sammendrag og detaljinnhold.',
+        usage: 'Bruk når flere innholdsrike elementer deler skjerm, men bare ett trenger detaljert oppmerksomhet om gangen.',
+        route: 'DisclosureCardDetail',
+        testID: 'catalog-item-disclosurecard',
+      },
+      {
         id: 'card',
         name: 'Card',
         description: 'Overflate som grupperer relatert innhold.',
@@ -110,6 +134,22 @@ const CATALOG_GROUPS: CatalogGroup[] = [
   {
     title: 'Skjema',
     items: [
+      {
+        id: 'numericfield',
+        name: 'NumericField',
+        description: 'Tallfelt med riktig tastatur for desimaler eller heltall.',
+        usage: 'Bruk når verdien er numerisk og tastaturet kan redusere inntastingsfeil.',
+        route: 'NumericFieldDetail',
+        testID: 'catalog-item-numericfield',
+      },
+      {
+        id: 'formsection',
+        name: 'FormSection',
+        description: 'Avgrenset gruppe med relaterte felt og handlinger.',
+        usage: 'Bruk når flere felt og handlinger skal forstås og behandles som én redigerbar enhet.',
+        route: 'FormSectionDetail',
+        testID: 'catalog-item-formsection',
+      },
       {
         id: 'textfield',
         name: 'TextField',
@@ -258,11 +298,15 @@ function CatalogNavigator({
           {(props) => <OverviewScreen {...props} scheme={scheme} setScheme={setScheme} />}
         </Stack.Screen>
         <Stack.Screen name="ButtonDetail" component={ButtonDetailScreen} options={{ title: 'Button' }} />
+        <Stack.Screen name="CompactActionDetail" component={CompactActionDetailScreen} options={{ title: 'CompactAction' }} />
         <Stack.Screen name="CardDetail" component={CardDetailScreen} options={{ title: 'Card' }} />
         <Stack.Screen name="DataRowDetail" component={DataRowDetailScreen} options={{ title: 'DataRow' }} />
+        <Stack.Screen name="DisclosureCardDetail" component={DisclosureCardDetailScreen} options={{ title: 'DisclosureCard' }} />
         <Stack.Screen name="DialogDetail" component={DialogDetailScreen} options={{ title: 'Dialog' }} />
         <Stack.Screen name="TextFieldDetail" component={TextFieldDetailScreen} options={{ title: 'TextField' }} />
         <Stack.Screen name="FieldErrorDetail" component={FieldErrorDetailScreen} options={{ title: 'FieldError' }} />
+        <Stack.Screen name="FormSectionDetail" component={FormSectionDetailScreen} options={{ title: 'FormSection' }} />
+        <Stack.Screen name="NumericFieldDetail" component={NumericFieldDetailScreen} options={{ title: 'NumericField' }} />
         <Stack.Screen name="AppShellDetail" component={AppShellDetailScreen} options={{ title: 'App-shell' }} />
         <Stack.Screen name="HeroDetail" component={HeroDetailScreen} options={{ title: 'Hero' }} />
         <Stack.Screen name="LoaderDetail" component={LoaderDetailScreen} options={{ title: 'Loader' }} />
@@ -412,6 +456,21 @@ function ButtonDetailScreen() {
   );
 }
 
+export function CompactActionDetailScreen() {
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-compactaction">
+      <DetailHeader name="CompactAction" description="Kompakt lokal handling med ikon og synlig etikett." usage="Bruk når handlingen gjelder ett lite innholdselement og ikke skal konkurrere med primære handlinger." />
+      <View style={styles.controlGroup}>
+        <CompactAction icon="✎" label="Rediger" onPress={() => {}} testID="catalog-compactaction-normal" />
+        <CompactAction icon="+" label="Legg til" onPress={() => {}} testID="catalog-compactaction-add" />
+        <CompactAction icon="×" label="Fjern" tone="neutral" onPress={() => {}} testID="catalog-compactaction-remove" />
+        <CompactAction disabled icon="✎" label="Rediger" onPress={() => {}} testID="catalog-compactaction-disabled" />
+        <CompactAction busy icon="+" label="Legger til" onPress={() => {}} testID="catalog-compactaction-busy" />
+      </View>
+    </ScrollView>
+  );
+}
+
 function CardDetailScreen() {
   const { colors } = useAppTheme();
   return (
@@ -433,6 +492,19 @@ function DataRowDetailScreen() {
         <DataRow label="Etikett" value="Verdi" showSeparator testID="catalog-datarow" />
         <DataRow label="Neste etikett" value="Neste verdi" showSeparator />
       </Card>
+    </ScrollView>
+  );
+}
+
+function DisclosureCardDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-disclosurecard">
+      <DetailHeader name="DisclosureCard" description="Utvidbart kort med sammendrag og detaljinnhold." usage="Bruk når flere innholdsrike elementer deler skjerm, men bare ett trenger detaljert oppmerksomhet om gangen." />
+      <DisclosureCard expanded={false} onPress={() => {}} summary="2 av 3 elementer ferdige" title="Kollapset" testID="catalog-disclosurecard-collapsed" />
+      <DisclosureCard expanded onPress={() => {}} summary="2 av 3 elementer ferdige" title="Åpen" testID="catalog-disclosurecard-expanded">
+        <Text style={[typography.body, { color: colors.text }]}>Detaljinnholdet vises når kortet er åpent.</Text>
+      </DisclosureCard>
     </ScrollView>
   );
 }
@@ -639,6 +711,36 @@ function FieldErrorDetailScreen() {
             testID="catalog-fielderror-with-field"
           />
         </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+function FormSectionDetailScreen() {
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-formsection">
+      <DetailHeader name="FormSection" description="Avgrenset gruppe med relaterte felt og handlinger." usage="Bruk når flere felt og handlinger skal forstås og behandles som én redigerbar enhet." />
+      <FormSection title="Seksjonstittel" detail="Valgfri forklaring" testID="catalog-formsection-detail">
+        <TextField label="Etikett" value="Eksempel" onChangeText={() => {}} />
+        <Button title="Lagre" onPress={() => {}} />
+      </FormSection>
+      <FormSection title="Seksjon uten forklaring" testID="catalog-formsection-basic">
+        <Button title="Handling" variant="secondary" onPress={() => {}} />
+      </FormSection>
+    </ScrollView>
+  );
+}
+
+export function NumericFieldDetailScreen() {
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-numericfield">
+      <DetailHeader name="NumericField" description="Tallfelt med riktig tastatur for desimaler eller heltall." usage="Bruk når verdien er numerisk og tastaturet kan redusere inntastingsfeil." />
+      <View style={styles.controlGroup}>
+        <NumericField kind="decimal" label="Desimalverdi" value="12,5" onChangeText={() => {}} testID="catalog-numericfield-decimal" />
+        <NumericField kind="integer" label="Heltallsverdi" value="8" onChangeText={() => {}} testID="catalog-numericfield-integer" />
+        <NumericField error="Skriv inn en gyldig verdi" kind="decimal" label="Verdi med feil" value="" onChangeText={() => {}} testID="catalog-numericfield-error" />
+        <NumericField editable={false} kind="decimal" label="Deaktivert verdi" value="12,5" onChangeText={() => {}} testID="catalog-numericfield-disabled" />
+        <NumericField autoFocus kind="decimal" label="Fokusert verdi" value="12,5" onChangeText={() => {}} testID="catalog-numericfield-focus" />
       </View>
     </ScrollView>
   );

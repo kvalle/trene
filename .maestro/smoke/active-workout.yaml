@@ -1,0 +1,53 @@
+appId: com.kjetilvalle.trene
+name: Active workout editing and cancellation states
+tags:
+  - smoke
+  - android
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Start økt"
+- tapOn: "Legg til øvelse"
+- tapOn: "Opprett første øvelse"
+- tapOn:
+    id: "exercise-name-input"
+- setClipboard: "Knebøy"
+- pasteText
+- tapOn:
+    id: "create-exercise-submit"
+- assertVisible: "Planlagt sett"
+- tapOn: "Belastning"
+- inputText: "80"
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Repetisjoner"
+- inputText: "5"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Bekreft planlagt sett for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Bekreft planlagt sett for Knebøy"
+- assertVisible: "Sett 1"
+# Test cancellation dialog while the screen is short (single confirmed set).
+- tapOn: "Avbryt"
+- extendedWaitUntil:
+    visible: "Avbryt økten?"
+    timeout: 10000
+- tapOn: "Behold økten"
+# Verify add-set produces a new planned set and the button re-enables.
+- tapOn: "Legg til sett"
+- assertVisible: "Planlagt sett"
+- scrollUntilVisible:
+    element:
+      text: "Legg til sett"
+    direction: DOWN
+- assertVisible:
+    text: "Legg til sett"
+    enabled: true

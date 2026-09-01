@@ -4,11 +4,10 @@ import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
-  ActivityIndicator,
   AppState,
   findNodeHandle,
-  Modal,
-  Pressable,
+  LayoutAnimation,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -33,6 +32,14 @@ import {
 } from '../database/workouts';
 import { parseLoad, parseRepetitions, validateWorkoutSet } from '../domain/workoutSet';
 import { formatLoad } from '../locale';
+import { Button } from '../ui/Button';
+import { CompactAction } from '../ui/CompactAction';
+import { Dialog } from '../ui/Dialog';
+import { DisclosureCard } from '../ui/DisclosureCard';
+import { ErrorAlert } from '../ui/ErrorAlert';
+import { FormSection } from '../ui/FormSection';
+import { NumericField } from '../ui/NumericField';
+import { PageStatus } from '../ui/PageStatus';
 import { type WorkoutSetDraft, useWorkoutDrafts } from '../workoutDrafts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Workout'>;
@@ -71,6 +78,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const [exerciseFailure, setExerciseFailure] = useState<{
     workoutExerciseId: number; message: string; operation: 'add-set' | 'remove-exercise';
   }>();
+  const [reduceMotion, setReduceMotion] = useState(true);
   const addExerciseRef = useRef<View>(null);
   const cancelRef = useRef<View>(null);
   const completeRef = useRef<View>(null);
@@ -114,6 +122,12 @@ export function WorkoutScreen({ navigation, route }: Props) {
       );
     }
   }, [drafts, state]);
+
+  useEffect(() => {
+    void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     if (state.status !== 'ready') return;
@@ -221,6 +235,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   }
 
   function updateWorkoutSet(setId: number, update: (set: WorkoutSet) => WorkoutSet | null) {
+    if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
     setState((current) => current.status !== 'ready' ? current : ({
       status: 'ready',
       workout: {
@@ -238,6 +253,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   }
 
   function updateWorkoutExercise(workoutExerciseId: number, update: (sets: WorkoutSet[]) => WorkoutSet[] | null) {
+    if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
     setState((current) => current.status !== 'ready' ? current : ({
       status: 'ready',
       workout: {
@@ -459,13 +475,8 @@ export function WorkoutScreen({ navigation, route }: Props) {
     }
   }
 
-  if (state.status === 'loading') return <ActivityIndicator accessibilityLabel="Laster treningsøkt" style={styles.center} />;
-  if (state.status === 'failed') return (
-    <View style={styles.center}>
-      <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>Kunne ikke laste inn</Text>
-      <Button label="Prøv igjen" onPress={() => setReload((value) => value + 1)} />
-    </View>
-  );
+  if (state.status === 'loading') return <PageStatus variant="loading" loaderLabel="Laster treningsøkt" />;
+  if (state.status === 'failed') return <PageStatus variant="error" title="Kunne ikke laste inn" actionTitle="Prøv igjen" onAction={() => setReload((value) => value + 1)} />;
 
   const hasCompletedSet = state.workout.exercises.some((exercise) =>
     exercise.sets.some((set) => set.confirmedAt !== null),
@@ -476,7 +487,11 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const workoutBusy = completing || pendingSetId !== undefined || pendingExerciseOperation !== undefined;
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
       {state.workout.exercises.length === 0 && (
         <Text style={[styles.empty, { color: colors.text }]}>Ingen øvelser lagt til ennå</Text>
       )}
@@ -484,31 +499,42 @@ export function WorkoutScreen({ navigation, route }: Props) {
         const expanded = expandedId === exercise.exerciseId;
         const completed = exercise.sets.filter((set) => set.confirmedAt !== null).length;
         return (
-          <View key={exercise.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ expanded }}
-              onPress={() => setExpandedId(expanded ? undefined : exercise.exerciseId)}
-              ref={(node) => { if (node) cardRefs.current.set(exercise.exerciseId, node); }}
-              style={styles.cardHeader}
-            >
-              <Text style={[styles.cardTitle, { color: colors.text }]}>{exercise.name}</Text>
-              {!expanded && <Text style={{ color: colors.text }}>{completed} av {exercise.sets.length} sett gjennomført</Text>}
-            </Pressable>
-            {expanded && exercise.sets.map((set, index) => set.confirmedAt ? (
+          <DisclosureCard
+            key={exercise.id}
+            expanded={expanded}
+            headerRef={(node) => { if (node) cardRefs.current.set(exercise.exerciseId, node); }}
+            onPress={() => setExpandedId(expanded ? undefined : exercise.exerciseId)}
+            summary={`${completed} av ${exercise.sets.length} sett gjennomført`}
+            title={exercise.name}
+          >
+            {expanded && (
+              <CompactAction
+                accessibilityLabel={`Fjern ${exercise.name} fra økten`}
+                disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
+                icon="×"
+                label="Fjern øvelse"
+                onPress={() => {
+                  if (completed > 0) setRemoveExerciseId(exercise.id);
+                  else void removeExercise(state.workout.id, exercise.id, exercise.name);
+                }}
+                ref={(node) => { if (node) removeExerciseRefs.current.set(exercise.id, node); }}
+              />
+            )}
+            {exercise.sets.map((set, index) => set.confirmedAt ? (
               <View key={set.id} style={[styles.receipt, { borderColor: colors.border }]}>
                 <View
                   accessible
                   accessibilityLabel={`Sett ${index + 1}, ${set.repetitions} repetisjoner med ${formatLoad(set.loadKg!)} kilogram`}
                   style={styles.receiptText}
                 >
-                  <Text style={[styles.setTitle, { color: colors.text }]}>Sett {index + 1}</Text>
+                  <Text style={[styles.receiptTitle, { color: colors.text }]}>Sett {index + 1}</Text>
                   <Text style={{ color: colors.text }}>{formatLoad(set.loadKg!)} kg · {set.repetitions} repetisjoner</Text>
                 </View>
-                <Button
+                <CompactAction
                   accessibilityLabel={`Rediger sett ${index + 1}`}
                   disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
-                  label="Rediger"
+                  icon="✎"
+                  label="Endre"
                   onPress={() => void mutateSet(
                     set.id,
                     () => unconfirmWorkoutSet(database, state.workout.id, set.id),
@@ -518,8 +544,8 @@ export function WorkoutScreen({ navigation, route }: Props) {
                 />
                 {setFailure?.setId === set.id && (
                   <View style={styles.failure}>
-                    <Text accessibilityRole="alert" style={{ color: colors.notification }}>{setFailure.message}</Text>
-                    <Button label="Prøv igjen" onPress={setFailure.retry} setButtonRef={(node) => { if (node) retryRefs.current.set(set.id, node); }} />
+                    <ErrorAlert message={setFailure.message} />
+                    <Button ref={(node) => { if (node) retryRefs.current.set(set.id, node); }} title="Prøv igjen" variant="secondary" onPress={setFailure.retry} />
                   </View>
                 )}
               </View>
@@ -527,71 +553,62 @@ export function WorkoutScreen({ navigation, route }: Props) {
               const draft = draftFor(set);
               const busy = pendingSetId === set.id;
               return (
-                <View key={set.id} style={styles.set}>
-                  <Text style={[styles.setTitle, { color: colors.text }]}>Planlagt sett</Text>
+                <FormSection key={set.id} title="Planlagt sett" detail={`Sett ${index + 1}`}>
                   <View style={styles.fields}>
-                    <View style={styles.field}>
-                      <TextInput
+                    <NumericField
                         aria-describedby={draft.loadError ? `load-error-${set.id}` : undefined}
                         aria-invalid={Boolean(draft.loadError)}
                         accessibilityLabel={`Belastning for ${exercise.name}`}
-                        keyboardType="decimal-pad"
+                        error={draft.loadError}
+                        errorID={`load-error-${set.id}`}
+                        kind="decimal"
+                        label="Belastning"
                         onBlur={() => void saveDraft(state.workout.id, set, exercise.name)}
                         onChangeText={(load) => updateDraft(set, { load, loadError: undefined })}
                         placeholder="Belastning"
-                        placeholderTextColor={colors.border}
                         ref={(node) => { if (node) loadInputRefs.current.set(set.id, node); }}
-                        style={[styles.input, { borderColor: draft.loadError ? colors.notification : colors.border, color: colors.text }]}
                         value={draft.load}
-                      />
-                      {draft.loadError && <Text accessibilityRole="alert" nativeID={`load-error-${set.id}`} style={{ color: colors.notification }}>{draft.loadError}</Text>}
-                    </View>
-                    <View style={styles.field}>
-                      <TextInput
+                    />
+                    <NumericField
                         aria-describedby={draft.repetitionsError ? `repetitions-error-${set.id}` : undefined}
                         aria-invalid={Boolean(draft.repetitionsError)}
                         accessibilityLabel={`Repetisjoner for ${exercise.name}`}
-                        keyboardType="number-pad"
+                        error={draft.repetitionsError}
+                        errorID={`repetitions-error-${set.id}`}
+                        kind="integer"
+                        label="Repetisjoner"
                         onBlur={() => void saveDraft(state.workout.id, set, exercise.name)}
                         onChangeText={(repetitions) => updateDraft(set, { repetitions, repetitionsError: undefined })}
                         placeholder="Repetisjoner"
-                        placeholderTextColor={colors.border}
                         ref={(node) => { if (node) repetitionsInputRefs.current.set(set.id, node); }}
-                        style={[styles.input, { borderColor: draft.repetitionsError ? colors.notification : colors.border, color: colors.text }]}
                         value={draft.repetitions}
-                      />
-                      {draft.repetitionsError && <Text accessibilityRole="alert" nativeID={`repetitions-error-${set.id}`} style={{ color: colors.notification }}>{draft.repetitionsError}</Text>}
-                    </View>
+                    />
                   </View>
                   {draft.unsaved && !draft.confirmationFailed && (
                     <View style={styles.failure}>
-                      <Text accessibilityRole="alert" style={{ color: colors.notification }}>Endringene er ikke lagret</Text>
-                      <Button disabled={busy} label="Prøv å lagre igjen" onPress={() => void saveDraft(state.workout.id, set, exercise.name, undefined, true)} setButtonRef={(node) => { if (node) retryRefs.current.set(set.id, node); }} />
+                      <ErrorAlert message="Endringene er ikke lagret" />
+                      <Button ref={(node) => { if (node) retryRefs.current.set(set.id, node); }} disabled={busy} title="Prøv å lagre igjen" variant="secondary" onPress={() => void saveDraft(state.workout.id, set, exercise.name, undefined, true)} />
                     </View>
                   )}
                   {draft.confirmationFailed && (
                     <View style={styles.failure}>
-                      <Text accessibilityRole="alert" style={{ color: colors.notification }}>Kunne ikke bekrefte settet</Text>
+                      <ErrorAlert message="Kunne ikke bekrefte settet" />
                       <Button
+                        ref={(node) => { if (node) retryRefs.current.set(set.id, node); }}
                         disabled={busy}
-                        label="Prøv å bekrefte igjen"
+                        title="Prøv å bekrefte igjen"
+                        variant="secondary"
                         onPress={() => void confirmSet(state.workout.id, set, exercise.name)}
-                        setButtonRef={(node) => { if (node) retryRefs.current.set(set.id, node); }}
                       />
                     </View>
                   )}
                   <View accessibilityLabel={`Handlinger for planlagt sett for ${exercise.name}`} style={styles.setActions}>
-                    <Button
-                      accessibilityLabel={`Bekreft planlagt sett for ${exercise.name}`}
-                      disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || draft.unsaved || draft.confirmationFailed}
-                      label={busy ? 'Lagrer' : 'Bekreft'}
-                      onPress={() => void confirmSet(state.workout.id, set, exercise.name)}
-                      primary
-                    />
-                    <Button
+                    <CompactAction
                       accessibilityLabel={`Slett planlagt sett for ${exercise.name}`}
                       disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
-                      label="Slett"
+                      icon="×"
+                      label="Fjern sett"
+                      tone="neutral"
                       onPress={() => void mutateSet(
                         set.id,
                         () => deletePlannedWorkoutSet(database, state.workout.id, set.id),
@@ -600,221 +617,154 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         true,
                       )}
                     />
+                    <Button
+                      accessibilityLabel={`Bekreft planlagt sett for ${exercise.name}`}
+                      disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || draft.unsaved || draft.confirmationFailed}
+                      busy={busy}
+                      style={styles.completeSet}
+                      title={busy ? 'Lagrer' : 'Utført'}
+                      onPress={() => void confirmSet(state.workout.id, set, exercise.name)}
+                    />
                   </View>
                   {setFailure?.setId === set.id && (
                     <View style={styles.failure}>
-                      <Text accessibilityRole="alert" style={{ color: colors.notification }}>{setFailure.message}</Text>
-                      <Button label="Prøv igjen" onPress={setFailure.retry} setButtonRef={(node) => { if (node) retryRefs.current.set(set.id, node); }} />
+                      <ErrorAlert message={setFailure.message} />
+                      <Button ref={(node) => { if (node) retryRefs.current.set(set.id, node); }} title="Prøv igjen" variant="secondary" onPress={setFailure.retry} />
                     </View>
                   )}
-                </View>
+                </FormSection>
               );
             })())}
             {expanded && (
               <View style={styles.exerciseActions}>
-                <Button
+                <CompactAction
                   disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || hasUnsavedDraft}
+                  busy={pendingExerciseOperation === 'add-set'}
+                  icon="+"
                   label={pendingExerciseOperation === 'add-set' ? 'Legger til sett' : 'Legg til sett'}
                   onPress={() => void flushDrafts().then((saved) => {
                     if (saved) void addSet(state.workout.id, exercise.id, exercise.name);
                   })}
-                  primary
-                />
-                <Button
-                  accessibilityLabel={`Fjern ${exercise.name} fra økten`}
-                  disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
-                  label="Fjern øvelse"
-                  onPress={() => {
-                    if (completed > 0) setRemoveExerciseId(exercise.id);
-                    else void removeExercise(state.workout.id, exercise.id, exercise.name);
-                  }}
-                  setButtonRef={(node) => { if (node) removeExerciseRefs.current.set(exercise.id, node); }}
                 />
               </View>
             )}
             {exerciseFailure?.workoutExerciseId === exercise.id && (
               <View style={styles.failure}>
-                <Text accessibilityRole="alert" style={{ color: colors.notification }}>{exerciseFailure.message}</Text>
-                <Button label="Prøv igjen" onPress={() => {
+                <ErrorAlert message={exerciseFailure.message} />
+                <Button ref={(node) => { if (node) exerciseRetryRefs.current.set(exercise.id, node); }} title="Prøv igjen" variant="secondary" onPress={() => {
                   if (exerciseFailure.operation === 'add-set') void addSet(state.workout.id, exercise.id, exercise.name);
                   else void removeExercise(state.workout.id, exercise.id, exercise.name);
-                }} setButtonRef={(node) => { if (node) exerciseRetryRefs.current.set(exercise.id, node); }} />
+                }} />
               </View>
             )}
-          </View>
+          </DisclosureCard>
         );
       })}
       <Button
-        buttonRef={addExerciseRef}
+        ref={addExerciseRef}
         disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || hasUnsavedDraft}
-        label="Legg til øvelse"
+        title="Legg til øvelse"
+        variant={state.workout.exercises.length === 0 ? 'primary' : 'secondary'}
         onPress={() => void flushDrafts().then((saved) => { if (saved) {
           navigation.setParams({ focusAddExercise: true });
           navigation.navigate('ExercisePicker', { workoutId: state.workout.id });
         } })}
       />
-      <Button
-        buttonRef={completeRef}
-        disabled={!hasCompletedSet || workoutBusy || hasDirtyDraft || hasUnsavedDraft}
-        label="Ferdig"
-        onPress={() => { setCompleteFailed(false); setCompleteDialogOpen(true); }}
-        primary
-      />
+      {state.workout.exercises.length > 0 && (
+        <Button
+          ref={completeRef}
+          disabled={!hasCompletedSet || workoutBusy || hasDirtyDraft || hasUnsavedDraft}
+          title="Ferdig"
+          onPress={() => { setCompleteFailed(false); setCompleteDialogOpen(true); }}
+        />
+      )}
       {completeFailed && (
         <View style={styles.failure}>
-          <Text accessibilityRole="alert" style={{ color: colors.notification }}>Kunne ikke fullføre økten</Text>
-          <Button buttonRef={retryCompleteRef} label="Prøv igjen" onPress={() => setCompleteDialogOpen(true)} />
+          <ErrorAlert message="Kunne ikke fullføre økten" />
+          <Button ref={retryCompleteRef} title="Prøv igjen" variant="secondary" onPress={() => setCompleteDialogOpen(true)} />
         </View>
       )}
-      <Button buttonRef={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} label="Avbryt" onPress={() => {
-        setCancelFailed(false);
-        setCancelDialogOpen(true);
-      }} />
+      {state.workout.exercises.length === 0 ? (
+        <CompactAction ref={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} icon="×" label="Avbryt" testID="cancel-active-workout" onPress={() => {
+          setCancelFailed(false);
+          setCancelDialogOpen(true);
+        }} />
+      ) : (
+        <Button ref={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} testID="cancel-active-workout" title="Avbryt" variant="text" onPress={() => {
+          setCancelFailed(false);
+          setCancelDialogOpen(true);
+        }} />
+      )}
       {cancelFailed && (
         <View style={styles.failure}>
-          <Text accessibilityRole="alert" style={{ color: colors.notification }}>
-            Kunne ikke avbryte økten
-          </Text>
-          <Button buttonRef={retryCancelRef} label="Prøv igjen" onPress={() => setCancelDialogOpen(true)} />
+          <ErrorAlert message="Kunne ikke avbryte økten" />
+          <Button ref={retryCancelRef} title="Prøv igjen" variant="secondary" onPress={() => setCancelDialogOpen(true)} />
         </View>
       )}
       {removeExerciseId !== undefined && (
-        <Modal
-          animationType="none"
+        <Dialog
           onRequestClose={closeRemoveDialog}
-          onShow={() => focus(confirmRemoveRef)}
-          transparent
           visible
+          initialFocusRef={confirmRemoveRef}
+          title="Fjern øvelsen?"
         >
-          <View accessibilityViewIsModal style={styles.modalBackdrop}>
-            <View style={[styles.dialog, { backgroundColor: colors.card }]}>
-              <Text accessibilityRole="header" style={[styles.dialogTitle, { color: colors.text }]}>Fjern øvelsen?</Text>
-              <Text style={{ color: colors.text }}>Gjennomførte og planlagte sett for øvelsen fjernes fra denne økten.</Text>
-              <Button
-                disabled={pendingExerciseOperation === 'remove-exercise'}
-                label="Behold øvelsen"
-                onPress={closeRemoveDialog}
-              />
-              <Button
-                accessibilityLabel="Bekreft fjerning av øvelsen"
-                buttonRef={confirmRemoveRef}
-                disabled={pendingExerciseOperation === 'remove-exercise'}
-                label={pendingExerciseOperation === 'remove-exercise' ? 'Fjerner øvelse' : 'Fjern øvelse'}
-                onPress={() => {
-                  const exercise = state.workout.exercises.find((candidate) => candidate.id === removeExerciseId);
-                  if (exercise) void removeExercise(state.workout.id, exercise.id, exercise.name);
-                }}
-              />
-            </View>
-          </View>
-        </Modal>
+          <Text style={{ color: colors.text }}>Gjennomførte og planlagte sett for øvelsen fjernes fra denne økten.</Text>
+          <Button disabled={pendingExerciseOperation === 'remove-exercise'} title="Behold øvelsen" variant="secondary" onPress={closeRemoveDialog} />
+          <Button
+            accessibilityLabel="Bekreft fjerning av øvelsen"
+            ref={confirmRemoveRef}
+            busy={pendingExerciseOperation === 'remove-exercise'}
+            disabled={pendingExerciseOperation === 'remove-exercise'}
+            title={pendingExerciseOperation === 'remove-exercise' ? 'Fjerner øvelse' : 'Fjern øvelse'}
+            variant="destructive"
+            onPress={() => {
+              const exercise = state.workout.exercises.find((candidate) => candidate.id === removeExerciseId);
+              if (exercise) void removeExercise(state.workout.id, exercise.id, exercise.name);
+            }}
+          />
+        </Dialog>
       )}
       {completeDialogOpen && (
-        <Modal
-          animationType="none"
+        <Dialog
           onRequestClose={() => {
             if (!completing) { setCompleteDialogOpen(false); requestAnimationFrame(() => focus(completeRef)); }
           }}
-          onShow={() => focus(confirmCompleteRef)}
-          transparent
           visible
+          initialFocusRef={confirmCompleteRef}
+          title="Fullfør økten?"
         >
-          <View accessibilityViewIsModal style={styles.modalBackdrop}>
-            <View style={[styles.dialog, { backgroundColor: colors.card }]}>
-              <Text accessibilityRole="header" style={[styles.dialogTitle, { color: colors.text }]}>Fullfør økten?</Text>
-              <Text style={{ color: colors.text }}>Økten lagres i historikken.</Text>
-              {hasPlannedSet && (
-                <Text style={{ color: colors.text }}>
-                  Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.
-                </Text>
-              )}
-              <Button disabled={completing} label="Fortsett økten" onPress={() => {
-                setCompleteDialogOpen(false);
-                requestAnimationFrame(() => focus(completeRef));
-              }} />
-              <Button
-                buttonRef={confirmCompleteRef}
-                disabled={completing}
-                label={completing ? 'Fullfører' : 'Fullfør økt'}
-                onPress={() => void confirmCompletion(state.workout.id)}
-                primary
-              />
-            </View>
-          </View>
-        </Modal>
+          <Text style={{ color: colors.text }}>Økten lagres i historikken.</Text>
+          {hasPlannedSet && <Text style={{ color: colors.text }}>Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.</Text>}
+          <Button disabled={completing} title="Fortsett økten" variant="secondary" onPress={() => {
+            setCompleteDialogOpen(false);
+            requestAnimationFrame(() => focus(completeRef));
+          }} />
+          <Button ref={confirmCompleteRef} busy={completing} disabled={completing} title={completing ? 'Fullfører' : 'Fullfør økt'} onPress={() => void confirmCompletion(state.workout.id)} />
+        </Dialog>
       )}
-      <Modal
-        animationType="none"
+      <Dialog
         onRequestClose={closeCancelDialog}
-        onShow={() => focus(confirmCancelRef)}
-        transparent
         visible={cancelDialogOpen}
+        initialFocusRef={confirmCancelRef}
+        title="Avbryt økten?"
       >
-        <View accessibilityViewIsModal style={styles.modalBackdrop}>
-          <View style={[styles.dialog, { backgroundColor: colors.card }]}>
-            <Text accessibilityRole="header" style={[styles.dialogTitle, { color: colors.text }]}>Avbryt økten?</Text>
-            <Text style={{ color: colors.text }}>Økten slettes permanent og vises ikke i historikken.</Text>
-            <Button disabled={cancelling} label="Behold økten" onPress={closeCancelDialog} />
-            <Button
-              buttonRef={confirmCancelRef}
-              disabled={cancelling}
-              label={cancelling ? 'Avbryter' : 'Avbryt økten'}
-              onPress={() => void confirmCancellation(state.workout.id)}
-            />
-          </View>
-        </View>
-      </Modal>
+        <Text style={{ color: colors.text }}>Økten slettes permanent og vises ikke i historikken.</Text>
+        <Button disabled={cancelling} title="Behold økten" variant="secondary" onPress={closeCancelDialog} />
+        <Button ref={confirmCancelRef} busy={cancelling} disabled={cancelling} title={cancelling ? 'Avbryter' : 'Avbryt økten'} variant="destructive" onPress={() => void confirmCancellation(state.workout.id)} />
+      </Dialog>
     </ScrollView>
-  );
-}
-
-function Button({ accessibilityLabel, buttonRef, disabled = false, label, onPress, primary = false, setButtonRef }: {
-  accessibilityLabel?: string;
-  buttonRef?: React.RefObject<View | null>;
-  disabled?: boolean; label: string; onPress: () => void; primary?: boolean;
-  setButtonRef?: (node: View | null) => void;
-}) {
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      ref={(node) => {
-        if (buttonRef) buttonRef.current = node;
-        setButtonRef?.(node);
-      }}
-      style={[styles.button, { backgroundColor: primary ? colors.primary : colors.card, borderColor: colors.border }, disabled && styles.disabled]}
-    >
-      <Text style={[styles.buttonText, { color: primary ? colors.background : colors.text }]}>{label}</Text>
-    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, gap: 16, padding: 20 },
-  center: { alignItems: 'center', flex: 1, gap: 20, justifyContent: 'center', padding: 24 },
-  heading: { fontSize: 24, fontWeight: '700' },
   empty: { fontSize: 18, paddingVertical: 36, textAlign: 'center' },
-  card: { borderRadius: 16, borderWidth: 1, gap: 16, padding: 16 },
-  cardHeader: { justifyContent: 'center', minHeight: 48 },
-  cardTitle: { fontSize: 21, fontWeight: '700', marginBottom: 4 },
-  set: { gap: 10, paddingVertical: 4 },
-  setTitle: { fontSize: 16, fontWeight: '600' },
   fields: { gap: 10 },
-  field: { gap: 6 },
-  input: { borderRadius: 10, borderWidth: 1, fontSize: 16, minHeight: 48, paddingHorizontal: 12 },
-  receipt: { alignItems: 'stretch', borderBottomWidth: 1, gap: 12, paddingBottom: 12 },
+  receipt: { alignItems: 'center', borderBottomWidth: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingBottom: 12 },
+  receiptTitle: { fontSize: 16, fontWeight: '600' },
   receiptText: { flex: 1, gap: 4 },
-  setActions: { gap: 10 },
+  setActions: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
+  completeSet: { flexGrow: 1, minWidth: 180 },
   exerciseActions: { gap: 10 },
-  button: { alignItems: 'center', borderRadius: 13, borderWidth: 1, justifyContent: 'center', minHeight: 50, paddingHorizontal: 18 },
-  buttonText: { fontSize: 17, fontWeight: '700' },
-  disabled: { opacity: 0.45 },
   failure: { gap: 10 },
-  modalBackdrop: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.55)', flex: 1, justifyContent: 'center', padding: 24 },
-  dialog: { borderRadius: 16, gap: 16, maxWidth: 440, padding: 24, width: '100%' },
-  dialogTitle: { fontSize: 24, fontWeight: '700' },
 });

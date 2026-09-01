@@ -25,9 +25,15 @@ tags:
 
 - tapOn: "Belastning"
 - inputText: "80"
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Repetisjoner"
 - inputText: "5"
-- tapOn: "Bekreft"
+- pressKey: back
+- tapOn: "Bekreft planlagt sett for Knebøy"
 - tapOn: "Ferdig"
 - assertVisible: "Fullfør økten?"
 - tapOn: "Fullfør økt"

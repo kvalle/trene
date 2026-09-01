@@ -20,9 +20,15 @@ tags:
     id: "create-exercise-submit"
 - tapOn: "Belastning"
 - inputText: "80"
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Repetisjoner"
 - inputText: "5"
-- tapOn: "Bekreft"
+- pressKey: back
+- tapOn: "Bekreft planlagt sett for Knebøy"
 - tapOn: "Ferdig"
 - tapOn: "Fullfør økt"
 - assertVisible: "Fullført økt"

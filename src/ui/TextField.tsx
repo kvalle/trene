@@ -14,6 +14,7 @@ import { FieldError } from './FieldError';
 type TextFieldProps = TextInputProps & {
   label: string;
   error?: string;
+  errorID?: string;
   containerStyle?: object;
   inputStyle?: object;
 };
@@ -22,6 +23,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
   {
     label,
     error,
+    errorID,
     testID,
     accessibilityLabel,
     accessibilityHint,
@@ -89,7 +91,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
           onBlur?.(e);
         }}
       />
-      {hasError ? <FieldError message={error!} testID={testID ? `${testID}-error` : undefined} /> : null}
+      {hasError ? <FieldError message={error!} nativeID={errorID} testID={testID ? `${testID}-error` : undefined} /> : null}
     </View>
   );
 });

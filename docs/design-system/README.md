@@ -80,8 +80,8 @@ komponenter uten å endre dagens tilgjengelighetsatferd eller skjermflyter.
 
 ## Komponentkatalog
 
-`docs/design-system/catalog/` dokumenterer komponentmønstrene og viser hvert
-mønster på en representativ skjerm. Katalogen dekker navigasjon og struktur,
+Runtime-katalogen dokumenterer komponentmønstrene og viser hvert mønster på en
+representativ skjerm. Katalogen dekker navigasjon og struktur,
 handlinger, skjema, lister og beholdere, feedback, sidevisninger og dialoger.
 Den inkluderer relevante normal-, tom-, laste-, feil-, deaktivert-, opptatt- og
 destruktive tilstander.
@@ -173,11 +173,8 @@ Metro-eierskap og avslutning:
 - Avslutt med `Ctrl+C` i samme terminal. Expo Go forblir installert, men mister tilkoblingen. Å starte en annen kataloginstans gjenbruker samme Metro-adresse.
 - `npm run start:android` eier en separat Metro for Trene-native; katalogens Metro kolliderer ikke med Trene-APK-en, men to Metro-instanser kan ikke dele 8081 samtidig.
 
-Den midlertidige HTML-referansen startes fortsatt med
-`npm run prototype:components` og åpnes på `http://localhost:4174`. Hvert
-komponentvalg kan lenkes direkte med `?component=<id>`. Den fjernes først når
-alle godkjente mønstre er representert med produksjonskomponenter i
-React Native-katalogen.
+Den midlertidige HTML-referansen er fjernet. Alle godkjente mønstre er nå
+representert med produksjonskomponenter i React Native-katalogen.
 
 ## Arbeidsregel for agenter
 

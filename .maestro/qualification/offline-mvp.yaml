@@ -20,9 +20,14 @@ tags:
     id: "create-exercise-submit"
 - tapOn: "Belastning"
 - inputText: "80.5"
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Repetisjoner"
 - inputText: "5"
-- tapOn: "Bekreft"
+- tapOn: "Bekreft planlagt sett for Knebøy"
 - assertVisible: "80,5 kg · 5 repetisjoner"
 
 # Force-stop after confirmation to prove that the accepted set survives.

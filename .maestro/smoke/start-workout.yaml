@@ -11,7 +11,7 @@ tags:
     timeout: 120000
 - tapOn: "Start økt"
 - assertVisible: "Ingen øvelser lagt til ennå"
-- assertVisible: "Ferdig"
+- assertNotVisible: "Ferdig"
 - tapOn: "Legg til øvelse"
 - tapOn: "Opprett første øvelse"
 
@@ -29,6 +29,11 @@ tags:
 
 - tapOn: "Belastning"
 - inputText: "80.5"
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Repetisjoner"
 - inputText: "5"
 
@@ -43,7 +48,7 @@ tags:
 - assertVisible: "80,5"
 - assertVisible: "5"
 
-- tapOn: "Bekreft"
+- tapOn: "Bekreft planlagt sett for Knebøy"
 - assertVisible: "Sett 1"
 - assertVisible: "80,5 kg · 5 repetisjoner"
 
@@ -58,11 +63,11 @@ tags:
 - assertVisible: "Knebøy"
 - assertVisible: "Sett 1"
 - assertVisible: "80,5 kg · 5 repetisjoner"
-- tapOn: "Rediger"
+- tapOn: "Rediger sett 1"
 - assertVisible: "Planlagt sett"
 - assertVisible: "80,5"
 - assertVisible: "5"
-- tapOn: "Bekreft"
+- tapOn: "Bekreft planlagt sett for Knebøy"
 - assertVisible: "Sett 1"
 
 - tapOn: "Avbryt"
