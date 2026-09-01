@@ -29,22 +29,22 @@ tags:
 - tapOn: "Start økt"
 - tapOn: "Legg til øvelse"
 - tapOn: "Beholdes"
-- tapOn: "Belastning"
+- tapOn: "Belastning for Beholdes"
 - inputText: "42.5"
-- tapOn: "Repetisjoner"
+- tapOn: "Repetisjoner for Beholdes"
 - inputText: "6"
+- tapOn: "Planlagt sett"
+- extendedWaitUntil:
+    visible: "Bekreft planlagt sett for Beholdes"
+    timeout: 30000
 - tapOn: "Bekreft planlagt sett for Beholdes"
 - extendedWaitUntil:
     visible: "Sett 1, 6 repetisjoner med 42,5 kilogram"
     timeout: 30000
 - extendedWaitUntil:
-    visible:
-      text: "Ferdig"
-      enabled: true
+    visible: "Ferdig"
     timeout: 30000
-- tapOn:
-    text: "Ferdig"
-    enabled: true
+- tapOn: "Ferdig"
 - extendedWaitUntil:
     visible: "Fullfør økt"
     timeout: 30000
