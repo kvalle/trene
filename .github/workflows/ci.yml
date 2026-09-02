@@ -208,7 +208,7 @@ jobs:
         with:
           name: android-diagnostics-${{ matrix.suite }}
           path: |
-            .artifacts/maestro/debug/
+            .artifacts/maestro/*/debug/
             .artifacts/maestro-android-backup/debug/
             .artifacts/maestro-android-backup/screenshots/
             .artifacts/android/*metadata.json
@@ -267,12 +267,12 @@ jobs:
       - name: Run native backup and restore journeys
         env:
           IOS_SIMULATOR_DEVICE: iPhone 16
-          IOS_SMOKE_APP: .artifacts/ios/Trene.app
+          IOS_E2E_APP: .artifacts/ios/Trene.app
           IOS_SIMULATOR_RUNTIME: '26'
-          IOS_SMOKE_FLOWS: ${{ matrix.flows }}
-          IOS_SMOKE_SHARD: ${{ matrix.shard }}
+          IOS_E2E_FLOWS: ${{ matrix.flows }}
+          IOS_E2E_SHARD: ${{ matrix.shard }}
           MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
-        run: npm run smoke:ios
+        run: npm run e2e:ios
       - name: Upload safe iOS diagnostics
         if: failure() || cancelled()
         uses: actions/upload-artifact@v6

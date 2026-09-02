@@ -137,7 +137,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disk-size: 4096M
-          script: adb install "$ANDROID_SMOKE_APK" && npm run smoke:android:backup
+          script: adb install "$ANDROID_SMOKE_APK" && npm run e2e:android:backup
       - name: Upload safe diagnostics
         if: always()
         uses: actions/upload-artifact@v6

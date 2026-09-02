@@ -7,7 +7,7 @@ ios_artifacts="$artifacts/ios"
 maestro_artifacts="$artifacts/maestro-ios"
 fixtures="$ios_artifacts/fixtures"
 default_app="$ios_artifacts/derived-data/Build/Products/Release-iphonesimulator/Trene.app"
-app="${IOS_SMOKE_APP:-$default_app}"
+app="${IOS_E2E_APP:-$default_app}"
 mkdir -p "$maestro_artifacts/home" "$maestro_artifacts/tmp" "$maestro_artifacts/debug" "$maestro_artifacts/screenshots"
 
 export MAESTRO_OPTS="-Duser.home=$maestro_artifacts/home"
@@ -47,7 +47,7 @@ else
   runtime_details="$(xcrun simctl list runtimes available -j | jq -cer --arg version "$runtime_version" '[.runtimes[] | select(.platform == "iOS" and (.version == $version or (.version | startswith($version + "."))))] | sort_by(.version | split(".") | map(tonumber)) | last')"
   runtime="$(jq -r '.identifier' <<< "$runtime_details")"
   resolved_runtime_version="$(jq -r '.version' <<< "$runtime_details")"
-  simulator_name="Trene iOS smoke ${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}-${IOS_SMOKE_SHARD:-focused}"
+  simulator_name="Trene iOS E2E ${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}-${IOS_E2E_SHARD:-focused}"
   udid="$(xcrun simctl create "$simulator_name" "$device_type" "$runtime")"
   created_simulator=true
 fi
@@ -79,7 +79,7 @@ if [[ -n "$cross_platform_input" || -n "$cross_platform_output" ]]; then
   container="$(xcrun simctl get_app_container "$udid" com.kjetilvalle.trene data)"
   cp "$cross_platform_input" "$container/Documents/representative.trene-backup"
   maestro --device "$udid" test --debug-output "$maestro_artifacts/debug/$scenario" \
-    .maestro/ios/cross-platform-round-trip.yaml
+    .maestro/e2e/ios/cross-platform-round-trip.yaml
   mkdir -p "$(dirname "$cross_platform_output")"
   cp "$container/Documents/trene-automation-export.trene-backup" "$cross_platform_output"
   export QUALIFICATION_PLATFORM="iOS ${IOS_SIMULATOR_RUNTIME:-unknown} Simulator"
@@ -89,20 +89,20 @@ if [[ -n "$cross_platform_input" || -n "$cross_platform_output" ]]; then
   exit 0
 fi
 
-requested_flows="${IOS_SMOKE_FLOWS:-${IOS_SMOKE_FLOW:-all}}"
+requested_flows="${IOS_E2E_FLOWS:-${IOS_E2E_FLOW:-all}}"
 if [[ "$requested_flows" == "all" ]]; then
-  flows=(.maestro/ios/*.yaml)
+  flows=(.maestro/e2e/ios/*.yaml)
 else
   IFS=',' read -r -a requested_flow_names <<< "$requested_flows"
   flows=()
   for requested_flow in "${requested_flow_names[@]}"; do
     if [[ ! "$requested_flow" =~ ^[A-Za-z0-9_-]+$ ]]; then
-      echo "Invalid iOS smoke flow name: $requested_flow" >&2
+      echo "Invalid iOS E2E flow name: $requested_flow" >&2
       exit 1
     fi
-    flow_path=".maestro/ios/$requested_flow.yaml"
+    flow_path=".maestro/e2e/ios/$requested_flow.yaml"
     if [[ ! -f "$flow_path" || "$requested_flow" == "select-backup-file" ]]; then
-      echo "Unknown standalone iOS smoke flow: $requested_flow" >&2
+      echo "Unknown standalone iOS E2E flow: $requested_flow" >&2
       exit 1
     fi
     flows+=("$flow_path")

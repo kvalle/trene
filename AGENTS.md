@@ -183,13 +183,13 @@ When an Android emulator is running and the app is installed, cplt agents can
 run the Maestro smoke suite through the host ADB server:
 
 ```sh
-npm run smoke:android
+npm run e2e:android
 ```
 
 The command verifies the emulator and reverse tunnel, keeps Maestro state and
 debug output under the ignored `.artifacts/maestro/` directory, and connects to
 ADB at `127.0.0.1:5037` so the same command works locally and in the cplt
-sandbox. Extend `.maestro/smoke/` when a new cross-runtime user journey needs
+sandbox. Extend the relevant group under `.maestro/e2e/android/` when a new cross-runtime user journey needs
 coverage. The runner discovers its YAML files automatically.
 
 ### Backup and restore interruptions
@@ -201,7 +201,7 @@ release smoke APK does not require Metro.
 Run interruption flows one at a time locally:
 
 ```sh
-ANDROID_BACKUP_INTERRUPTION_FLOW=<flow> npm run smoke:android:backup
+ANDROID_BACKUP_INTERRUPTION_FLOW=<flow> npm run e2e:android:backup
 ```
 
 Supported flows are `export-cleanup`, `before-replacement`,

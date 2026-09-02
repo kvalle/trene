@@ -88,7 +88,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disk-size: 4096M
-          script: adb install .artifacts/android/trene.apk && npm run smoke:android:backup
+          script: adb install .artifacts/android/trene.apk && npm run e2e:android:backup
       - name: Verify exported SHA-256 and every authoritative row
         run: node scripts/verify-cross-platform-backup.mjs .artifacts/cross-platform/output/package.trene-backup .artifacts/cross-platform/output/metadata.json .artifacts/cross-platform/input-metadata.json --semantic-only
       - uses: actions/upload-artifact@v6

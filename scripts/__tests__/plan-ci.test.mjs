@@ -49,19 +49,26 @@ test("classifies platform-owned native and Maestro paths", () => {
     android: "full",
     ios: "none",
   });
-  assert.deepEqual(classifyPaths([".maestro/android-backup/export.yaml"]), {
-    has_changes: true,
-    native: true,
-    android: "full",
-    ios: "none",
-  });
+  for (const path of [
+    ".maestro/e2e/android/smoke/start-workout.yaml",
+    ".maestro/e2e/android/standalone/workout-lifecycle.yaml",
+    ".maestro/e2e/android/backup/export.yaml",
+    ".maestro/e2e/android/interruption/export-cleanup-start.yaml",
+  ]) {
+    assert.deepEqual(classifyPaths([path]), {
+      has_changes: true,
+      native: true,
+      android: "full",
+      ios: "none",
+    });
+  }
   assert.deepEqual(classifyPaths(["ios/Trene/AppDelegate.swift"]), {
     has_changes: true,
     native: true,
     android: "none",
     ios: "full",
   });
-  assert.deepEqual(classifyPaths([".maestro/ios/restore-success.yaml"]), {
+  assert.deepEqual(classifyPaths([".maestro/e2e/ios/restore-success.yaml"]), {
     has_changes: true,
     native: true,
     android: "none",
@@ -71,13 +78,13 @@ test("classifies platform-owned native and Maestro paths", () => {
 
 test("classifies scripts by platform ownership", () => {
   const full = { has_changes: true, native: true, android: "full", ios: "full" };
-  assert.deepEqual(classifyPaths(["scripts/run-android-smoke.sh"]), {
+  assert.deepEqual(classifyPaths(["scripts/run-android-e2e.sh"]), {
     has_changes: true,
     native: true,
     android: "full",
     ios: "none",
   });
-  assert.deepEqual(classifyPaths(["scripts/run-ios-smoke.sh"]), {
+  assert.deepEqual(classifyPaths(["scripts/run-ios-e2e.sh"]), {
     has_changes: true,
     native: true,
     android: "none",
@@ -85,7 +92,6 @@ test("classifies scripts by platform ownership", () => {
   });
   assert.deepEqual(classifyPaths(["scripts/create-ios-smoke-fixtures.mjs"]), full);
   assert.deepEqual(classifyPaths(["scripts/validate-backup-qualification.mjs"]), full);
-  assert.deepEqual(classifyPaths([".maestro/qualification/round-trip.yaml"]), full);
 });
 
 test("classifies every workflow by the native jobs it owns", () => {
