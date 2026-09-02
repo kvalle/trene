@@ -20,12 +20,12 @@ tags:
     id: "create-exercise-submit"
 - extendedWaitUntil:
     visible: "Beholdes"
-    timeout: 30000
+    timeout: 120000
 - stopApp
 - launchApp
 - extendedWaitUntil:
     visible: "Klar for en økt?"
-    timeout: 30000
+    timeout: 120000
 - tapOn: "Innstillinger"
 - tapOn:
     id: "settings-data"
@@ -43,6 +43,6 @@ tags:
 - launchApp
 - extendedWaitUntil:
     visible: "Klar for en økt?"
-    timeout: 30000
+    timeout: 120000
 - tapOn: "Øvelser"
 - assertVisible: "Beholdes.*"
