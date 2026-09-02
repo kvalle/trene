@@ -49,7 +49,7 @@ for _ in {1..60}; do
       | grep -Eo '[0-9]+ modules' \
       | grep -Eo '[0-9]+')
     echo "Android app bundle ready after $((SECONDS - prewarm_started_at))s. Starting Maestro."
-    npm run smoke:android
+    npm run e2e:android:smoke
     full_bundle_count=$(grep -Fc "($prewarm_modules modules)" .artifacts/metro.log || true)
     bundle_count=$(grep -c 'Android Bundled' .artifacts/metro.log || true)
     if [[ "$full_bundle_count" -ne 1 || "$bundle_count" -le "$prewarm_bundle_count" ]]; then

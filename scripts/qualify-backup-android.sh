@@ -49,7 +49,7 @@ echo '  npm run qualify:backup:fixture'
 echo '  adb push .artifacts/backup-qualification/fixture/large.trene-backup /sdcard/Download/large.trene-backup'
 echo
 echo 'Run the automated native suite first:'
-echo '  ANDROID_BACKUP_INTERRUPTION_FLOW=none npm run smoke:android:backup'
+echo '  ANDROID_BACKUP_INTERRUPTION_FLOW=none npm run e2e:android:backup'
 echo
 echo 'Then verify manually on this device:'
 echo '  1. Create and cancel sharing; confirm no saved-success claim.'

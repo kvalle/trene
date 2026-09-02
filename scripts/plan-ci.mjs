@@ -22,8 +22,8 @@ function routeForPath(path) {
   }
   if (path.startsWith(".github/workflows/")) return ["full", "full"];
 
-  if (/^\.maestro\/ios\//.test(path)) return ["none", "full"];
-  if (/^\.maestro\/(android-|smoke\/)/.test(path)) return ["full", "none"];
+  if (/^\.maestro\/e2e\/ios\//.test(path)) return ["none", "full"];
+  if (/^\.maestro\/e2e\/android\//.test(path)) return ["full", "none"];
   if (path.startsWith(".maestro/")) return ["full", "full"];
 
   if (path.startsWith("android/")) return ["full", "none"];

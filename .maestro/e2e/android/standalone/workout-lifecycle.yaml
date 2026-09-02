@@ -27,6 +27,12 @@ tags:
     centerElement: true
 - tapOn: "Repetisjoner"
 - inputText: "5"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Bekreft planlagt sett for Knebøy"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Bekreft planlagt sett for Knebøy"
 - assertVisible: "80,5 kg · 5 repetisjoner"
 

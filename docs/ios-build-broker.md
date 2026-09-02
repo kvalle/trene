@@ -29,7 +29,7 @@ artifacts use the project-neutral names `App.app` and `fixtures/`.
 
 ## Flow trust boundary
 
-Trene owns the Maestro YAML under `.maestro/ios/`; the broker does not keep a
+Trene owns the Maestro YAML under `.maestro/e2e/ios/`; the broker does not keep a
 second copy under `flows/`. A request contains a strict flow slug, which the
 broker resolves beneath the fixed flow root configured by the `trene` profile.
 
@@ -63,7 +63,7 @@ An ordinary standalone flow becomes requestable without a broker implementation
 change when it uses the supported Maestro subset, existing fixtures, and the
 profile's default setup:
 
-1. Add or change the graph under `.maestro/ios/`. Keep its complete include
+1. Add or change the graph under `.maestro/e2e/ios/`. Keep its complete include
    graph beneath the configured flow root.
 2. Verify the flow through the normal native CI path and review that it stays
    within the existing broker profile's trust boundary.

@@ -62,9 +62,9 @@ jobs:
           CROSS_PLATFORM_BACKUP_OUTPUT: .artifacts/cross-platform/output/package.trene-backup
           IOS_SIMULATOR_DEVICE: iPhone 16
           IOS_SIMULATOR_RUNTIME: '26'
-          IOS_SMOKE_SHARD: cross-platform
+          IOS_E2E_SHARD: cross-platform
           MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
-        run: npm run smoke:ios
+        run: npm run e2e:ios
       - name: Verify exported SHA-256 and every authoritative row
         run: node scripts/verify-cross-platform-backup.mjs .artifacts/cross-platform/output/package.trene-backup .artifacts/cross-platform/output/metadata.json .artifacts/cross-platform/input-metadata.json --semantic-only
       - uses: actions/upload-artifact@v6

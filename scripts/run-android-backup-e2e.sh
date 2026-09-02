@@ -45,24 +45,24 @@ trap cleanup EXIT
 
 node scripts/create-ios-smoke-fixtures.mjs "$fixtures"
 
-requested_flow="${ANDROID_BACKUP_SMOKE_FLOW:-all}"
+requested_flow="${ANDROID_BACKUP_E2E_FLOW:-all}"
 requested_interruption="${ANDROID_BACKUP_INTERRUPTION_FLOW:-}"
 if [[ ! "$requested_flow" =~ ^[A-Za-z0-9_-]+$ ]]; then
-  echo "Invalid Android backup smoke flow name: $requested_flow" >&2
+  echo "Invalid Android backup E2E flow name: $requested_flow" >&2
   exit 1
 fi
 if [[ -n "$requested_interruption" && "$requested_flow" != "all" ]]; then
-  echo "ANDROID_BACKUP_SMOKE_FLOW cannot be combined with ANDROID_BACKUP_INTERRUPTION_FLOW" >&2
+  echo "ANDROID_BACKUP_E2E_FLOW cannot be combined with ANDROID_BACKUP_INTERRUPTION_FLOW" >&2
   exit 1
 fi
 if [[ -n "$requested_interruption" && "$requested_interruption" != "none" ]]; then
   flows=()
 elif [[ "$requested_flow" == "all" ]]; then
-  flows=(.maestro/android-backup/*.yaml)
+  flows=(.maestro/e2e/android/backup/*.yaml)
 else
-  flow_path=".maestro/android-backup/$requested_flow.yaml"
+  flow_path=".maestro/e2e/android/backup/$requested_flow.yaml"
   if [[ ! -f "$flow_path" || "$requested_flow" == "select-backup-file" ]]; then
-    echo "Unknown standalone Android backup smoke flow: $requested_flow" >&2
+    echo "Unknown standalone Android backup E2E flow: $requested_flow" >&2
     exit 1
   fi
   flows=("$flow_path")
@@ -128,7 +128,7 @@ if [[ -n "$cross_platform_input" || -n "$cross_platform_output" ]]; then
   adb shell am force-stop com.google.android.documentsui >/dev/null 2>&1 || true
   reset_app
   export scenario=cross-platform-round-trip
-  run_flow .maestro/android-backup/cross-platform-round-trip.yaml \
+  run_flow .maestro/e2e/android/backup/cross-platform-round-trip.yaml \
     -e "EXPECTED_WORKOUTS=${CROSS_PLATFORM_EXPECTED_WORKOUTS:-1}" \
     -e "EXPECTED_EXERCISES=${CROSS_PLATFORM_EXPECTED_EXERCISES:-2}"
   mkdir -p "$(dirname "$cross_platform_output")"
@@ -188,7 +188,7 @@ run_interruption() {
   reset_app
   export scenario="$name"
   write_private_file "$documents/trene-automation-scenario.txt" "interrupt:$stage"
-  maestro test --debug-output "$maestro_artifacts/debug/$name-start" ".maestro/android-interruption/$name-start.yaml" &
+  maestro test --debug-output "$maestro_artifacts/debug/$name-start" ".maestro/e2e/android/interruption/$name-start.yaml" &
   maestro_pid=$!
   for _ in $(seq 1 60); do
     private_test -f "$documents/trene-automation-checkpoint.txt" && break
@@ -205,7 +205,7 @@ run_interruption() {
     maestro_pid=""
   fi
   remove_private_files "$documents/trene-automation-scenario.txt" "$documents/trene-automation-checkpoint.txt"
-  run_flow ".maestro/android-interruption/$expected.yaml"
+  run_flow ".maestro/e2e/android/interruption/$expected.yaml"
   if [[ "$name" == "export-cleanup" ]]; then
     test -z "$(private_files "/data/user/0/$package/cache/trene-exports")"
   fi

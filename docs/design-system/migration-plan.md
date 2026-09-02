@@ -671,7 +671,7 @@ Kilde: `src/screens/SettingsScreen.tsx`.
   `continue-restore` og `confirm-restore`.
 
 Kilder: `src/screens/DataScreen.tsx`, `src/screens/__tests__/DataScreen.test.tsx`,
-`src/backup/` og `.maestro/android-backup/`/`.maestro/ios/`.
+`src/backup/` og `.maestro/e2e/android/backup/`/`.maestro/e2e/ios/`.
 
 ### Treningsøkt
 
@@ -811,7 +811,7 @@ deaktivering og navigasjonsblokkering under lagring. En liten komponenttest skal
 bevise at knapper og felt videresender ref, `testID`, rolle, navn, hint,
 tilstand, native `disabled`/`editable` og hendelser.
 
-Relevant runtimeflyt er `.maestro/smoke/create-exercise.yaml`. Tastatur,
+Relevant runtimeflyt er `.maestro/e2e/android/smoke/create-exercise.yaml`. Tastatur,
 feltfeil, stor tekst, eksplisitt avbryt og plattformavbryt må i tillegg prøves
 manuelt på Android og iOS-simulator.
 
@@ -845,7 +845,7 @@ hele Data-raden er én knapp, navigerer til `Data`, beholder `settings-data` og
 beholder automatisk safe-area-innsetting. Historikktesten suppleres bare med
 loading-label og eventuell busy-tilstand som ikke allerede dekkes.
 
-`.maestro/smoke/browse-completed-workout.yaml` dekker tom og fylt Historikk.
+`.maestro/e2e/android/smoke/browse-completed-workout.yaml` dekker tom og fylt Historikk.
 Alle backup-flytene går gjennom Innstillinger.
 
 ### Ticket 5: søkbar liste og Øvelser

@@ -29,26 +29,21 @@ esac
 if [ "$qualification_suite" = representative ]; then
   adb shell pm clear com.kjetilvalle.trene >/dev/null
   sleep 2
-  maestro test --debug-output "$artifacts/debug" .maestro/smoke/start-workout.yaml
+  maestro test --debug-output "$artifacts/debug" .maestro/e2e/android/smoke/start-workout.yaml
 fi
 
 if [ "$qualification_suite" = all ] || [ "$qualification_suite" = standalone ]; then
-  for flow in .maestro/smoke/*.yaml .maestro/qualification/*.yaml; do
-    adb shell pm clear com.kjetilvalle.trene >/dev/null
-    sleep 2
-    maestro test --debug-output "$artifacts/debug" "$flow"
-  done
-  ANDROID_BACKUP_INTERRUPTION_FLOW=none npm run smoke:android:backup
+  npm run e2e:android
 fi
 
 if [ "$qualification_suite" = all ]; then
   for flow in export-cleanup before-replacement around-activation after-replacement; do
-    ANDROID_BACKUP_INTERRUPTION_FLOW="$flow" npm run smoke:android:backup
+    ANDROID_BACKUP_INTERRUPTION_FLOW="$flow" npm run e2e:android:backup
   done
 else
   case "$qualification_suite" in
     export-cleanup|before-replacement|around-activation|after-replacement)
-      ANDROID_BACKUP_INTERRUPTION_FLOW="$qualification_suite" npm run smoke:android:backup
+      ANDROID_BACKUP_INTERRUPTION_FLOW="$qualification_suite" npm run e2e:android:backup
       ;;
   esac
 fi

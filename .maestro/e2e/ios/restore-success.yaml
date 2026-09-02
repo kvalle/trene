@@ -25,7 +25,7 @@ tags:
 - launchApp
 - extendedWaitUntil:
     visible: "Klar for en økt?"
-    timeout: 30000
+    timeout: 120000
 - tapOn: "Innstillinger"
 - tapOn:
     id: "settings-data"

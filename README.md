@@ -50,10 +50,10 @@ safe-stop; skjermtilstand og tekst som ikke krever native integrasjon testes i
 Jest. Ved feil lastes bare logger, skjermbilder og trygg metadata opp, aldri
 sikkerhetskopier, SQLite-databaser, appcontainere eller brukerdata.
 
-### Android smoke-test med Maestro
+### Android E2E med Maestro
 
 Maestro kjører appen som en bruker gjennom native tilgjengelighetstreet. Flyten i
-`.maestro/smoke/create-exercise.yaml` oppretter `Knebøy`, restarter appen og
+`.maestro/e2e/android/smoke/create-exercise.yaml` oppretter `Knebøy`, restarter appen og
 verifiserer at øvelsen fortsatt finnes i SQLite.
 
 Installer først [Maestro CLI](https://docs.maestro.dev/maestro-cli/how-to-install-maestro-cli)
@@ -71,29 +71,30 @@ terminal, la Metro fortsette å kjøre, og start testen i en annen:
 
 ```sh
 npm run android
-npm run smoke:android
+npm run e2e:android
 ```
 
 Hvis appen allerede er installert, start Metro separat med
-`npm run start:android` før smoke-testen.
+`npm run start:android` før E2E-testen. Bruk `e2e:android:smoke`,
+`e2e:android:standalone` eller `e2e:android:backup` for bare én gruppe.
 
 Kommandoen bruker prosjektlokal Maestro-tilstand under `.artifacts/maestro/` og
 fungerer både lokalt og gjennom cplt-sandkassen.
 
-Runneren sletter eksisterende appdata på emulatoren før hver smoke-flyt. Maestro
+Runneren sletter eksisterende appdata på emulatoren før hver flyt. Maestro
 Studio kan også åpne samme YAML-fil for visuell steg-for-steg-kjøring og
 inspeksjon, men nullstiller ikke appdata automatisk.
 
-### Standalone offline qualification
+### Standalone workout lifecycle
 
-CI runs every flow in `.maestro/smoke/` and the combined
-`.maestro/qualification/offline-mvp.yaml` against clean app data. The latter
+CI runs every flow in `.maestro/e2e/android/smoke/` and the complete
+`.maestro/e2e/android/standalone/workout-lifecycle.yaml` against clean app data. The latter
 verifies recording, force-stop, resume, completion, and both history views. CI
 disables and verifies the absence of networking before installing the app, and
 runs without Metro. With a release APK installed locally, run the flows with:
 
 ```sh
-npm run qualify:android
+npm run e2e:android:standalone
 ```
 
 The manual device matrix and traceability for all 16 scenarios are documented in
