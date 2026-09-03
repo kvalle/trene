@@ -46,6 +46,7 @@ tags:
     timeout: 120000
 - tapOn: "Fortsett økt"
 - assertVisible: "80,5 kg · 5 repetisjoner"
+- assertVisible: "Controlled failure for issue 193"
 
 # Force-stop again, then finish and inspect both history views.
 - stopApp
