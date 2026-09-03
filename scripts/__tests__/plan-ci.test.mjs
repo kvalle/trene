@@ -6,9 +6,26 @@ import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { classifyPaths } from "../plan-ci.mjs";
+import { androidSuitesForMode, classifyPaths } from "../plan-ci.mjs";
 
 const none = { has_changes: true, native: false, android: "none", ios: "none" };
+
+test("plans isolated Android suites without duplicates", () => {
+  assert.deepEqual(androidSuitesForMode("none"), []);
+  assert.deepEqual(androidSuitesForMode("representative"), ["representative"]);
+  const full = androidSuitesForMode("full");
+  assert.deepEqual(full, [
+    "smoke",
+    "standalone",
+    "backup",
+    "export-cleanup",
+    "before-replacement",
+    "around-activation",
+    "after-replacement",
+  ]);
+  assert.equal(new Set(full).size, full.length);
+  assert.throws(() => androidSuitesForMode("unexpected"), /Unknown Android verification mode/);
+});
 
 test("classifies no changes and documentation or agent configuration", () => {
   assert.deepEqual(classifyPaths([]), { ...none, has_changes: false });
@@ -155,4 +172,14 @@ test("CLI accepts changed paths from a file", () => {
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, "has_changes=true\nnative=false\nandroid=none\nios=none\n");
+});
+
+test("CLI emits the Android suite matrix", () => {
+  const script = fileURLToPath(new URL("../plan-ci.mjs", import.meta.url));
+  const result = spawnSync(process.execPath, [script, "--android-matrix", "full"], {
+    encoding: "utf8",
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), androidSuitesForMode("full"));
 });

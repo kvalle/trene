@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+source scripts/android-e2e-readiness.sh
+
 group="${1:-}"
 case "$group" in
   smoke|standalone) ;;
@@ -12,7 +14,31 @@ case "$group" in
 esac
 
 artifacts="$PWD/.artifacts/maestro/$group"
+diagnostics="$PWD/.artifacts/android-e2e/$group"
+current_journey=setup
+started_at="$(date +%s)"
 mkdir -p "$artifacts/home" "$artifacts/tmp" "$artifacts/debug"
+
+cleanup() {
+  local status=$?
+  local finished_at
+  finished_at="$(date +%s)"
+  mkdir -p "$diagnostics"
+  {
+    echo "suite=$group"
+    echo "journey=$current_journey"
+    echo "status=$status"
+    echo "started_at=$started_at"
+    echo "finished_at=$finished_at"
+    echo "duration_seconds=$((finished_at - started_at))"
+    echo "android_api=$(adb shell getprop ro.build.version.sdk 2>/dev/null || true)"
+    echo "android_fingerprint=$(adb shell getprop ro.build.fingerprint 2>/dev/null || true)"
+    echo "adb_version=$(adb version 2>/dev/null | sed -n '1p' || true)"
+    echo "maestro_version=$(maestro --version 2>/dev/null | sed -n '1p' || true)"
+  } > "$diagnostics/runtime-metadata.txt"
+  if [[ "$status" -ne 0 ]]; then capture_android_e2e_diagnostics "$diagnostics/$current_journey"; fi
+}
+trap cleanup EXIT
 
 export MAESTRO_OPTS="-Duser.home=$artifacts/home"
 export JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=$artifacts/tmp -Djansi.tmpdir=$artifacts/tmp -Djava.rmi.server.hostname=localhost -Djava.net.preferIPv4Stack=true"
@@ -35,6 +61,7 @@ if [[ "$group" == "smoke" ]]; then
 fi
 
 for flow in ".maestro/e2e/android/$group"/*.yaml; do
+  current_journey="$(basename "$flow" .yaml)"
   adb shell pm clear com.kjetilvalle.trene >/dev/null
   sleep 2
   maestro test --debug-output "$artifacts/debug/$(basename "$flow" .yaml)" "$flow"

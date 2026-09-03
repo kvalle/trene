@@ -19,6 +19,7 @@ env:
   ANDROID_COMPILE_SDK: '36'
   ANDROID_CMAKE: 3.22.1
   ANDROID_NDK: 27.1.12297006
+  ANDROID_API_LEVEL: '34'
   GRADLE_USER_HOME: /home/runner/.gradle
   GRADLE_VERSION: 9.3.1
   JAVA_VERSION: '17'
@@ -56,13 +57,7 @@ jobs:
         env:
           MODE: ${{ steps.routes.outputs.android }}
         run: |
-          if [[ "$MODE" == "full" ]]; then
-            matrix='["standalone","export-cleanup","before-replacement","around-activation","after-replacement"]'
-          elif [[ "$MODE" == "representative" ]]; then
-            matrix='["representative"]'
-          else
-            matrix='[]'
-          fi
+          matrix="$(node scripts/plan-ci.mjs --android-matrix "$MODE")"
           echo "android=$matrix" >> "$GITHUB_OUTPUT"
           if [[ "${{ steps.routes.outputs.ios }}" == "full" ]]; then
             ios='[{"shard":"restore","flows":"restore-success,damaged-backup,picker-cancellation"},{"shard":"recovery","flows":"restore-failure,newer-backup"},{"shard":"fail-safe","flows":"rollback-failure,storage-failure,share-cancellation"}]'
@@ -155,7 +150,7 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
-  android-smoke:
+  android-e2e:
     name: Android ${{ matrix.suite }} verification
     needs: [plan, android-apk]
     if: needs.plan.outputs.android != 'none'
@@ -192,16 +187,28 @@ jobs:
         with:
           name: trene-android-apk
           path: .artifacts/android
+      - name: Verify immutable APK identity
+        run: node scripts/verify-ci-evidence.mjs apk "$GITHUB_SHA" "$GITHUB_RUN_ID" .artifacts/android/apk-identity.json "$ANDROID_SMOKE_APK"
       - name: Install app offline and run verification
         uses: reactivecircus/android-emulator-runner@v2
         env:
           ANDROID_QUALIFICATION_SUITE: ${{ matrix.suite }}
         with:
-          api-level: 34
+          api-level: ${{ env.ANDROID_API_LEVEL }}
           arch: x86_64
           disk-size: 4096M
           profile: pixel_2
+          target: default
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: bash scripts/ci-android-offline.sh
+      - name: Upload Android runtime metadata
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-runtime-${{ matrix.suite }}
+          path: .artifacts/android-e2e/${{ matrix.suite }}/runtime-metadata.txt
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Upload safe Android diagnostics
         if: failure() || cancelled()
         uses: actions/upload-artifact@v6
@@ -214,6 +221,7 @@ jobs:
             .artifacts/android/*metadata.json
             .artifacts/android/accessibility.xml
             .artifacts/android-readiness/
+            .artifacts/android-e2e/${{ matrix.suite }}/
           if-no-files-found: ignore
           retention-days: 7
   ios-app:

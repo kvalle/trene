@@ -7,6 +7,7 @@ import test from "node:test";
 
 const root = resolve(import.meta.dirname, "../..");
 const runner = join(root, "scripts/run-android-e2e.sh");
+const qualificationRunner = join(root, "scripts/run-android-qualification.sh");
 
 function executable(directory, name, body) {
   const path = join(directory, name);
@@ -68,7 +69,7 @@ for (const group of ["smoke", "standalone"]) {
       sleep: ":",
     });
     assert.equal(result.status, 0, result.stderr);
-    const commands = log.trim().split("\n");
+    const commands = log.trim().split("\n").filter((command) => command.startsWith("test "));
     assert.ok(commands.length > 0);
     assert.ok(commands.every((command) => command.includes(`.maestro/e2e/android/${group}/`)));
   });
@@ -79,3 +80,26 @@ test("unknown Android E2E groups are rejected before commands run", () => {
   assert.equal(result.status, 2);
   assert.match(result.stderr, /Unknown Android E2E group: qualification/);
 });
+
+for (const group of ["smoke", "standalone", "backup"]) {
+  test(`CI qualification dispatches ${group} without the aggregate command`, () => {
+    const directory = mkdtempSync(join(tmpdir(), "qualification-runner-"));
+    const log = join(directory, "commands.log");
+    executable(directory, "adb", 'if [ "$1" = devices ]; then printf "emulator-5554\\tdevice\\n"; fi');
+    executable(directory, "npm", 'printf "%s %s\\n" "${ANDROID_BACKUP_INTERRUPTION_FLOW:-unset}" "$*" >> "$E2E_TEST_LOG"');
+    const result = spawnSync("/bin/sh", [qualificationRunner], {
+      cwd: root,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: `${directory}:${process.env.PATH}`,
+        E2E_TEST_LOG: log,
+        ANDROID_QUALIFICATION_SUITE: group,
+      },
+    });
+
+    assert.equal(result.status, 0, result.stderr);
+    const expectedPrefix = group === "backup" ? "none" : "unset";
+    assert.equal(readFileSync(log, "utf8").trim(), `${expectedPrefix} run e2e:android:${group}`);
+  });
+}
