@@ -14,10 +14,12 @@ tags:
 - tapOn:
     id: "restore-from-file"
 - extendedWaitUntil:
-    visible: "(Recents|Browse|Cancel)"
+    visible: "Cancel"
     timeout: 30000
 - tapOn: "Cancel"
-- assertVisible:
-    id: "restore-from-file"
+- extendedWaitUntil:
+    visible:
+      id: "restore-from-file"
+    timeout: 30000
 - assertNotVisible:
     id: "data-error"
