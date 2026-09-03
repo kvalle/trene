@@ -2,11 +2,14 @@
 
 set -euo pipefail
 
+source scripts/android-e2e-readiness.sh
+
 apk="${ANDROID_SMOKE_APK:-.artifacts/android/trene.apk}"
 
 mkdir -p .artifacts
 
 cleanup() {
+  capture_android_readiness_diagnostics
   adb shell ip link set eth0 up >/dev/null 2>&1 || true
   adb shell svc wifi enable >/dev/null 2>&1 || true
   adb shell svc data enable >/dev/null 2>&1 || true
@@ -24,8 +27,7 @@ if [[ ! -f "$apk" ]]; then
 fi
 
 adb uninstall com.kjetilvalle.trene >/dev/null 2>&1 || true
-adb root >/dev/null
-adb wait-for-device
+wait_for_android_root_runtime
 adb shell svc wifi disable
 adb shell svc data disable
 adb shell ip link set eth0 down

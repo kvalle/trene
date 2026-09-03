@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+source scripts/android-e2e-readiness.sh
+
 artifacts="$PWD/.artifacts"
 android_artifacts="$artifacts/android"
 maestro_artifacts="$artifacts/maestro-android-backup"
@@ -19,18 +21,9 @@ export MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true
 export MAESTRO_DISABLE_UPDATE_CHECK=true
 export ADB_SERVER_SOCKET=tcp:127.0.0.1:5037
 
-if adb shell run-as "$package" id >/dev/null 2>&1; then
-  private_access=run-as
-else
-  if adb root >/dev/null 2>&1; then adb wait-for-device; fi
-  if ! adb shell test -d "/data/user/0/$package" >/dev/null 2>&1; then
-    echo 'App-private qualification access requires a debuggable APK or a rootable emulator.' >&2
-    exit 1
-  fi
-fi
-
 cleanup() {
   if [[ -n "$maestro_pid" ]]; then kill "$maestro_pid" >/dev/null 2>&1 || true; wait "$maestro_pid" >/dev/null 2>&1 || true; fi
+  capture_android_readiness_diagnostics
   adb exec-out screencap -p > "$maestro_artifacts/screenshots/final.png" 2>/dev/null || true
   for debug_directory in "$maestro_artifacts"/debug/*/.maestro; do
     if [[ -d "$debug_directory" ]]; then
@@ -42,6 +35,16 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
+
+if adb shell run-as "$package" id >/dev/null 2>&1; then
+  private_access=run-as
+else
+  wait_for_android_root_runtime
+  if ! adb shell test -d "/data/user/0/$package" >/dev/null 2>&1; then
+    echo 'App-private qualification access requires a debuggable APK or a rootable emulator.' >&2
+    exit 1
+  fi
+fi
 
 node scripts/create-ios-smoke-fixtures.mjs "$fixtures"
 

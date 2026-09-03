@@ -137,7 +137,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disk-size: 4096M
-          script: adb install "$ANDROID_SMOKE_APK" && npm run e2e:android:backup
+          script: bash scripts/android-e2e-readiness.sh && adb install "$ANDROID_SMOKE_APK" && npm run e2e:android:backup
       - name: Upload safe diagnostics
         if: always()
         uses: actions/upload-artifact@v6
@@ -154,6 +154,7 @@ jobs:
           path: |
             .artifacts/maestro-android-backup/debug/
             .artifacts/maestro-android-backup/screenshots/
+            .artifacts/android-readiness/
           if-no-files-found: ignore
           retention-days: 7
 
