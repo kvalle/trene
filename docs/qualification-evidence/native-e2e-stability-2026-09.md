@@ -17,4 +17,5 @@ The final evidence records:
 
 ## Results
 
-Qualification results are recorded after the repeated runs complete.
+The issue #193 comments are the append-only evidence log. They record the run
+URLs and results without changing the qualified Git revision after each run.
