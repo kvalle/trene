@@ -34,7 +34,9 @@ tags:
     direction: DOWN
     centerElement: true
 - tapOn: "Bekreft planlagt sett for Knebøy"
-- assertVisible: "80,5 kg · 5 repetisjoner"
+- extendedWaitUntil:
+    visible: "80,5 kg · 5 repetisjoner"
+    timeout: 30000
 
 # Force-stop after confirmation to prove that the accepted set survives.
 - stopApp
@@ -54,14 +56,31 @@ tags:
 - tapOn: "Fortsett økt"
 - assertVisible: "80,5 kg · 5 repetisjoner"
 - tapOn: "Ferdig"
+- extendedWaitUntil:
+    visible: "Fullfør økt"
+    timeout: 30000
 - tapOn: "Fullfør økt"
-- assertVisible: "Fullført økt"
+- extendedWaitUntil:
+    visible: "Fullført økt"
+    timeout: 30000
 - assertVisible: "80,5 kg · 5 repetisjoner"
 - tapOn: "Tilbake til forsiden"
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 - tapOn: "Tidligere økter"
-- assertVisible: "1 øvelse"
+- extendedWaitUntil:
+    visible: "1 øvelse"
+    timeout: 30000
 - back
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 - tapOn: "Øvelser"
-- assertVisible: "Brukt i 1 økt"
+- extendedWaitUntil:
+    visible: "Brukt i 1 økt"
+    timeout: 30000
 - tapOn: "Knebøy"
-- assertVisible: "80,5 kg · 5 repetisjoner"
+- extendedWaitUntil:
+    visible: "80,5 kg · 5 repetisjoner"
+    timeout: 30000

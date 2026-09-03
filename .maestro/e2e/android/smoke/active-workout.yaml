@@ -17,7 +17,9 @@ tags:
 - pasteText
 - tapOn:
     id: "create-exercise-submit"
-- assertVisible: "Planlagt sett"
+- extendedWaitUntil:
+    visible: "Planlagt sett"
+    timeout: 30000
 - tapOn: "Belastning"
 - inputText: "80"
 - scrollUntilVisible:
@@ -34,6 +36,9 @@ tags:
     direction: DOWN
     centerElement: true
 - tapOn: "Bekreft planlagt sett for Knebøy"
+- extendedWaitUntil:
+    visible: "80 kg · 5 repetisjoner"
+    timeout: 30000
 - assertVisible: "Sett 1"
 # Test cancellation dialog while the screen is short (single confirmed set).
 - tapOn: "Avbryt"

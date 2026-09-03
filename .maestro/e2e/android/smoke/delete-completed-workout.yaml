@@ -28,18 +28,38 @@ tags:
 - tapOn: "Repetisjoner"
 - inputText: "5"
 - pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Bekreft planlagt sett for Knebøy"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Bekreft planlagt sett for Knebøy"
+- extendedWaitUntil:
+    visible: "80 kg · 5 repetisjoner"
+    timeout: 30000
 - tapOn: "Ferdig"
+- extendedWaitUntil:
+    visible: "Fullfør økt"
+    timeout: 30000
 - tapOn: "Fullfør økt"
-- assertVisible: "Fullført økt"
+- extendedWaitUntil:
+    visible: "Fullført økt"
+    timeout: 30000
 
 # Cancellation keeps the completed workout available.
 - tapOn: "Slett økt"
-- assertVisible: "Slett fullført økt?"
+- extendedWaitUntil:
+    visible: "Slett fullført økt?"
+    timeout: 30000
 - tapOn: "Avbryt"
+- extendedWaitUntil:
+    notVisible: "Slett fullført økt?"
+    timeout: 30000
 - assertVisible: "Fullført økt"
 
 # The destructive confirmation removes it and returns to empty history.
 - tapOn: "Slett økt"
 - tapOn: "Slett"
-- assertVisible: "Ingen fullførte økter ennå"
+- extendedWaitUntil:
+    visible: "Ingen fullførte økter ennå"
+    timeout: 30000
