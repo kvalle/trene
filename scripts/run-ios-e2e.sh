@@ -16,12 +16,13 @@ export MAESTRO_CLI_NO_ANALYTICS=true
 export MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true
 export MAESTRO_DISABLE_UPDATE_CHECK=true
 
+source scripts/ios-e2e-readiness.sh
+
 created_simulator=false
 udid=""
 cleanup() {
   if [[ -n "$udid" ]]; then
-    xcrun simctl spawn "$udid" log show --last 20m --style compact \
-      --predicate 'process == "Trene"' > "$ios_artifacts/simulator.log" 2>&1 || true
+    capture_ios_readiness_diagnostics "$udid"
     xcrun simctl io "$udid" screenshot "$maestro_artifacts/screenshots/final.png" >/dev/null 2>&1 || true
   fi
   xcrun simctl list devices > "$ios_artifacts/simulator-devices.txt" 2>&1 || true
@@ -59,7 +60,7 @@ jq -n \
   --arg runtime "${resolved_runtime_version:-provided by IOS_SIMULATOR_UDID}" \
   '{simulatorUdid:$udid,device:$device,runtime:$runtime}' > "$ios_artifacts/simulator-selection.json"
 xcrun simctl boot "$udid" >/dev/null 2>&1 || true
-xcrun simctl bootstatus "$udid" -b
+wait_for_ios_runtime "$udid"
 node scripts/create-ios-smoke-fixtures.mjs "$fixtures"
 
 cross_platform_input="${CROSS_PLATFORM_BACKUP_INPUT:-}"

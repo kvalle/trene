@@ -88,6 +88,8 @@ jobs:
             .artifacts/cross-platform/*-metadata.json
             .artifacts/ios/*.json
             .artifacts/ios/*.log
+            .artifacts/ios/readiness/
+            .artifacts/maestro-ios/debug/
             .artifacts/maestro-ios/screenshots/
           if-no-files-found: ignore
           retention-days: 7
