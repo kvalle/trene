@@ -3,6 +3,25 @@ import { pathToFileURL } from "node:url";
 
 const MODES = ["none", "representative", "full"];
 
+const ANDROID_SUITES = {
+  none: [],
+  representative: ["representative"],
+  full: [
+    "smoke",
+    "standalone",
+    "backup",
+    "export-cleanup",
+    "before-replacement",
+    "around-activation",
+    "after-replacement",
+  ],
+};
+
+export function androidSuitesForMode(mode) {
+  if (!(mode in ANDROID_SUITES)) throw new Error(`Unknown Android verification mode: ${mode}`);
+  return [...ANDROID_SUITES[mode]];
+}
+
 function maxMode(left, right) {
   return MODES[Math.max(MODES.indexOf(left), MODES.indexOf(right))];
 }
@@ -102,7 +121,13 @@ async function readCliPaths(args) {
 }
 
 async function main() {
-  const paths = await readCliPaths(process.argv.slice(2));
+  const args = process.argv.slice(2);
+  if (args[0] === "--android-matrix") {
+    if (args.length !== 2) throw new Error("--android-matrix requires one mode");
+    process.stdout.write(`${JSON.stringify(androidSuitesForMode(args[1]))}\n`);
+    return;
+  }
+  const paths = await readCliPaths(args);
   process.stdout.write(`${formatGithubOutput(classifyPaths(paths))}\n`);
 }
 

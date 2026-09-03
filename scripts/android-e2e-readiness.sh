@@ -50,6 +50,23 @@ capture_android_readiness_diagnostics() {
   free -h > "$android_readiness_artifacts/runner-memory.txt" 2>&1 || true
 }
 
+capture_android_e2e_diagnostics() {
+  local target="$1"
+  mkdir -p "$target"
+  capture_android_readiness_diagnostics
+  run_bounded_android_command adb exec-out screencap -p > "$target/screenshot.png" 2>/dev/null || true
+  run_bounded_android_command adb shell uiautomator dump /sdcard/window.xml > "$target/ui-dump.txt" 2>&1 || true
+  run_bounded_android_command adb exec-out cat /sdcard/window.xml > "$target/ui-hierarchy.xml" 2>/dev/null || true
+  run_bounded_android_command adb logcat -d > "$target/logcat.txt" 2>&1 || true
+  run_bounded_android_command adb devices -l > "$target/adb-devices.txt" 2>&1 || true
+  run_bounded_android_command adb get-state > "$target/adb-state.txt" 2>&1 || true
+  run_bounded_android_command adb shell dumpsys window > "$target/window.txt" 2>&1 || true
+  run_bounded_android_command adb shell dumpsys activity > "$target/activity.txt" 2>&1 || true
+  run_bounded_android_command adb shell dumpsys meminfo com.kjetilvalle.trene > "$target/app-memory.txt" 2>&1 || true
+  df -h > "$target/runner-disk.txt" 2>&1 || true
+  free -h > "$target/runner-memory.txt" 2>&1 || true
+}
+
 android_readiness_timeout() {
   echo "Timed out waiting for $1 after $android_readiness_attempts attempts." >&2
   capture_android_readiness_diagnostics

@@ -12,6 +12,8 @@ package=com.kjetilvalle.trene
 documents="/data/user/0/$package/files"
 maestro_pid=""
 private_access=direct
+current_journey=setup
+started_at="$(date +%s)"
 
 mkdir -p "$maestro_artifacts/home" "$maestro_artifacts/tmp" "$maestro_artifacts/debug" "$maestro_artifacts/screenshots"
 export MAESTRO_OPTS="-Duser.home=$maestro_artifacts/home"
@@ -22,6 +24,11 @@ export MAESTRO_DISABLE_UPDATE_CHECK=true
 export ADB_SERVER_SOCKET=tcp:127.0.0.1:5037
 
 cleanup() {
+  local status=$?
+  local suite=backup
+  local finished_at
+  [[ -n "${requested_interruption:-}" && "${requested_interruption:-}" != none ]] && suite="$requested_interruption"
+  finished_at="$(date +%s)"
   if [[ -n "$maestro_pid" ]]; then kill "$maestro_pid" >/dev/null 2>&1 || true; wait "$maestro_pid" >/dev/null 2>&1 || true; fi
   capture_android_readiness_diagnostics
   adb exec-out screencap -p > "$maestro_artifacts/screenshots/final.png" 2>/dev/null || true
@@ -33,6 +40,20 @@ cleanup() {
   if [[ ! -f "$android_artifacts/runtime-metadata.json" ]]; then
     node -e 'const fs=require("node:fs"); fs.writeFileSync(process.argv[1],JSON.stringify({appVersion:"unknown",formatVersion:null,schemaVersion:null,platform:`Android API ${process.env.ANDROID_API_LEVEL||"unknown"}`,scenario:process.env.scenario||"unknown",stage:"failed-before-runtime-export-verification",tableCounts:null},null,2)+"\n")' "$android_artifacts/runtime-metadata.json" || true
   fi
+  mkdir -p "$artifacts/android-e2e/$suite"
+  {
+    echo "suite=$suite"
+    echo "journey=$current_journey"
+    echo "status=$status"
+    echo "started_at=$started_at"
+    echo "finished_at=$finished_at"
+    echo "duration_seconds=$((finished_at - started_at))"
+    echo "android_api=$(adb shell getprop ro.build.version.sdk 2>/dev/null || true)"
+    echo "android_fingerprint=$(adb shell getprop ro.build.fingerprint 2>/dev/null || true)"
+    echo "adb_version=$(adb version 2>/dev/null | sed -n '1p' || true)"
+    echo "maestro_version=$(maestro --version 2>/dev/null | sed -n '1p' || true)"
+  } > "$artifacts/android-e2e/$suite/runtime-metadata.txt"
+  if [[ "$status" -ne 0 ]]; then capture_android_e2e_diagnostics "$artifacts/android-e2e/$suite/$current_journey"; fi
 }
 trap cleanup EXIT
 
@@ -147,6 +168,7 @@ for flow in "${flows[@]}"; do
   if [[ "$(basename "$flow")" == "select-backup-file.yaml"
     || "$(basename "$flow")" == "cross-platform-round-trip.yaml" ]]; then continue; fi
   export scenario="$(basename "$flow" .yaml)"
+  current_journey="$scenario"
   fixture=representative
   case "$(basename "$flow")" in
     damaged-backup.yaml) fixture=damaged ;;
@@ -188,6 +210,7 @@ if [[ "$requested_interruption" == "none"
 
 run_interruption() {
   local name="$1" stage="$2" expected="$3"
+  current_journey="$name"
   reset_app
   export scenario="$name"
   write_private_file "$documents/trene-automation-scenario.txt" "interrupt:$stage"
