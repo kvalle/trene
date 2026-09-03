@@ -33,18 +33,37 @@ tags:
 - tapOn: "Repetisjoner"
 - inputText: "5"
 - pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Bekreft planlagt sett for Knebøy"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Bekreft planlagt sett for Knebøy"
+- extendedWaitUntil:
+    visible: "80 kg · 5 repetisjoner"
+    timeout: 30000
 - tapOn: "Ferdig"
-- assertVisible: "Fullfør økten?"
+- extendedWaitUntil:
+    visible: "Fullfør økten?"
+    timeout: 30000
 - tapOn: "Fullfør økt"
-- assertVisible: "Fullført økt"
+- extendedWaitUntil:
+    visible: "Fullført økt"
+    timeout: 30000
 - assertVisible: "Knebøy"
 - tapOn: "Tilbake til forsiden"
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 
 - tapOn: "Tidligere økter"
-- assertVisible: "1 øvelse"
+- extendedWaitUntil:
+    visible: "1 øvelse"
+    timeout: 30000
 - tapOn: "1 øvelse"
-- assertVisible: "Fullført økt"
+- extendedWaitUntil:
+    visible: "Fullført økt"
+    timeout: 30000
 - assertVisible: "80 kg · 5 repetisjoner"
 
 # Restart and verify that completed history remains browsable.
@@ -54,4 +73,6 @@ tags:
     visible: "Klar for en økt?"
     timeout: 120000
 - tapOn: "Tidligere økter"
-- assertVisible: "1 øvelse"
+- extendedWaitUntil:
+    visible: "1 øvelse"
+    timeout: 30000

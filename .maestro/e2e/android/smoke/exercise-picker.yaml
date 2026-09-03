@@ -17,20 +17,45 @@ tags:
 - pasteText
 - tapOn:
     id: "create-exercise-submit"
+- extendedWaitUntil:
+    visible: "Historikk"
+    timeout: 30000
 - pressKey: BACK
+- extendedWaitUntil:
+    visible: "Søk i øvelser"
+    timeout: 30000
+- assertVisible: "Knebøy"
 - pressKey: BACK
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
 
 - tapOn: "Start økt"
+- extendedWaitUntil:
+    visible: "Ingen øvelser lagt til ennå"
+    timeout: 30000
 - tapOn: "Legg til øvelse"
-- assertVisible: "Knebøy"
+- extendedWaitUntil:
+    visible: "Knebøy"
+    timeout: 30000
 - tapOn: "Søk i øvelser"
 - inputText: "kneb"
 - assertVisible: "Knebøy"
 - tapOn: "Avbryt"
-- assertVisible: "Ingen øvelser lagt til ennå"
+- extendedWaitUntil:
+    visible: "Ingen øvelser lagt til ennå"
+    timeout: 30000
 
 - tapOn: "Legg til øvelse"
+- extendedWaitUntil:
+    visible: "Knebøy"
+    timeout: 30000
 - tapOn: "Knebøy"
+- extendedWaitUntil:
+    visible: "Planlagt sett"
+    timeout: 30000
 - assertVisible: "Knebøy"
 - tapOn: "Legg til øvelse"
-- assertVisible: "Alle eksisterende øvelser er lagt til"
+- extendedWaitUntil:
+    visible: "Alle eksisterende øvelser er lagt til"
+    timeout: 30000

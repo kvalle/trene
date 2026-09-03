@@ -36,6 +36,7 @@ tags:
     centerElement: true
 - tapOn: "Repetisjoner"
 - inputText: "5"
+- pressKey: back
 
 # Background and resume before confirmation to verify planned values are durable.
 - pressKey: HOME
@@ -48,9 +49,16 @@ tags:
 - assertVisible: "80,5"
 - assertVisible: "5"
 
+- scrollUntilVisible:
+    element:
+      text: "Bekreft planlagt sett for Knebøy"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Bekreft planlagt sett for Knebøy"
+- extendedWaitUntil:
+    visible: "80,5 kg · 5 repetisjoner"
+    timeout: 30000
 - assertVisible: "Sett 1"
-- assertVisible: "80,5 kg · 5 repetisjoner"
 
 # Restart the native process without clearing SQLite.
 - stopApp
@@ -67,7 +75,15 @@ tags:
 - assertVisible: "Planlagt sett"
 - assertVisible: "80,5"
 - assertVisible: "5"
+- scrollUntilVisible:
+    element:
+      text: "Bekreft planlagt sett for Knebøy"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Bekreft planlagt sett for Knebøy"
+- extendedWaitUntil:
+    visible: "80,5 kg · 5 repetisjoner"
+    timeout: 30000
 - assertVisible: "Sett 1"
 
 - tapOn: "Avbryt"
@@ -78,4 +94,6 @@ tags:
 
 - tapOn: "Avbryt"
 - tapOn: "Avbryt økten"
-- assertVisible: "Start økt"
+- extendedWaitUntil:
+    visible: "Start økt"
+    timeout: 30000
