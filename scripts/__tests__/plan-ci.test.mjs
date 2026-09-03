@@ -13,7 +13,6 @@ const none = { has_changes: true, native: false, android: "none", ios: "none" };
 test("plans isolated Android suites without duplicates", () => {
   assert.deepEqual(androidSuitesForMode("none"), []);
   assert.deepEqual(androidSuitesForMode("representative"), ["representative"]);
-  assert.deepEqual(androidSuitesForMode("standalone"), ["standalone"]);
   const full = androidSuitesForMode("full");
   assert.deepEqual(full, [
     "smoke",

@@ -6,7 +6,6 @@ const MODES = ["none", "representative", "full"];
 const ANDROID_SUITES = {
   none: [],
   representative: ["representative"],
-  standalone: ["standalone"],
   full: [
     "smoke",
     "standalone",

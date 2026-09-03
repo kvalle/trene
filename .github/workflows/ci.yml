@@ -8,14 +8,6 @@ on:
       - 'docs/**'
   pull_request:
   workflow_dispatch:
-    inputs:
-      verification:
-        description: Native verification to run
-        type: choice
-        options:
-          - full
-          - android-standalone
-        default: full
 
 permissions:
   contents: read
@@ -55,13 +47,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          if [[ "$EVENT_NAME" == "workflow_dispatch" && "${{ inputs.verification }}" == "android-standalone" ]]; then
-            printf '%s\n' \
-              'has_changes=true' \
-              'native=true' \
-              'android=standalone' \
-              'ios=none' >> "$GITHUB_OUTPUT"
-          elif [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             printf '%s\n' package.json | node scripts/plan-ci.mjs >> "$GITHUB_OUTPUT"
           else
             git diff --name-only "$BASE_SHA" "$GITHUB_SHA" | node scripts/plan-ci.mjs >> "$GITHUB_OUTPUT"
