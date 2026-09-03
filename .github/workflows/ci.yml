@@ -213,6 +213,7 @@ jobs:
             .artifacts/maestro-android-backup/screenshots/
             .artifacts/android/*metadata.json
             .artifacts/android/accessibility.xml
+            .artifacts/android-readiness/
           if-no-files-found: ignore
           retention-days: 7
   ios-app:
