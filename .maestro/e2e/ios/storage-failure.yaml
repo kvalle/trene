@@ -15,7 +15,14 @@ tags:
 - tapOn: "Opprett første øvelse"
 - tapOn:
     id: "exercise-name-input"
-- inputText: "Beholdes"
+- inputText: "B"
+- inputText: "e"
+- inputText: "h"
+- inputText: "o"
+- inputText: "l"
+- inputText: "d"
+- inputText: "e"
+- inputText: "s"
 - tapOn:
     id: "create-exercise-submit"
 - extendedWaitUntil:

@@ -126,12 +126,19 @@ test("the native picker selects a backup once and leaves destination waits to ca
 });
 
 test("restore setup enters the exercise name without lossy bulk input", () => {
-  const flow = readFileSync(join(root, ".maestro/e2e/ios/restore-success.yaml"), "utf8");
-  assert.match(
-    flow,
-    /inputText: "U"\n- inputText: "t"\n- inputText: "d"\n- inputText: "a"\n- inputText: "t"\n- inputText: "e"\n- inputText: "r"\n- inputText: "t"/,
-  );
-  assert.doesNotMatch(flow, /inputText: "Utdatert"/);
+  const cases = [
+    ["restore-success.yaml", "Utdatert"],
+    ["damaged-backup.yaml", "Beholdes"],
+    ["newer-backup.yaml", "Beholdes"],
+    ["restore-failure.yaml", "Beholdes"],
+    ["storage-failure.yaml", "Beholdes"],
+  ];
+  for (const [name, value] of cases) {
+    const flow = readFileSync(join(root, ".maestro/e2e/ios", name), "utf8");
+    const commands = [...value].map((character) => `- inputText: "${character}"`).join("\n");
+    assert.match(flow, new RegExp(commands), name);
+    assert.doesNotMatch(flow, new RegExp(`inputText: "${value}"`), name);
+  }
 });
 
 test("picker cancellation avoids the duplicated native Cancel node", () => {
