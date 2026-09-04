@@ -133,3 +133,9 @@ test("restore setup enters the exercise name without lossy bulk input", () => {
   );
   assert.doesNotMatch(flow, /inputText: "Utdatert"/);
 });
+
+test("picker cancellation avoids the duplicated native Cancel node", () => {
+  const flow = readFileSync(join(root, ".maestro/e2e/ios/picker-cancellation.yaml"), "utf8");
+  assert.doesNotMatch(flow, /tapOn: "Cancel"/);
+  assert.match(flow, /point: "76%,13%"[\s\S]*id: "restore-from-file"/);
+});
