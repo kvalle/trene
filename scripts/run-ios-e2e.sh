@@ -79,7 +79,7 @@ if [[ -n "$cross_platform_input" || -n "$cross_platform_output" ]]; then
   xcrun simctl terminate "$udid" com.kjetilvalle.trene >/dev/null 2>&1 || true
   container="$(xcrun simctl get_app_container "$udid" com.kjetilvalle.trene data)"
   cp "$cross_platform_input" "$container/Documents/representative.trene-backup"
-  maestro --device "$udid" test --debug-output "$maestro_artifacts/debug/$scenario" \
+  maestro --device "$udid" test --no-reinstall-driver --debug-output "$maestro_artifacts/debug/$scenario" \
     .maestro/e2e/ios/cross-platform-round-trip.yaml
   mkdir -p "$(dirname "$cross_platform_output")"
   cp "$container/Documents/trene-automation-export.trene-backup" "$cross_platform_output"
@@ -129,7 +129,7 @@ for flow in "${flows[@]}"; do
     rollback-failure.yaml) fault_scenario="rollback-failure" ;;
   esac
   if [[ -n "$fault_scenario" ]]; then printf '%s\n' "$fault_scenario" > "$container/Documents/trene-automation-scenario.txt"; fi
-  maestro --device "$udid" test --debug-output "$maestro_artifacts/debug/$(basename "$flow" .yaml)" "$flow"
+  maestro --device "$udid" test --no-reinstall-driver --debug-output "$maestro_artifacts/debug/$(basename "$flow" .yaml)" "$flow"
   if [[ "$scenario" == "rollback-failure" ]]; then
     test -f "$container/Documents/trene-restore-recovery/operation.json"
     test -f "$container/Documents/trene-restore-recovery/rollback.sqlite"

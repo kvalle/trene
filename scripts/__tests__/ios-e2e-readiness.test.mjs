@@ -105,7 +105,7 @@ test("the iOS runner retries readiness but invokes each product journey once", (
   const runner = readFileSync(join(root, "scripts/run-ios-e2e.sh"), "utf8");
   assert.match(runner, /wait_for_ios_runtime "\$udid"/);
   assert.doesNotMatch(runner, /wait_for_ios_condition[^\n]*maestro[^\n]*test/);
-  assert.equal(runner.match(/maestro --device "\$udid" test/g)?.length, 2);
+  assert.equal(runner.match(/maestro --device "\$udid" test --no-reinstall-driver/g)?.length, 2);
 });
 
 test("the native picker selects a backup once and leaves destination waits to callers", () => {
