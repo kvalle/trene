@@ -15,8 +15,14 @@ tags:
 - tapOn: "Opprett første øvelse"
 - tapOn:
     id: "exercise-name-input"
-- setClipboard: "Utdatert"
-- pasteText
+- inputText: "U"
+- inputText: "t"
+- inputText: "d"
+- inputText: "a"
+- inputText: "t"
+- inputText: "e"
+- inputText: "r"
+- inputText: "t"
 - tapOn:
     id: "create-exercise-submit"
 - extendedWaitUntil:

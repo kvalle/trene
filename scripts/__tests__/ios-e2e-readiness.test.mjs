@@ -125,8 +125,11 @@ test("the native picker selects a backup once and leaves destination waits to ca
   }
 });
 
-test("restore setup pastes the exercise name atomically", () => {
+test("restore setup enters the exercise name without lossy bulk input", () => {
   const flow = readFileSync(join(root, ".maestro/e2e/ios/restore-success.yaml"), "utf8");
-  assert.match(flow, /setClipboard: "Utdatert"\n- pasteText/);
+  assert.match(
+    flow,
+    /inputText: "U"\n- inputText: "t"\n- inputText: "d"\n- inputText: "a"\n- inputText: "t"\n- inputText: "e"\n- inputText: "r"\n- inputText: "t"/,
+  );
   assert.doesNotMatch(flow, /inputText: "Utdatert"/);
 });
