@@ -124,3 +124,9 @@ test("the native picker selects a backup once and leaves destination waits to ca
     assert.match(contents, new RegExp(`file: select-backup-file\\.yaml[\\s\\S]*extendedWaitUntil:[\\s\\S]*id: "${destination}"`), flow);
   }
 });
+
+test("restore setup pastes the exercise name atomically", () => {
+  const flow = readFileSync(join(root, ".maestro/e2e/ios/restore-success.yaml"), "utf8");
+  assert.match(flow, /setClipboard: "Utdatert"\n- pasteText/);
+  assert.doesNotMatch(flow, /inputText: "Utdatert"/);
+});

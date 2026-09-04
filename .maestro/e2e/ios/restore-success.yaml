@@ -15,7 +15,8 @@ tags:
 - tapOn: "Opprett første øvelse"
 - tapOn:
     id: "exercise-name-input"
-- inputText: "Utdatert"
+- setClipboard: "Utdatert"
+- pasteText
 - tapOn:
     id: "create-exercise-submit"
 - extendedWaitUntil:
