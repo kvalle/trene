@@ -15,14 +15,7 @@ tags:
 - tapOn: "Opprett første øvelse"
 - tapOn:
     id: "exercise-name-input"
-- inputText: "U"
-- inputText: "t"
-- inputText: "d"
-- inputText: "a"
-- inputText: "t"
-- inputText: "e"
-- inputText: "r"
-- inputText: "t"
+- inputText: "Utdatert"
 - tapOn:
     id: "create-exercise-submit"
 - extendedWaitUntil:

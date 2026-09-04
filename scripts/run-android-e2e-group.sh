@@ -60,15 +60,9 @@ if [[ "$group" == "smoke" ]]; then
   fi
 fi
 
-first_flow=true
 for flow in ".maestro/e2e/android/$group"/*.yaml; do
   current_journey="$(basename "$flow" .yaml)"
   adb shell pm clear com.kjetilvalle.trene >/dev/null
   sleep 2
-  if [[ "$first_flow" == true ]]; then
-    maestro test --debug-output "$artifacts/debug/$(basename "$flow" .yaml)" "$flow"
-    first_flow=false
-  else
-    maestro test --no-reinstall-driver --debug-output "$artifacts/debug/$(basename "$flow" .yaml)" "$flow"
-  fi
+  maestro test --debug-output "$artifacts/debug/$(basename "$flow" .yaml)" "$flow"
 done

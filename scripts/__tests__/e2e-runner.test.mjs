@@ -72,8 +72,6 @@ for (const group of ["smoke", "standalone"]) {
     const commands = log.trim().split("\n").filter((command) => command.startsWith("test "));
     assert.ok(commands.length > 0);
     assert.ok(commands.every((command) => command.includes(`.maestro/e2e/android/${group}/`)));
-    assert.doesNotMatch(commands[0], /--no-reinstall-driver/);
-    assert.ok(commands.slice(1).every((command) => command.includes("--no-reinstall-driver")));
   });
 }
 

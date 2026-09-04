@@ -16,8 +16,7 @@ tags:
 - extendedWaitUntil:
     visible: "Cancel"
     timeout: 30000
-- tapOn:
-    point: "76%,13%"
+- tapOn: "Cancel"
 - extendedWaitUntil:
     visible:
       id: "restore-from-file"

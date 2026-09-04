@@ -15,7 +15,26 @@ The final evidence records:
 - Local Android and iOS broker outcomes.
 - A controlled negative run proving that a behavioral assertion keeps CI red.
 
-## Results
+## Result
 
-The issue #193 comments are the append-only evidence log. They record the run
-URLs and results without changing the qualified Git revision after each run.
+Qualification failed. Repeated runs exposed harness failures after the preceding
+stabilization tickets had each passed their individual CI run:
+
+- Run [33814172730](https://github.com/kvalle/trene/actions/runs/33814172730):
+  the iOS recovery shard timed out starting a new XCTest driver after readiness.
+- Run [33847614094](https://github.com/kvalle/trene/actions/runs/33847614094):
+  iOS bulk text entry delivered only `U` from `Utdatert`.
+- Run [33851797560](https://github.com/kvalle/trene/actions/runs/33851797560):
+  the native picker exposed duplicate `Cancel` nodes and remained open.
+- Run [33855868149](https://github.com/kvalle/trene/actions/runs/33855868149):
+  iOS bulk text entry dropped characters, and Android Maestro instrumentation
+  failed during driver reinstallation before the final smoke journey started.
+- Run [33867391018](https://github.com/kvalle/trene/actions/runs/33867391018):
+  iOS text entry still dropped characters when sent one command at a time.
+
+The controlled negative run [33814097073](https://github.com/kvalle/trene/actions/runs/33814097073)
+correctly failed its deliberate standalone assertion. Local Android qualification
+and all eight iOS broker flows passed individually, but the required repeated
+complete CI stability was not demonstrated. Experimental fixes made during the
+qualification were removed from this branch because they did not remain stable
+under repetition.

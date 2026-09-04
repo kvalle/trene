@@ -105,7 +105,7 @@ test("the iOS runner retries readiness but invokes each product journey once", (
   const runner = readFileSync(join(root, "scripts/run-ios-e2e.sh"), "utf8");
   assert.match(runner, /wait_for_ios_runtime "\$udid"/);
   assert.doesNotMatch(runner, /wait_for_ios_condition[^\n]*maestro[^\n]*test/);
-  assert.equal(runner.match(/maestro --device "\$udid" test --no-reinstall-driver/g)?.length, 2);
+  assert.equal(runner.match(/maestro --device "\$udid" test/g)?.length, 2);
 });
 
 test("the native picker selects a backup once and leaves destination waits to callers", () => {
@@ -123,26 +123,4 @@ test("the native picker selects a backup once and leaves destination waits to ca
     const contents = readFileSync(join(root, ".maestro/e2e/ios", flow), "utf8");
     assert.match(contents, new RegExp(`file: select-backup-file\\.yaml[\\s\\S]*extendedWaitUntil:[\\s\\S]*id: "${destination}"`), flow);
   }
-});
-
-test("restore setup enters the exercise name without lossy bulk input", () => {
-  const cases = [
-    ["restore-success.yaml", "Utdatert"],
-    ["damaged-backup.yaml", "Beholdes"],
-    ["newer-backup.yaml", "Beholdes"],
-    ["restore-failure.yaml", "Beholdes"],
-    ["storage-failure.yaml", "Beholdes"],
-  ];
-  for (const [name, value] of cases) {
-    const flow = readFileSync(join(root, ".maestro/e2e/ios", name), "utf8");
-    const commands = [...value].map((character) => `- inputText: "${character}"`).join("\n");
-    assert.match(flow, new RegExp(commands), name);
-    assert.doesNotMatch(flow, new RegExp(`inputText: "${value}"`), name);
-  }
-});
-
-test("picker cancellation avoids the duplicated native Cancel node", () => {
-  const flow = readFileSync(join(root, ".maestro/e2e/ios/picker-cancellation.yaml"), "utf8");
-  assert.doesNotMatch(flow, /tapOn: "Cancel"/);
-  assert.match(flow, /point: "76%,13%"[\s\S]*id: "restore-from-file"/);
 });
