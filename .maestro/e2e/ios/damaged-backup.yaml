@@ -13,12 +13,27 @@ tags:
     visible: "Opprett første øvelse"
     timeout: 30000
 - tapOn: "Opprett første øvelse"
+- runFlow:
+    when:
+      notVisible: "Opprett øvelse"
+    commands:
+      - runFlow:
+          when:
+            visible: "Opprett første øvelse"
+          commands:
+            - tapOn: "Opprett første øvelse"
+- extendedWaitUntil:
+    visible: "Opprett øvelse"
+    timeout: 30000
 - tapOn:
-    id: "exercise-name-input"
+    point: "50%,31%"
 - inputText: "Beholdes"
+- assertVisible: "Beholdes"
 - tapOn:
     id: "create-exercise-submit"
-- assertVisible: "Beholdes"
+- extendedWaitUntil:
+    visible: "Beholdes"
+    timeout: 30000
 - stopApp
 - launchApp
 - extendedWaitUntil:

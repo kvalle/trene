@@ -106,11 +106,14 @@ test("the iOS runner retries readiness but invokes each product journey once", (
   assert.match(runner, /wait_for_ios_runtime "\$udid"/);
   assert.doesNotMatch(runner, /wait_for_ios_condition[^\n]*maestro[^\n]*test/);
   assert.equal(runner.match(/maestro --device "\$udid" test/g)?.length, 2);
+  assert.equal(runner.match(/simctl terminate "\$udid" com\.apple\.DocumentsApp/g)?.length, 2);
 });
 
 test("the native picker selects a backup once and leaves destination waits to callers", () => {
   const picker = readFileSync(join(root, ".maestro/e2e/ios/select-backup-file.yaml"), "utf8");
   assert.equal(picker.match(/id: "\$\{BACKUP_FILE\}, trene-backup"/g)?.length, 1);
+  assert.equal(picker.match(/id: "DOC\.sidebar\.item\.On My iPhone"/g)?.length, 2);
+  assert.equal(picker.match(/id: "Trene, Container"/g)?.length, 4);
   assert.doesNotMatch(picker, /waitForAnimationToEnd/);
   for (const [flow, destination] of [
     ["restore-success.yaml", "restore-preview"],
@@ -123,4 +126,28 @@ test("the native picker selects a backup once and leaves destination waits to ca
     const contents = readFileSync(join(root, ".maestro/e2e/ios", flow), "utf8");
     assert.match(contents, new RegExp(`file: select-backup-file\\.yaml[\\s\\S]*extendedWaitUntil:[\\s\\S]*id: "${destination}"`), flow);
   }
+});
+
+test("iOS text entry is verified before state-changing actions", () => {
+  for (const [flow, exerciseName] of [
+    ["restore-success.yaml", "Utdatert"],
+    ["damaged-backup.yaml", "Beholdes"],
+    ["newer-backup.yaml", "Beholdes"],
+    ["restore-failure.yaml", "Beholdes"],
+    ["storage-failure.yaml", "Beholdes"],
+  ]) {
+    const contents = readFileSync(join(root, ".maestro/e2e/ios", flow), "utf8");
+    assert.match(contents, /tapOn: "Opprett første øvelse"[\s\S]*notVisible: "Opprett øvelse"[\s\S]*visible: "Opprett første øvelse"[\s\S]*tapOn: "Opprett første øvelse"/);
+    assert.match(contents, /point: "50%,31%"/);
+    assert.match(contents, new RegExp(`inputText: "${exerciseName}"[\\s\\S]*assertVisible: "${exerciseName}"[\\s\\S]*id: "create-exercise-submit"`), flow);
+  }
+
+  const restoreFailure = readFileSync(join(root, ".maestro/e2e/ios/restore-failure.yaml"), "utf8");
+  assert.match(restoreFailure, /inputText: "42\.5"\n- assertVisible: "\^42\\\\\.5\$"/);
+  assert.match(restoreFailure, /inputText: "6"\n- assertVisible: "\^6\$"/);
+});
+
+test("picker cancellation targets the visible control and confirms the app destination", () => {
+  const cancellation = readFileSync(join(root, ".maestro/e2e/ios/picker-cancellation.yaml"), "utf8");
+  assert.equal(cancellation.match(/point: "76%,13%"/g)?.length, 1);
 });
