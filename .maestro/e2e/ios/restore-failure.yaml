@@ -13,9 +13,22 @@ tags:
     visible: "Opprett første øvelse"
     timeout: 30000
 - tapOn: "Opprett første øvelse"
+- runFlow:
+    when:
+      notVisible: "Opprett øvelse"
+    commands:
+      - runFlow:
+          when:
+            visible: "Opprett første øvelse"
+          commands:
+            - tapOn: "Opprett første øvelse"
+- extendedWaitUntil:
+    visible: "Opprett øvelse"
+    timeout: 30000
 - tapOn:
-    id: "exercise-name-input"
+    point: "50%,31%"
 - inputText: "Beholdes"
+- assertVisible: "Beholdes"
 - tapOn:
     id: "create-exercise-submit"
 - extendedWaitUntil:
@@ -31,8 +44,10 @@ tags:
 - tapOn: "Beholdes"
 - tapOn: "Belastning for Beholdes"
 - inputText: "42.5"
+- assertVisible: "^42\\.5$"
 - tapOn: "Repetisjoner for Beholdes"
 - inputText: "6"
+- assertVisible: "^6$"
 - tapOn: "Planlagt sett"
 - extendedWaitUntil:
     visible: "Bekreft planlagt sett for Beholdes"
@@ -45,6 +60,15 @@ tags:
     visible: "Ferdig"
     timeout: 30000
 - tapOn: "Ferdig"
+- runFlow:
+    when:
+      notVisible: "Fullfør økt"
+    commands:
+      - runFlow:
+          when:
+            visible: "Ferdig"
+          commands:
+            - tapOn: "Ferdig"
 - extendedWaitUntil:
     visible: "Fullfør økt"
     timeout: 30000
