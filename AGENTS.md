@@ -241,7 +241,7 @@ python3 scripts/request-ios-smoke.py --flow restore-success
 ```
 
 Supported flows are `restore-success`, `damaged-backup`,
-`picker-cancellation`, `restore-failure`, `newer-backup`,
+`delete-training-data`, `picker-cancellation`, `restore-failure`, `newer-backup`,
 `rollback-failure`, `storage-failure`, and `share-cancellation`.
 `select-backup-file` is an internal helper. Cross-platform round trips remain CI
 workflows and are not broker requests.

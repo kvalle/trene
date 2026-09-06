@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
-import { usePreventRemove } from '@react-navigation/native';
-import { useEffect, useRef, useState } from 'react';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect, usePreventRemove } from '@react-navigation/native';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, findNodeHandle, ScrollView, StyleSheet, Text, View, type Text as TextType } from 'react-native';
 
 import { createAndShareBackup } from '../backup/createBackup';
@@ -9,7 +10,9 @@ import { createNativeRestorePlatform } from '../backup/nativeRestorePlatform';
 import { prepareRestore, RestorePreparationError, type PreparedRestore } from '../backup/prepareRestore';
 import { RestoreCommitError } from '../backup/commitRestore';
 import { nativeBackupRestoreFaultCheckpoint } from '../backup/nativeRestoreAutomation';
+import type { RootStackParamList } from '../AppNavigator';
 import { useDatabaseRuntime } from '../database/DatabaseContext';
+import { hasTrainingData } from '../database/trainingData';
 import { formatDateTime } from '../locale';
 import { typography } from '../theme';
 import { useAppTheme } from '../ui/AppThemeProvider';
@@ -20,7 +23,9 @@ import { Dialog } from '../ui/Dialog';
 import { ErrorAlert } from '../ui/ErrorAlert';
 import { Notice } from '../ui/Notice';
 
-export function DataScreen() {
+type Props = NativeStackScreenProps<RootStackParamList, 'Data'>;
+
+export function DataScreen({ navigation }: Props) {
   const runtime = useDatabaseRuntime();
   const { colors } = useAppTheme();
   const [operation, setOperation] = useState<'idle' | 'backup' | 'restore' | 'commit'>('idle');
@@ -29,10 +34,21 @@ export function DataScreen() {
   const [restore, setRestore] = useState<PreparedRestore | null>(null);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [currentCounts, setCurrentCounts] = useState<PreparedRestore['previewCounts'] | null>(null);
+  const [canDelete, setCanDelete] = useState(false);
+  const [availabilityFailure, setAvailabilityFailure] = useState(false);
   const restoreButtonRef = useRef<View>(null);
   const dialogTitleRef = useRef<TextType>(null);
   const busy = operation !== 'idle';
   usePreventRemove(operation === 'commit', () => undefined);
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    hasTrainingData(runtime).then(
+      (present) => { if (active) { setCanDelete(present); setAvailabilityFailure(false); } },
+      () => { if (active) { setCanDelete(false); setAvailabilityFailure(true); } },
+    );
+    return () => { active = false; };
+  }, [runtime]));
 
   useEffect(() => () => restore?.cancel(), [restore]);
 
@@ -153,6 +169,17 @@ export function DataScreen() {
         ref={restoreButtonRef}
         style={styles.secondaryAction}
       />
+      <Button
+        testID="delete-training-data"
+        variant="destructive"
+        disabled={busy || !canDelete}
+        title="Slett treningsdata"
+        onPress={() => navigation.navigate('DeleteTrainingData')}
+        style={styles.secondaryAction}
+      />
+      {availabilityFailure && (
+        <ErrorAlert message="Kunne ikke kontrollere om treningsdata kan slettes. Åpne skjermen på nytt og prøv igjen." />
+      )}
       {failure && !safeStop && <ErrorAlert testID="data-error" message={failure} />}
       <Dialog
         initialFocusRef={dialogTitleRef}

@@ -1,0 +1,89 @@
+appId: com.kjetilvalle.trene
+name: Delete and restore all training data on iOS
+tags:
+  - ios
+  - backup-restore
+  - sqlite
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-data"
+- tapOn:
+    id: "restore-from-file"
+- runFlow:
+    file: select-backup-file.yaml
+    env:
+      BACKUP_FILE: representative.trene-backup
+- extendedWaitUntil:
+    visible:
+      id: "restore-preview"
+    timeout: 30000
+- tapOn:
+    id: "continue-restore"
+- tapOn:
+    id: "confirm-restore"
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
+- tapOn: "Start økt"
+- back
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-data"
+- tapOn:
+    id: "delete-training-data"
+- tapOn:
+    id: "open-delete-training-data-confirmation"
+- assertVisible: "Alle treningsøkter, inkludert en eventuell aktiv økt, og alle øvelser slettes permanent. Lag en sikkerhetskopi først hvis du vil beholde dataene."
+- tapOn:
+    id: "cancel-delete-training-data"
+- tapOn:
+    id: "open-delete-training-data-confirmation"
+- tapOn:
+    id: "confirm-delete-training-data"
+- extendedWaitUntil:
+    visible: "Alle treningsdata er slettet."
+    timeout: 30000
+- assertVisible: "Start økt"
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-data"
+- tapOn:
+    id: "delete-training-data"
+- assertNotVisible:
+    id: "open-delete-training-data-confirmation"
+- back
+- back
+- tapOn: "Øvelser"
+- assertVisible: "Opprett første øvelse"
+- back
+- tapOn: "Tidligere økter"
+- assertVisible: "Ingen fullførte økter ennå"
+- back
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-data"
+- tapOn:
+    id: "restore-from-file"
+- runFlow:
+    file: select-backup-file.yaml
+    env:
+      BACKUP_FILE: representative.trene-backup
+- extendedWaitUntil:
+    visible:
+      id: "restore-preview"
+    timeout: 30000
+- tapOn:
+    id: "continue-restore"
+- tapOn:
+    id: "confirm-restore"
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 30000
+- tapOn: "Øvelser"
+- assertVisible: "Knebøy.*"
+- assertVisible: "Markløft.*"

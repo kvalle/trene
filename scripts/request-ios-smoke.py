@@ -112,7 +112,7 @@ def compute_source_identity(repo: str | bytes) -> SourceIdentity:
 
 PROTOCOL_VERSION = 1
 PROFILE_ID = 'trene'
-ALLOWED_FLOWS = ('damaged-backup', 'newer-backup', 'picker-cancellation', 'restore-failure', 'restore-success', 'rollback-failure', 'share-cancellation', 'storage-failure')
+ALLOWED_FLOWS = ('damaged-backup', 'delete-training-data', 'newer-backup', 'picker-cancellation', 'restore-failure', 'restore-success', 'rollback-failure', 'share-cancellation', 'storage-failure')
 UUID_PATTERN = __import__("re").compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
 

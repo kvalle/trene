@@ -20,6 +20,7 @@ import {
 } from '../../database/workouts';
 import { WorkoutScreen } from '../WorkoutScreen';
 import { WorkoutDraftProvider } from '../../workoutDrafts';
+import { TrainingDataDeletionProvider } from '../../trainingDataDeletion';
 import { HomeScreen } from '../HomeScreen';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
@@ -909,7 +910,7 @@ function renderScreen(
 
 function sharedScreen(screenName: 'home' | 'workout') {
   return (
-    <AppThemeProvider>
+    <AppThemeProvider><TrainingDataDeletionProvider>
       <DatabaseProvider database={database}>
         <WorkoutDraftProvider>
           <NavigationContainer>
@@ -924,7 +925,7 @@ function sharedScreen(screenName: 'home' | 'workout') {
           </NavigationContainer>
         </WorkoutDraftProvider>
       </DatabaseProvider>
-    </AppThemeProvider>
+    </TrainingDataDeletionProvider></AppThemeProvider>
   );
 }
 

@@ -9,6 +9,7 @@ import { AppThemeProvider } from '../../ui/AppThemeProvider';
 import { createAndShareBackup } from '../../backup/createBackup';
 import { RestoreCommitError } from '../../backup/commitRestore';
 import { prepareRestore, RestorePreparationError } from '../../backup/prepareRestore';
+import { hasTrainingData } from '../../database/trainingData';
 
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
@@ -22,9 +23,37 @@ jest.mock('../../backup/prepareRestore', () => ({
   prepareRestore: jest.fn(),
   RestorePreparationError: jest.requireActual('../../backup/prepareRestore').RestorePreparationError,
 }));
+jest.mock('../../database/trainingData', () => ({ hasTrainingData: jest.fn() }));
 
 const mockedCreateBackup = jest.mocked(createAndShareBackup);
 const mockedPrepareRestore = jest.mocked(prepareRestore);
+const mockedHasTrainingData = jest.mocked(hasTrainingData);
+
+beforeEach(() => {
+  mockedHasTrainingData.mockImplementation(() => new Promise(() => undefined));
+});
+
+test('shows deletion third and opens its dedicated screen', async () => {
+  mockedHasTrainingData.mockResolvedValue(true);
+  const navigate = jest.fn();
+  renderScreen(navigate);
+
+  const actions = await screen.findAllByRole('button');
+  expect(actions.map((action) => action.props.accessibilityLabel)).toEqual([
+    'Lag sikkerhetskopi',
+    'Gjenopprett fra fil',
+    'Slett treningsdata',
+  ]);
+  fireEvent.press(screen.getByRole('button', { name: 'Slett treningsdata' }));
+  expect(navigate).toHaveBeenCalledWith('DeleteTrainingData');
+});
+
+test('keeps deletion labelled and disabled when no training data exists', async () => {
+  mockedHasTrainingData.mockResolvedValue(false);
+  renderScreen();
+
+  expect(await screen.findByRole('button', { name: 'Slett treningsdata' })).toBeDisabled();
+});
 
 test('discloses backup sensitivity and does not claim sharing saved it', async () => {
   mockedCreateBackup.mockResolvedValue({} as never);
@@ -215,11 +244,11 @@ test.each([
   expect(screen.getByRole('alert')).toHaveTextContent(/Dataene dine er ikke endret/);
 });
 
-function renderScreen() {
+function renderScreen(navigate = jest.fn()) {
   const runtime = new DatabaseRuntime(jest.fn());
   return render(
     <DatabaseProvider database={runtime}>
-      <AppThemeProvider><NavigationContainer><DataScreen /></NavigationContainer></AppThemeProvider>
+      <AppThemeProvider><NavigationContainer><DataScreen navigation={{ navigate } as never} route={{} as never} /></NavigationContainer></AppThemeProvider>
     </DatabaseProvider>,
   );
 }

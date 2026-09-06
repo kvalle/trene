@@ -11,6 +11,7 @@ import { HistoryScreen } from './screens/HistoryScreen';
 import { WorkoutScreen } from './screens/WorkoutScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { DataScreen } from './screens/DataScreen';
+import { DeleteTrainingDataScreen } from './screens/DeleteTrainingDataScreen';
 import { useAppTheme } from './ui/AppThemeProvider';
 import { getAppStackScreenOptions } from './ui/appShell';
 import { WorkoutDraftProvider } from './workoutDrafts';
@@ -30,6 +31,7 @@ export type RootStackParamList = {
   ExerciseDetail: { exerciseId: number };
   Settings: undefined;
   Data: undefined;
+  DeleteTrainingData: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -48,6 +50,7 @@ export function AppNavigator() {
           <Stack.Screen name="Exercises" component={ExercisesScreen} options={{ title: 'Øvelser' }} />
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Innstillinger' }} />
           <Stack.Screen name="Data" component={DataScreen} options={{ title: 'Data' }} />
+          <Stack.Screen name="DeleteTrainingData" component={DeleteTrainingDataScreen} options={{ title: 'Slett treningsdata' }} />
           <Stack.Screen
             name="ExercisePicker"
             component={ExercisePickerScreen}
