@@ -72,6 +72,7 @@ if [[ -n "$cross_platform_input" || -n "$cross_platform_output" ]]; then
   fi
   scenario=cross-platform-round-trip
   export scenario
+  xcrun simctl terminate "$udid" com.apple.DocumentsApp >/dev/null 2>&1 || true
   xcrun simctl uninstall "$udid" com.kjetilvalle.trene >/dev/null 2>&1 || true
   xcrun simctl install "$udid" "$app"
   xcrun simctl launch "$udid" com.kjetilvalle.trene >/dev/null
@@ -115,6 +116,7 @@ for flow in "${flows[@]}"; do
     || "$(basename "$flow")" == "cross-platform-round-trip.yaml" ]]; then continue; fi
   scenario="$(basename "$flow" .yaml)"
   export scenario
+  xcrun simctl terminate "$udid" com.apple.DocumentsApp >/dev/null 2>&1 || true
   xcrun simctl uninstall "$udid" com.kjetilvalle.trene >/dev/null 2>&1 || true
   xcrun simctl install "$udid" "$app"
   xcrun simctl launch "$udid" com.kjetilvalle.trene >/dev/null

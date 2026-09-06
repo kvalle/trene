@@ -13,14 +13,18 @@ tags:
     visible: "Opprett første øvelse"
     timeout: 30000
 - tapOn: "Opprett første øvelse"
+- extendedWaitUntil:
+    visible: "Opprett øvelse"
+    timeout: 30000
 - tapOn:
-    id: "exercise-name-input"
-- inputText: "Beholdes"
+    point: "50%,31%"
+- inputText: "B"
+- assertVisible: "^B$"
 - tapOn:
     id: "create-exercise-submit"
 - extendedWaitUntil:
-    visible: "Beholdes"
-    timeout: 120000
+    visible: "B"
+    timeout: 30000
 - stopApp
 - launchApp
 - extendedWaitUntil:
@@ -45,4 +49,4 @@ tags:
     visible: "Klar for en økt?"
     timeout: 120000
 - tapOn: "Øvelser"
-- assertVisible: "Beholdes.*"
+- assertVisible: "B.*"

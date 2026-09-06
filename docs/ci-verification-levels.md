@@ -9,14 +9,16 @@ observable routing cases covered by `npm run test:ci-plan`.
 | Portable | Every CI run | Type errors, unit/integration regressions, routing validity, and qualification-record structure | One authoritative result per commit; release qualification validates this successful CI run |
 | Android representative | Ordinary application changes | Common launch and workout persistence journey on the minimum supported API | The CI APK built once for the commit |
 | Android full | Backup, database, persistence, Android native/file-flow, Maestro, dependency, or owning workflow changes | Complete backup, recovery, accessibility, and interruption behavior on API 34 | The same CI APK across all five suites |
-| iOS representative | Ordinary application changes | Critical native restore integration without running every destructive scenario | The app is built once in the job |
-| iOS full | Backup, database, persistence, iOS native/file-flow, Maestro, dependency, or owning workflow changes | Every supported iOS backup and restore journey on iOS 26 | One app build for the complete flow set |
+| iOS local | Before pull-request review | Every supported iOS backup and restore journey through the local broker | The broker builds once for the source-bound flow requests |
+| iOS hosted diagnostic | Intentional `iOS E2E` dispatch | On-demand hosted reproduction; not a pull-request gate | One app build for the complete flow set |
 | Release qualification | Intentional dispatch for an exact candidate commit | Maximum Android API boundary and both runtime-produced cross-platform semantic round trips | Successful CI result and its verified immutable Android APK |
 
 Documentation-only changes do not run native jobs. Platform-owned changes run
 only that platform unless they affect shared backup semantics or release
-qualification. Obsolete pull-request runs are cancelled; intentional release
-qualification runs are not.
+qualification. Android E2E remains part of pull-request CI. iOS E2E is verified
+locally through the broker and may be dispatched manually for hosted diagnostics;
+it does not run automatically on pull requests. Obsolete pull-request runs are
+cancelled; intentional release qualification runs are not.
 
 At every package transfer, qualification verifies SHA-256, format and schema
 versions, authoritative table counts, and the semantic digest. Synthetic package
@@ -27,8 +29,8 @@ failed gate, never accepted product evidence.
 The supported publication path is `Publish qualified release`; it refuses to
 create a GitHub release unless its referenced workflow run contains a successful
 `Accept backup-enabled release` job. Before publication, manually dispatch `CI`
-on the candidate ref to force complete
-Android and iOS candidate coverage. Then dispatch `Backup release qualification`
+on the candidate ref to force complete Android candidate coverage and dispatch
+`iOS E2E` separately when hosted iOS diagnostics are wanted. Then dispatch `Backup release qualification`
 on that ref with `candidate-commit` set to its full SHA and `ci-run-id` set to
 that successful manual CI run. After recording the successful qualification
 run in a later evidence-only commit, dispatch
