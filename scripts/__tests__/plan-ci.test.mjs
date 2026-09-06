@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { androidSuitesForMode, classifyPaths } from "../plan-ci.mjs";
 
+const root = fileURLToPath(new URL("../..", import.meta.url));
 const none = { has_changes: true, native: false, android: "none", ios: "none" };
 
 test("plans isolated Android suites without duplicates", () => {
@@ -116,6 +117,12 @@ test("classifies every workflow by the native jobs it owns", () => {
     has_changes: true,
     native: true,
     android: "full",
+    ios: "none",
+  });
+  assert.deepEqual(classifyPaths([".github/workflows/ios-e2e.yml"]), {
+    has_changes: true,
+    native: true,
+    android: "none",
     ios: "full",
   });
   assert.deepEqual(classifyPaths([".github/workflows/ios-runtime.yml"]), {
@@ -138,6 +145,24 @@ test("classifies every workflow by the native jobs it owns", () => {
       ios: "full",
     });
   }
+});
+
+test("keeps iOS E2E manual and outside pull request CI", () => {
+  const ci = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
+  const ios = readFileSync(join(root, ".github/workflows/ios-e2e.yml"), "utf8");
+  assert.doesNotMatch(ci, /iOS simulator app|e2e:ios|macos-26/);
+  assert.match(ios, /on:\n\s+workflow_dispatch:/);
+  assert.doesNotMatch(ios, /pull_request:|push:/);
+  for (const flow of [
+    "restore-success",
+    "damaged-backup",
+    "picker-cancellation",
+    "restore-failure",
+    "newer-backup",
+    "rollback-failure",
+    "storage-failure",
+    "share-cancellation",
+  ]) assert.match(ios, new RegExp(`flows: [^\\n]*\\b${flow}\\b`), flow);
 });
 
 test("combines routes without allowing weaker paths to reduce coverage", () => {

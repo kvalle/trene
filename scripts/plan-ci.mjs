@@ -34,8 +34,8 @@ function routeForPath(path) {
     return ["none", "none"];
   }
 
-  if (path === ".github/workflows/ci.yml") return ["full", "full"];
-  if (path === ".github/workflows/ios-runtime.yml") return ["none", "full"];
+  if (path === ".github/workflows/ci.yml") return ["full", "none"];
+  if (/^\.github\/workflows\/ios-(e2e|runtime)\.yml$/.test(path)) return ["none", "full"];
   if (/^\.github\/workflows\/(release-qualification|cross-platform-(android|ios))\.yml$/.test(path)) {
     return ["full", "full"];
   }

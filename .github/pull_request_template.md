@@ -9,6 +9,7 @@
 - [ ] The summary reflects the final scope
 - [ ] Exact final verification results are listed below
 - [ ] Required local native verification is complete, or not applicable
+- [ ] All iOS E2E flows pass locally through the iOS broker
 
 ## Verification
 
