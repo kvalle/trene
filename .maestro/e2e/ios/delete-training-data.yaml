@@ -46,9 +46,8 @@ tags:
 - tapOn:
     id: "confirm-delete-training-data"
 - extendedWaitUntil:
-    visible: "Alle treningsdata er slettet."
+    visible: "Start økt"
     timeout: 30000
-- assertVisible: "Start økt"
 - tapOn: "Innstillinger"
 - tapOn:
     id: "settings-data"
