@@ -85,7 +85,7 @@ it('shows the interactive and long-text PositiveStatus states', () => {
   expect(screen.getByTestId('catalog-positivestatus')).toBeOnTheScreen();
   expect(screen.getByText('Endringene er lagret.')).toBeOnTheScreen();
   expect(screen.getByTestId('catalog-positivestatus-long')).toBeOnTheScreen();
-  fireEvent.press(screen.getByTestId('catalog-positivestatus-dismiss'));
+  fireEvent.press(screen.getByTestId('catalog-positivestatus-navigate'));
   expect(screen.getByTestId('catalog-positivestatus-show')).toBeOnTheScreen();
   jest.useRealTimers();
 });

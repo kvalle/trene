@@ -91,11 +91,10 @@ describe('PositiveStatus', () => {
     const onDismiss = jest.fn();
     renderWithTheme(<PositiveStatus message="Endringene er lagret." onDismiss={onDismiss} testID="status" />);
 
-    expect(screen.getByTestId('status')).toHaveProp('accessibilityRole', 'alert');
     expect(screen.getByTestId('status')).toHaveProp('accessibilityLiveRegion', 'polite');
     expect(screen.getByText('Endringene er lagret.')).toBeOnTheScreen();
     expect(screen.getByTestId('status-progress', { includeHiddenElements: true })).toBeOnTheScreen();
-    expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('Endringene er lagret.');
+    expect(screen.getByText('Endringene er lagret.')).toHaveProp('accessibilityLiveRegion', 'polite');
 
     fireEvent.press(screen.getByRole('button', { name: 'Lukk statusmelding' }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
@@ -121,6 +120,19 @@ describe('PositiveStatus', () => {
     expect(onDismiss).not.toHaveBeenCalled();
     fireEvent(screen.getByTestId('status'), 'touchEnd', { nativeEvent: {} });
     act(() => jest.advanceTimersByTime(600));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('pauses while the close action has focus without showing a paused label', () => {
+    const onDismiss = jest.fn();
+    renderWithTheme(<PositiveStatus durationMs={1000} message="Lagret." onDismiss={onDismiss} />);
+
+    fireEvent(screen.getByRole('button', { name: 'Lukk statusmelding' }), 'focus');
+    act(() => jest.advanceTimersByTime(1000));
+    expect(onDismiss).not.toHaveBeenCalled();
+    expect(screen.queryByText('Pauset')).not.toBeOnTheScreen();
+    fireEvent(screen.getByRole('button', { name: 'Lukk statusmelding' }), 'blur');
+    act(() => jest.advanceTimersByTime(1000));
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 });

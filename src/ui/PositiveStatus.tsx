@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Animated,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -37,52 +38,71 @@ export function PositiveStatus({
   const remainingMs = useRef(durationMs);
   const startedAt = useRef<number | null>(null);
   const animation = useRef<Animated.CompositeAnimation | null>(null);
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dismissed = useRef(false);
+  const onDismissRef = useRef(onDismiss);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  onDismissRef.current = onDismiss;
+
+  function stopTimer() {
+    animation.current?.stop();
+    if (dismissTimer.current) clearTimeout(dismissTimer.current);
+    dismissTimer.current = null;
+  }
 
   function dismiss() {
     if (dismissed.current) return;
     dismissed.current = true;
-    animation.current?.stop();
-    onDismiss();
+    stopTimer();
+    onDismissRef.current();
   }
 
   function startTimer() {
     if (dismissed.current || remainingMs.current <= 0) return;
     startedAt.current = Date.now();
-    animation.current = Animated.timing(progress, {
-      duration: remainingMs.current,
-      toValue: 0,
-      useNativeDriver: false,
-    });
-    animation.current.start(({ finished }) => {
-      if (finished) dismiss();
-    });
+    dismissTimer.current = setTimeout(dismiss, remainingMs.current);
+    if (!reduceMotion) {
+      animation.current = Animated.timing(progress, {
+        duration: remainingMs.current,
+        toValue: 0,
+        useNativeDriver: true,
+      });
+      animation.current.start();
+    }
   }
 
   function pauseTimer() {
     if (startedAt.current === null) return;
-    animation.current?.stop();
+    stopTimer();
     remainingMs.current = Math.max(0, remainingMs.current - (Date.now() - startedAt.current));
     startedAt.current = null;
     progress.stopAnimation();
   }
 
   useEffect(() => {
-    AccessibilityInfo.announceForAccessibility(message);
-    startTimer();
-    return () => animation.current?.stop();
-    // The status lifetime starts once when it is mounted.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
   }, []);
+
+  useEffect(() => {
+    dismissed.current = false;
+    remainingMs.current = durationMs;
+    progress.setValue(1);
+    if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(message);
+    startTimer();
+    return stopTimer;
+    // startTimer only reads refs plus reduceMotion, which intentionally restarts this lifetime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [durationMs, message, progress, reduceMotion]);
 
   const backgroundColor = scheme === 'dark' ? 'rgba(128,201,162,0.14)' : colors.surfaceAlt;
 
   return (
     <View
       {...rest}
-      accessible
       accessibilityLiveRegion="polite"
-      accessibilityRole="alert"
       testID={testID}
       onTouchStart={(event) => {
         pauseTimer();
@@ -96,6 +116,8 @@ export function PositiveStatus({
         startTimer();
         onTouchCancel?.(event);
       }}
+      onPointerEnter={pauseTimer}
+      onPointerLeave={startTimer}
       style={[styles.container, { backgroundColor, borderColor: colors.primary }, style as object]}
     >
       <View style={[styles.icon, { backgroundColor: colors.primary }]} accessibilityElementsHidden>
@@ -103,7 +125,12 @@ export function PositiveStatus({
           ✓
         </Text>
       </View>
-      <Text style={[typography.body, styles.message, { color: colors.text }]} allowFontScaling maxFontSizeMultiplier={2}>
+      <Text
+        accessibilityLiveRegion="polite"
+        style={[typography.body, styles.message, { color: colors.text }]}
+        allowFontScaling
+        maxFontSizeMultiplier={2}
+      >
         {message}
       </Text>
       <Pressable
@@ -125,7 +152,7 @@ export function PositiveStatus({
           testID={testID ? `${testID}-progress` : undefined}
           style={[
             styles.progress,
-            { backgroundColor: colors.primary, transform: [{ scaleX: progress }] },
+            { backgroundColor: colors.primary, transform: [{ scaleX: reduceMotion ? 1 : progress }] },
           ]}
         />
       </View>

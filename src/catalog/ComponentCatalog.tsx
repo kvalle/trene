@@ -887,14 +887,12 @@ export function PositiveStatusDetailScreen() {
       />
       <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Interaktiv tilstand</Text>
-        <Text style={[typography.metadata, { color: colors.muted }]}>Meldingen fjernes etter fem sekunder eller med lukkeknappen. Vis den på nytt for å starte tiden på nytt.</Text>
+        <Text style={[typography.metadata, { color: colors.muted }]}>Meldingen fjernes etter fem sekunder, med lukkeknappen eller når personen navigerer videre.</Text>
         <View style={[styles.statusPreview, { backgroundColor: colors.background, borderColor: colors.border }]}>
           <Text style={[typography.body, { color: colors.text }]}>Eksempelinnhold bak statusmeldingen.</Text>
-          {visible ? (
-            <PositiveStatus message="Endringene er lagret." onDismiss={() => setVisible(false)} testID="catalog-positivestatus" />
-          ) : (
-            <Button title="Vis statusmelding" variant="secondary" onPress={() => setVisible(true)} testID="catalog-positivestatus-show" />
-          )}
+          <Button title="Naviger videre" variant="secondary" onPress={() => setVisible(false)} testID="catalog-positivestatus-navigate" />
+          {!visible ? <Button title="Vis statusmelding" variant="secondary" onPress={() => setVisible(true)} testID="catalog-positivestatus-show" /> : null}
+          {visible ? <PositiveStatus message="Endringene er lagret." onDismiss={() => setVisible(false)} testID="catalog-positivestatus" /> : null}
         </View>
       </View>
       <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
