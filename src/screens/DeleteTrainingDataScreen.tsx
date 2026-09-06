@@ -17,7 +17,7 @@ const CONSEQUENCE = 'Alle treningsøkter, inkludert en eventuell aktiv økt, og 
 export function DeleteTrainingDataScreen() {
   const runtime = useDatabaseRuntime();
   const { colors } = useAppTheme();
-  const { reportDeleted } = useTrainingDataDeletionStatus();
+  const { clearDeleted, reportDeleted } = useTrainingDataDeletionStatus();
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [failure, setFailure] = useState(false);
@@ -28,10 +28,11 @@ export function DeleteTrainingDataScreen() {
     if (deleting) return;
     setDeleting(true);
     setFailure(false);
+    reportDeleted();
     try {
       await deleteAllTrainingData(runtime);
-      reportDeleted();
     } catch {
+      clearDeleted();
       setConfirmationOpen(false);
       setFailure(true);
       const message = 'Kunne ikke slette treningsdataene. Dataene ble ikke endret.';

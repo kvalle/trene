@@ -61,7 +61,7 @@ test('publishes a one-shot success after deletion completes', async () => {
 
 test('keeps the screen and announces that data was unchanged after failure', async () => {
   mockedDelete.mockRejectedValue(new Error('injected failure'));
-  renderScreen();
+  renderScreen(true);
   fireEvent.press(screen.getByRole('button', { name: 'Slett alle treningsdata' }));
   fireEvent.press(screen.getByRole('button', { name: 'Slett alle data' }));
 
@@ -71,6 +71,7 @@ test('keeps the screen and announces that data was unchanged after failure', asy
   );
   expect(screen.getByRole('header', { name: 'Slett treningsdata' })).toBeOnTheScreen();
   expect(screen.queryByTestId('delete-training-data-confirmation')).not.toBeOnTheScreen();
+  expect(screen.getByText('present')).toBeOnTheScreen();
 });
 
 function renderScreen(observeStatus = false) {
