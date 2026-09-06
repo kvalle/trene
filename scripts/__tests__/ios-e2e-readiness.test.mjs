@@ -151,3 +151,9 @@ test("picker cancellation targets the visible control and confirms the app desti
   const cancellation = readFileSync(join(root, ".maestro/e2e/ios/picker-cancellation.yaml"), "utf8");
   assert.equal(cancellation.match(/point: "76%,13%"/g)?.length, 1);
 });
+
+test("share cancellation taps the visible background instead of the stale dismiss node", () => {
+  const cancellation = readFileSync(join(root, ".maestro/e2e/ios/share-cancellation.yaml"), "utf8");
+  assert.match(cancellation, /point: "50%,20%"[\s\S]*id: "create-backup"/);
+  assert.doesNotMatch(cancellation, /PopoverDismissRegion/);
+});
