@@ -37,7 +37,10 @@ export function HomeScreen({ navigation, route }: Props) {
     );
     return () => { active = false; };
   }, [database, reload]));
-  useFocusEffect(useCallback(() => () => clearDeleted(), [clearDeleted]));
+  useFocusEffect(useCallback(() => {
+    if (!deleted) return undefined;
+    return clearDeleted;
+  }, [clearDeleted, deleted]));
   useEffect(() => AppState.addEventListener('change', (nextState) => {
     if (nextState === 'active') setReload((value) => value + 1);
   }).remove, []);

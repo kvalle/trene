@@ -56,6 +56,13 @@ test('shows deletion success on empty Home and removes it on onward navigation',
   expect(navigate).toHaveBeenCalledWith('Exercises');
 });
 
+test('does not clear deletion success when an older Home instance unmounts', async () => {
+  const view = renderScreen({}, undefined, false, 7, false);
+  view.rerender(homeTree(true));
+
+  expect(await screen.findByText('Alle treningsdata er slettet.')).toBeOnTheScreen();
+});
+
 test('persists the workout before opening it and resumes an existing workout', async () => {
   const navigate = jest.fn();
   let finishStart: (id: number) => void = () => undefined;
@@ -183,7 +190,17 @@ function renderScreen(
   draftWorkoutId = 7,
   deleted = false,
 ) {
-  return render(
+  return render(homeTree(deleted, navigation, params, failedDraft, draftWorkoutId));
+}
+
+function homeTree(
+  deleted = false,
+  navigation: Record<string, jest.Mock> = {},
+  params?: { focusStartWorkout?: boolean },
+  failedDraft = false,
+  draftWorkoutId = 7,
+) {
+  return (
     <AppThemeProvider><TrainingDataDeletionProvider>
       <DatabaseProvider database={database}>
         <WorkoutDraftProvider initialDrafts={failedDraft ? {
@@ -195,7 +212,7 @@ function renderScreen(
           </NavigationContainer>
         </WorkoutDraftProvider>
       </DatabaseProvider>
-    </TrainingDataDeletionProvider></AppThemeProvider>,
+    </TrainingDataDeletionProvider></AppThemeProvider>
   );
 }
 
