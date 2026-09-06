@@ -11,13 +11,13 @@
     <aside class="control-panel">
       <p class="eyebrow">Trene designsystem</p>
       <h1>Positiv status</h1>
-      <p class="summary">Tre varianter i Home-kontekst. Prototypen endrer ikke produksjonsappen.</p>
+      <p class="summary">Tre tidsstyrte varianter nederst i Home-kontekst. Prototypen endrer ikke produksjonsappen.</p>
 
       <fieldset>
         <legend>Variant</legend>
-        <button class="variant active" data-variant="a" type="button">A · Før innholdet</button>
-        <button class="variant" data-variant="b" type="button">B · Ved handlingene</button>
-        <button class="variant" data-variant="c" type="button">C · Fast nederst</button>
+        <button class="variant active" data-variant="a" type="button">A · Fremdriftslinje</button>
+        <button class="variant" data-variant="b" type="button">B · Nedtellingsring</button>
+        <button class="variant" data-variant="c" type="button">C · Avtagende flate</button>
       </fieldset>
 
       <fieldset>
@@ -38,7 +38,8 @@
           <li>Rolle: positiv tilbakemelding etter fullført handling</li>
           <li>Ikon og tekst, aldri farge alene</li>
           <li>Høflig skjermleserannonsering ved visning</li>
-          <li>Ingen automatisk tidsavbrudd</li>
+          <li>Åtte sekunders demonstrasjonstid</li>
+          <li>Timeren pauses ved berøring, peker eller tastaturfokus</li>
           <li>Kan lukkes eksplisitt og fjernes ved videre navigasjon</li>
         </ul>
       </section>
@@ -48,8 +49,8 @@
       <header class="preview-header">
         <div>
           <p class="eyebrow">Prototype - ticket #202</p>
-          <h2 id="variant-title">A · Før innholdet</h2>
-          <p id="variant-description">Statusen kommer først i leserekkefølgen, rett under app-headeren.</p>
+          <h2 id="variant-title">A · Fremdriftslinje</h2>
+          <p id="variant-description">En linje under meldingen krymper mot venstre til statusen fjernes.</p>
         </div>
         <p class="prototype-status">Kun forslag. Krever eksplisitt godkjenning.</p>
       </header>
@@ -67,7 +68,7 @@
 
   <nav class="prototype-switcher" aria-label="Bytt prototypevariant">
     <button id="previous" type="button" aria-label="Forrige variant">←</button>
-    <span id="switcher-label">A · Før innholdet</span>
+    <span id="switcher-label">A · Fremdriftslinje</span>
     <button id="next" type="button" aria-label="Neste variant">→</button>
   </nav>
   <script src="prototype.js"></script>
