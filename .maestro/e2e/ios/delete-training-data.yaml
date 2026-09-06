@@ -29,8 +29,6 @@ tags:
 - extendedWaitUntil:
     visible: "Klar for en økt?"
     timeout: 30000
-- tapOn: "Start økt"
-- tapOn: "Navigate up"
 - tapOn: "Innstillinger"
 - tapOn:
     id: "settings-data"
@@ -55,14 +53,18 @@ tags:
     id: "delete-training-data"
 - assertNotVisible:
     id: "open-delete-training-data-confirmation"
-- tapOn: "Navigate up"
-- tapOn: "Navigate up"
+- tapOn:
+    point: "8%,8%"
+- tapOn:
+    point: "8%,8%"
 - tapOn: "Øvelser"
 - assertVisible: "Opprett første øvelse"
-- tapOn: "Navigate up"
+- tapOn:
+    point: "8%,8%"
 - tapOn: "Tidligere økter"
 - assertVisible: "Ingen fullførte økter ennå"
-- tapOn: "Navigate up"
+- tapOn:
+    point: "8%,8%"
 - tapOn: "Innstillinger"
 - tapOn:
     id: "settings-data"
