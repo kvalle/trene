@@ -1,6 +1,7 @@
 import { createRef } from 'react';
 import { AccessibilityInfo, Text, View } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { ErrorAlert } from '../ErrorAlert';
 import { Hero } from '../Hero';
@@ -98,6 +99,17 @@ describe('PositiveStatus', () => {
 
     fireEvent.press(screen.getByRole('button', { name: 'Lukk statusmelding' }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('positions above the safe area', () => {
+    render(
+      <AppThemeProvider>
+        <SafeAreaInsetsContext.Provider value={{ top: 0, right: 0, bottom: 24, left: 0 }}>
+          <PositiveStatus message="Lagret." onDismiss={() => {}} testID="status" />
+        </SafeAreaInsetsContext.Provider>
+      </AppThemeProvider>,
+    );
+    expect(screen.getByTestId('status')).toHaveStyle({ bottom: 40 });
   });
 
   it('dismisses automatically after the configured duration', () => {

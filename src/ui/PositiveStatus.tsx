@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useContext, useEffect, useRef } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -9,6 +9,7 @@ import {
   View,
   type ViewProps,
 } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { radii, typography } from '../theme';
 import { useAppTheme } from './AppThemeProvider';
@@ -34,6 +35,7 @@ export function PositiveStatus({
   ...rest
 }: PositiveStatusProps) {
   const { colors, scheme } = useAppTheme();
+  const safeAreaInsets = useContext(SafeAreaInsetsContext);
   const progress = useRef(new Animated.Value(1)).current;
   const remainingMs = useRef(durationMs);
   const startedAt = useRef<number | null>(null);
@@ -153,7 +155,11 @@ export function PositiveStatus({
       }}
       onPointerEnter={() => beginInteraction('pointer')}
       onPointerLeave={() => endInteraction('pointer')}
-      style={[styles.container, { backgroundColor, borderColor: colors.primary }, style as object]}
+      style={[
+        styles.container,
+        { backgroundColor, borderColor: colors.primary, bottom: 16 + (safeAreaInsets?.bottom ?? 0) },
+        style as object,
+      ]}
     >
       <View style={[styles.icon, { backgroundColor: colors.primary }]} accessibilityElementsHidden>
         <Text style={[styles.iconText, { color: colors.onPrimary }]} allowFontScaling={false}>
@@ -200,7 +206,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     borderRadius: radii.container,
     borderWidth: 1,
-    bottom: 16,
     elevation: 6,
     flexDirection: 'row',
     gap: 10,
