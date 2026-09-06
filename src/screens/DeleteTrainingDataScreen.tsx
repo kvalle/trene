@@ -1,11 +1,9 @@
 import { usePreventRemove } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useRef, useState } from 'react';
 import { AccessibilityInfo, ScrollView, StyleSheet, Text, type Text as TextType } from 'react-native';
 
 import { useDatabaseRuntime } from '../database/DatabaseContext';
 import { deleteAllTrainingData } from '../database/trainingData';
-import type { RootStackParamList } from '../AppNavigator';
 import { typography } from '../theme';
 import { useTrainingDataDeletionStatus } from '../trainingDataDeletion';
 import { useAppTheme } from '../ui/AppThemeProvider';
@@ -16,9 +14,7 @@ import { Notice } from '../ui/Notice';
 
 const CONSEQUENCE = 'Alle treningsøkter, inkludert en eventuell aktiv økt, og alle øvelser slettes permanent. Lag en sikkerhetskopi først hvis du vil beholde dataene.';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'DeleteTrainingData'>;
-
-export function DeleteTrainingDataScreen({ navigation }: Props) {
+export function DeleteTrainingDataScreen() {
   const runtime = useDatabaseRuntime();
   const { colors } = useAppTheme();
   const { reportDeleted } = useTrainingDataDeletionStatus();
@@ -35,7 +31,6 @@ export function DeleteTrainingDataScreen({ navigation }: Props) {
     try {
       await deleteAllTrainingData(runtime);
       reportDeleted();
-      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch {
       setConfirmationOpen(false);
       setFailure(true);

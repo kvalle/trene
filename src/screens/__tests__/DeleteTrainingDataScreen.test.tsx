@@ -51,14 +51,12 @@ test('locks dismissal and navigation while deletion is running', async () => {
 
 test('publishes a one-shot success after deletion completes', async () => {
   mockedDelete.mockResolvedValue();
-  const reset = jest.fn();
-  renderScreen(true, reset);
+  renderScreen(true);
   fireEvent.press(screen.getByRole('button', { name: 'Slett alle treningsdata' }));
   fireEvent.press(screen.getByRole('button', { name: 'Slett alle data' }));
 
   expect(await screen.findByText('deleted')).toBeOnTheScreen();
   expect(mockedDelete).toHaveBeenCalledTimes(1);
-  expect(reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Home' }] });
 });
 
 test('keeps the screen and announces that data was unchanged after failure', async () => {
@@ -75,13 +73,13 @@ test('keeps the screen and announces that data was unchanged after failure', asy
   expect(screen.queryByTestId('delete-training-data-confirmation')).not.toBeOnTheScreen();
 });
 
-function renderScreen(observeStatus = false, reset = jest.fn()) {
+function renderScreen(observeStatus = false) {
   const runtime = new DatabaseRuntime(jest.fn());
   return render(
     <TrainingDataDeletionProvider>
       {observeStatus && <DeletionStatus />}
       <DatabaseProvider database={runtime}>
-        <AppThemeProvider><NavigationContainer><DeleteTrainingDataScreen navigation={{ reset } as never} route={{} as never} /></NavigationContainer></AppThemeProvider>
+        <AppThemeProvider><NavigationContainer><DeleteTrainingDataScreen /></NavigationContainer></AppThemeProvider>
       </DatabaseProvider>
     </TrainingDataDeletionProvider>,
   );

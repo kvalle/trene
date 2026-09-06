@@ -30,7 +30,7 @@ tags:
     visible: "Klar for en økt?"
     timeout: 30000
 - tapOn: "Start økt"
-- back
+- tapOn: "Navigate up"
 - tapOn: "Innstillinger"
 - tapOn:
     id: "settings-data"
@@ -56,14 +56,14 @@ tags:
     id: "delete-training-data"
 - assertNotVisible:
     id: "open-delete-training-data-confirmation"
-- back
-- back
+- tapOn: "Navigate up"
+- tapOn: "Navigate up"
 - tapOn: "Øvelser"
 - assertVisible: "Opprett første øvelse"
-- back
+- tapOn: "Navigate up"
 - tapOn: "Tidligere økter"
 - assertVisible: "Ingen fullførte økter ennå"
-- back
+- tapOn: "Navigate up"
 - tapOn: "Innstillinger"
 - tapOn:
     id: "settings-data"
