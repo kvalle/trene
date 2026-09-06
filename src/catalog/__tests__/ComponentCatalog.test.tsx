@@ -1,5 +1,6 @@
+import { AccessibilityInfo } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import ComponentCatalog, { CompactActionDetailScreen, NumericFieldDetailScreen } from '../ComponentCatalog';
+import ComponentCatalog, { CompactActionDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen } from '../ComponentCatalog';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 
 jest.mock('@react-navigation/native', () => ({
@@ -46,6 +47,7 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('Loader')).toBeOnTheScreen();
   expect(screen.getByText('Notice')).toBeOnTheScreen();
   expect(screen.getByText('ErrorAlert')).toBeOnTheScreen();
+  expect(screen.getByText('PositiveStatus')).toBeOnTheScreen();
   expect(screen.getByText('SIDEVISNINGER')).toBeOnTheScreen();
   expect(screen.getByText('LISTER OG BEHOLDERE')).toBeOnTheScreen();
   expect(screen.getByText('Card')).toBeOnTheScreen();
@@ -69,12 +71,26 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('NoticeDetail')).toBeOnTheScreen();
   expect(screen.getByText('ErrorAlertDetail')).toBeOnTheScreen();
   expect(screen.getByText('PageStatusDetail')).toBeOnTheScreen();
+  expect(screen.getByText('PositiveStatusDetail')).toBeOnTheScreen();
   expect(screen.getByText('ListContainerDetail')).toBeOnTheScreen();
   expect(screen.getByText('NavigationRowDetail')).toBeOnTheScreen();
   expect(screen.getByText('SearchFieldDetail')).toBeOnTheScreen();
 
   fireEvent(screen.getByLabelText('Mørk modus'), 'valueChange', true);
   expect(screen.getByLabelText('Mørk modus')).toBeOnTheScreen();
+});
+
+it('shows the interactive and long-text PositiveStatus states', () => {
+  jest.useFakeTimers();
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockReturnValue(new Promise(() => {}));
+  render(<AppThemeProvider><PositiveStatusDetailScreen /></AppThemeProvider>);
+  expect(screen.getByTestId('catalog-positivestatus')).toBeOnTheScreen();
+  expect(screen.getByText('Endringene er lagret.')).toBeOnTheScreen();
+  expect(screen.getByTestId('catalog-positivestatus-long')).toBeOnTheScreen();
+  fireEvent.press(screen.getByTestId('catalog-positivestatus-navigate'));
+  expect(screen.getByTestId('catalog-positivestatus-show')).toBeOnTheScreen();
+  jest.useRealTimers();
+  jest.restoreAllMocks();
 });
 
 it('shows every CompactAction state', () => {

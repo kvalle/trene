@@ -6,12 +6,17 @@ The sandbox cannot access the 1Password signing agent. If a commit fails because
 the signing socket is unavailable, create the commit unsigned with
 `git -c commit.gpgsign=false commit ...`.
 
-## Temporary CI artifacts
+## Temporary artifacts
 
 Download CI artifacts used for ad hoc analysis under the ignored
 `.artifacts/ci-analysis/` directory. Do not reuse cplt temporary paths from an
 earlier session or request external-directory access when an ignored directory
 inside this repository is sufficient.
+
+Store temporary screenshots, images, logs, and other working artifacts under an
+appropriate ignored `.artifacts/` subdirectory, not `/tmp` or another path
+outside the repository. When an artifact is intended to be committed, write it
+directly to its final repository location instead of staging it externally.
 
 ## Wayfinder on GitHub
 

@@ -112,7 +112,14 @@ handling og opptatt tilstand er varianter. Oppsummeringer er komposisjoner av
 kort og datarader. Utvidbare kort dokumenteres i både kollapset og åpen tilstand.
 
 Feedback og sidevisninger holdes adskilt. Loader, informasjonsvarsel og
-feilvarsel er komponenter som kan plasseres i ulike kontekster. Lasting, tomt
+feilvarsel er komponenter som kan plasseres i ulike kontekster. `PositiveStatus`
+bekrefter en vellykket handling uten å avbryte videre arbeid. Den ligger fast
+nederst over skjerminnholdet, bruker ikon og tekst sammen, og viser gjenværende
+tid med en lineær fremdriftslinje som ikke krysser tekstområdet. Meldingen
+annonseres høflig, kan lukkes eksplisitt og fjernes automatisk etter fem sekunder.
+Timeren pauses mens personen berører eller fokuserer meldingen, uten en synlig
+pausetekst. Skjermen som eier meldingen, fjerner den også ved videre navigasjon.
+Lasting, tomt
 innhold, ingen søkeresultater, feil og manglende ressurs er innholdsvarianter av
 den sammensatte komponenten «Sidestatus». Sidestatus eier sentrering og vertikal
 struktur, mens innholdet avgjør om den bruker loader, tekst og/eller handling.
