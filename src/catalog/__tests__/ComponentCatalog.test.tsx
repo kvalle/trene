@@ -1,3 +1,4 @@
+import { AccessibilityInfo } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import ComponentCatalog, { CompactActionDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen } from '../ComponentCatalog';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
@@ -81,6 +82,7 @@ it('renders production theme contexts and switches theme', () => {
 
 it('shows the interactive and long-text PositiveStatus states', () => {
   jest.useFakeTimers();
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockReturnValue(new Promise(() => {}));
   render(<AppThemeProvider><PositiveStatusDetailScreen /></AppThemeProvider>);
   expect(screen.getByTestId('catalog-positivestatus')).toBeOnTheScreen();
   expect(screen.getByText('Endringene er lagret.')).toBeOnTheScreen();
@@ -88,6 +90,7 @@ it('shows the interactive and long-text PositiveStatus states', () => {
   fireEvent.press(screen.getByTestId('catalog-positivestatus-navigate'));
   expect(screen.getByTestId('catalog-positivestatus-show')).toBeOnTheScreen();
   jest.useRealTimers();
+  jest.restoreAllMocks();
 });
 
 it('shows every CompactAction state', () => {

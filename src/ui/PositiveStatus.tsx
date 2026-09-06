@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -40,8 +40,10 @@ export function PositiveStatus({
   const animation = useRef<Animated.CompositeAnimation | null>(null);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dismissed = useRef(false);
+  const mounted = useRef(true);
   const onDismissRef = useRef(onDismiss);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const interactions = useRef(new Set<string>());
+  const reduceMotion = useRef(true);
 
   onDismissRef.current = onDismiss;
 
@@ -59,10 +61,10 @@ export function PositiveStatus({
   }
 
   function startTimer() {
-    if (dismissed.current || remainingMs.current <= 0) return;
+    if (dismissed.current || remainingMs.current <= 0 || interactions.current.size > 0) return;
     startedAt.current = Date.now();
     dismissTimer.current = setTimeout(dismiss, remainingMs.current);
-    if (!reduceMotion) {
+    if (!reduceMotion.current) {
       animation.current = Animated.timing(progress, {
         duration: remainingMs.current,
         toValue: 0,
@@ -80,10 +82,44 @@ export function PositiveStatus({
     progress.stopAnimation();
   }
 
+  function beginInteraction(kind: string) {
+    if (interactions.current.size === 0) pauseTimer();
+    interactions.current.add(kind);
+  }
+
+  function endInteraction(kind: string) {
+    interactions.current.delete(kind);
+    if (interactions.current.size === 0) startTimer();
+  }
+
+  function updateMotionPreference(enabled: boolean) {
+    if (!mounted.current) return;
+    reduceMotion.current = enabled;
+    animation.current?.stop();
+    if (enabled || dismissed.current || startedAt.current === null) {
+      progress.setValue(1);
+      return;
+    }
+    const activeRemainingMs = Math.max(0, remainingMs.current - (Date.now() - startedAt.current));
+    progress.setValue(activeRemainingMs / durationMs);
+    animation.current = Animated.timing(progress, {
+      duration: activeRemainingMs,
+      toValue: 0,
+      useNativeDriver: true,
+    });
+    animation.current.start();
+  }
+
   useEffect(() => {
-    void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    return () => subscription.remove();
+    mounted.current = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then(updateMotionPreference);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', updateMotionPreference);
+    return () => {
+      mounted.current = false;
+      subscription.remove();
+    };
+    // Motion preference only controls the decorative progress animation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -93,31 +129,30 @@ export function PositiveStatus({
     if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(message);
     startTimer();
     return stopTimer;
-    // startTimer only reads refs plus reduceMotion, which intentionally restarts this lifetime.
+    // startTimer only reads refs; motion preference changes do not restart this lifetime.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [durationMs, message, progress, reduceMotion]);
+  }, [durationMs, message, progress]);
 
   const backgroundColor = scheme === 'dark' ? 'rgba(128,201,162,0.14)' : colors.surfaceAlt;
 
   return (
     <View
       {...rest}
-      accessibilityLiveRegion="polite"
       testID={testID}
       onTouchStart={(event) => {
-        pauseTimer();
+        beginInteraction('touch');
         onTouchStart?.(event);
       }}
       onTouchEnd={(event) => {
-        startTimer();
+        endInteraction('touch');
         onTouchEnd?.(event);
       }}
       onTouchCancel={(event) => {
-        startTimer();
+        endInteraction('touch');
         onTouchCancel?.(event);
       }}
-      onPointerEnter={pauseTimer}
-      onPointerLeave={startTimer}
+      onPointerEnter={() => beginInteraction('pointer')}
+      onPointerLeave={() => endInteraction('pointer')}
       style={[styles.container, { backgroundColor, borderColor: colors.primary }, style as object]}
     >
       <View style={[styles.icon, { backgroundColor: colors.primary }]} accessibilityElementsHidden>
@@ -137,8 +172,8 @@ export function PositiveStatus({
         accessibilityLabel="Lukk statusmelding"
         accessibilityRole="button"
         hitSlop={4}
-        onFocus={pauseTimer}
-        onBlur={startTimer}
+        onFocus={() => beginInteraction('focus')}
+        onBlur={() => endInteraction('focus')}
         onPress={dismiss}
         style={({ pressed }) => [styles.dismiss, pressed && { opacity: 0.72 }]}
         testID={testID ? `${testID}-dismiss` : undefined}
@@ -152,7 +187,7 @@ export function PositiveStatus({
           testID={testID ? `${testID}-progress` : undefined}
           style={[
             styles.progress,
-            { backgroundColor: colors.primary, transform: [{ scaleX: reduceMotion ? 1 : progress }] },
+            { backgroundColor: colors.primary, transform: [{ scaleX: progress }] },
           ]}
         />
       </View>

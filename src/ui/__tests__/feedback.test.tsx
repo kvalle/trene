@@ -80,6 +80,7 @@ describe('PositiveStatus', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockReturnValue(new Promise(() => {}));
   });
 
   afterEach(() => {
@@ -91,7 +92,6 @@ describe('PositiveStatus', () => {
     const onDismiss = jest.fn();
     renderWithTheme(<PositiveStatus message="Endringene er lagret." onDismiss={onDismiss} testID="status" />);
 
-    expect(screen.getByTestId('status')).toHaveProp('accessibilityLiveRegion', 'polite');
     expect(screen.getByText('Endringene er lagret.')).toBeOnTheScreen();
     expect(screen.getByTestId('status-progress', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(screen.getByText('Endringene er lagret.')).toHaveProp('accessibilityLiveRegion', 'polite');
@@ -132,6 +132,21 @@ describe('PositiveStatus', () => {
     expect(onDismiss).not.toHaveBeenCalled();
     expect(screen.queryByText('Pauset')).not.toBeOnTheScreen();
     fireEvent(screen.getByRole('button', { name: 'Lukk statusmelding' }), 'blur');
+    act(() => jest.advanceTimersByTime(1000));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays paused until overlapping interactions have all ended', () => {
+    const onDismiss = jest.fn();
+    renderWithTheme(<PositiveStatus durationMs={1000} message="Lagret." onDismiss={onDismiss} testID="status" />);
+    const close = screen.getByRole('button', { name: 'Lukk statusmelding' });
+
+    fireEvent(screen.getByTestId('status'), 'touchStart', { nativeEvent: {} });
+    fireEvent(close, 'focus');
+    fireEvent(screen.getByTestId('status'), 'touchEnd', { nativeEvent: {} });
+    act(() => jest.advanceTimersByTime(1000));
+    expect(onDismiss).not.toHaveBeenCalled();
+    fireEvent(close, 'blur');
     act(() => jest.advanceTimersByTime(1000));
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
