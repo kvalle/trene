@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="nb" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trene - positive status prototype</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="prototype-shell">
+    <aside class="control-panel">
+      <p class="eyebrow">Trene designsystem</p>
+      <h1>Positiv status</h1>
+      <p class="summary">Tre varianter i Home-kontekst. Prototypen endrer ikke produksjonsappen.</p>
+
+      <fieldset>
+        <legend>Variant</legend>
+        <button class="variant active" data-variant="a" type="button">A · Før innholdet</button>
+        <button class="variant" data-variant="b" type="button">B · Ved handlingene</button>
+        <button class="variant" data-variant="c" type="button">C · Fast nederst</button>
+      </fieldset>
+
+      <fieldset>
+        <legend>Visning</legend>
+        <button id="theme-toggle" class="control-button" type="button">Mørk modus</button>
+        <button id="text-toggle" class="control-button" type="button">Stor tekst</button>
+      </fieldset>
+
+      <fieldset>
+        <legend>Atferd</legend>
+        <button id="reset-status" class="control-button" type="button">Vis status på nytt</button>
+        <button id="navigate" class="control-button" type="button">Naviger videre</button>
+      </fieldset>
+
+      <section class="review-notes">
+        <h2>Felles forslag</h2>
+        <ul>
+          <li>Rolle: positiv tilbakemelding etter fullført handling</li>
+          <li>Ikon og tekst, aldri farge alene</li>
+          <li>Høflig skjermleserannonsering ved visning</li>
+          <li>Ingen automatisk tidsavbrudd</li>
+          <li>Kan lukkes eksplisitt og fjernes ved videre navigasjon</li>
+        </ul>
+      </section>
+    </aside>
+
+    <section class="preview-panel">
+      <header class="preview-header">
+        <div>
+          <p class="eyebrow">Prototype - ticket #202</p>
+          <h2 id="variant-title">A · Før innholdet</h2>
+          <p id="variant-description">Statusen kommer først i leserekkefølgen, rett under app-headeren.</p>
+        </div>
+        <p class="prototype-status">Kun forslag. Krever eksplisitt godkjenning.</p>
+      </header>
+
+      <div class="phone-wrap">
+        <section class="phone" aria-label="Trene Home-prototype">
+          <div class="status-bar"><span>09:41</span><span>5G 100%</span></div>
+          <header class="app-header"><h3>Trene</h3></header>
+          <div id="screen" class="screen"></div>
+        </section>
+      </div>
+      <p id="announcement" class="announcement" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <nav class="prototype-switcher" aria-label="Bytt prototypevariant">
+    <button id="previous" type="button" aria-label="Forrige variant">←</button>
+    <span id="switcher-label">A · Før innholdet</span>
+    <button id="next" type="button" aria-label="Neste variant">→</button>
+  </nav>
+  <script src="prototype.js"></script>
+</body>
+</html>

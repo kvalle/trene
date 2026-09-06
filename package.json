@@ -9,6 +9,7 @@
     "catalog:android": "sh scripts/run-catalog.sh --android",
     "catalog:ios": "sh scripts/run-catalog.sh --ios",
     "prototype:active-workout": "printf 'Active Workout-prototypen kjorer pa http://localhost:4175\n' && python3 -m http.server 4175 --directory docs/design-system/prototypes/active-workout",
+    "prototype:positive-status": "printf 'Positive status-prototypen kjorer pa http://localhost:4176\n' && python3 -m http.server 4176 --directory docs/design-system/prototypes/positive-status",
     "start:android": "sh scripts/start-android-metro.sh",
     "android": "expo run:android",
     "ios": "expo run:ios",
