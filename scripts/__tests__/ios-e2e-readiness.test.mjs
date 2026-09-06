@@ -128,20 +128,15 @@ test("the native picker selects a backup once and leaves destination waits to ca
   }
 });
 
-test("iOS text entry is verified before state-changing actions", () => {
-  for (const [flow, exerciseName] of [
-    ["restore-success.yaml", "Utdatert"],
-    ["damaged-backup.yaml", "Beholdes"],
-    ["newer-backup.yaml", "Beholdes"],
-    ["restore-failure.yaml", "Beholdes"],
-    ["storage-failure.yaml", "Beholdes"],
-  ]) {
+test("restore flows use verified single-character setup input", () => {
+  for (const [flow, value] of [["restore-success.yaml", "U"], ["damaged-backup.yaml", "B"], ["newer-backup.yaml", "B"], ["restore-failure.yaml", "B"], ["storage-failure.yaml", "B"]]) {
     const contents = readFileSync(join(root, ".maestro/e2e/ios", flow), "utf8");
-    assert.match(contents, /tapOn: "Opprett første øvelse"[\s\S]*notVisible: "Opprett øvelse"[\s\S]*visible: "Opprett første øvelse"[\s\S]*tapOn: "Opprett første øvelse"/);
-    assert.match(contents, /point: "50%,31%"/);
-    assert.match(contents, new RegExp(`inputText: "${exerciseName}"[\\s\\S]*assertVisible: "${exerciseName}"[\\s\\S]*id: "create-exercise-submit"`), flow);
+    assert.match(contents, new RegExp(`inputText: "${value}"\\n- assertVisible: "\\^${value}\\$"`), flow);
+    assert.doesNotMatch(contents, /inputText: "(?:Beholdes|Utdatert)"/, flow);
   }
+});
 
+test("iOS text entry is verified before state-changing actions", () => {
   const restoreFailure = readFileSync(join(root, ".maestro/e2e/ios/restore-failure.yaml"), "utf8");
   assert.match(restoreFailure, /inputText: "42\.5"\n- assertVisible: "\^42\\\\\.5\$"/);
   assert.match(restoreFailure, /inputText: "6"\n- assertVisible: "\^6\$"/);

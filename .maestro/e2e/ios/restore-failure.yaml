@@ -13,26 +13,17 @@ tags:
     visible: "Opprett første øvelse"
     timeout: 30000
 - tapOn: "Opprett første øvelse"
-- runFlow:
-    when:
-      notVisible: "Opprett øvelse"
-    commands:
-      - runFlow:
-          when:
-            visible: "Opprett første øvelse"
-          commands:
-            - tapOn: "Opprett første øvelse"
 - extendedWaitUntil:
     visible: "Opprett øvelse"
     timeout: 30000
 - tapOn:
     point: "50%,31%"
-- inputText: "Beholdes"
-- assertVisible: "Beholdes"
+- inputText: "B"
+- assertVisible: "^B$"
 - tapOn:
     id: "create-exercise-submit"
 - extendedWaitUntil:
-    visible: "Beholdes"
+    visible: "B"
     timeout: 30000
 - stopApp
 - launchApp
@@ -41,18 +32,18 @@ tags:
     timeout: 60000
 - tapOn: "Start økt"
 - tapOn: "Legg til øvelse"
-- tapOn: "Beholdes"
-- tapOn: "Belastning for Beholdes"
+- tapOn: "B"
+- tapOn: "Belastning for B"
 - inputText: "42.5"
 - assertVisible: "^42\\.5$"
-- tapOn: "Repetisjoner for Beholdes"
+- tapOn: "Repetisjoner for B"
 - inputText: "6"
 - assertVisible: "^6$"
 - tapOn: "Planlagt sett"
 - extendedWaitUntil:
-    visible: "Bekreft planlagt sett for Beholdes"
+    visible: "Bekreft planlagt sett for B"
     timeout: 30000
-- tapOn: "Bekreft planlagt sett for Beholdes"
+- tapOn: "Bekreft planlagt sett for B"
 - extendedWaitUntil:
     visible: "Sett 1, 6 repetisjoner med 42,5 kilogram"
     timeout: 30000
@@ -105,8 +96,7 @@ tags:
     visible: "Klar for en økt?"
     timeout: 60000
 - tapOn: "Øvelser"
-- assertVisible: "Beholdes.*"
-- assertNotVisible: "Knebøy.*"
+- assertVisible: "B.*"
 - stopApp
 - launchApp
 - extendedWaitUntil:

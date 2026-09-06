@@ -27,12 +27,12 @@ tags:
     timeout: 30000
 - tapOn:
     point: "50%,31%"
-- inputText: "Utdatert"
-- assertVisible: "Utdatert"
+- inputText: "U"
+- assertVisible: "^U$"
 - tapOn:
     id: "create-exercise-submit"
 - extendedWaitUntil:
-    visible: "Utdatert"
+    visible: "U"
     timeout: 30000
 - stopApp
 - launchApp
@@ -76,7 +76,7 @@ tags:
 - tapOn: "Øvelser"
 - assertVisible: "Knebøy.*"
 - assertVisible: "Markløft.*"
-- assertNotVisible: "Utdatert.*"
+- assertNotVisible: "^U$"
 - stopApp
 - launchApp
 - extendedWaitUntil:
@@ -85,4 +85,4 @@ tags:
 - tapOn: "Øvelser"
 - assertVisible: "Knebøy.*"
 - assertVisible: "Markløft.*"
-- assertNotVisible: "Utdatert.*"
+- assertNotVisible: "^U$"
