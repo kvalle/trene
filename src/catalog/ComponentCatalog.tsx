@@ -23,6 +23,7 @@ import { NavigationRow } from '../ui/NavigationRow';
 import { Notice } from '../ui/Notice';
 import { NumericField } from '../ui/NumericField';
 import { PageStatus } from '../ui/PageStatus';
+import { PositiveStatus } from '../ui/PositiveStatus';
 import { SearchField } from '../ui/SearchField';
 import { SelectionRow } from '../ui/SelectionRow';
 import { TextField } from '../ui/TextField';
@@ -45,6 +46,7 @@ type CatalogStackParamList = {
   NoticeDetail: undefined;
   ErrorAlertDetail: undefined;
   PageStatusDetail: undefined;
+  PositiveStatusDetail: undefined;
   ListContainerDetail: undefined;
   NavigationRowDetail: undefined;
   SearchFieldDetail: undefined;
@@ -233,6 +235,14 @@ const CATALOG_GROUPS: CatalogGroup[] = [
     title: 'Feedback',
     items: [
       {
+        id: 'positivestatus',
+        name: 'PositiveStatus',
+        description: 'Tidsstyrt positiv tilbakemelding som ligger over innholdet nederst på skjermen.',
+        usage: 'Bruk etter en vellykket handling når resultatet bør bekreftes uten å avbryte videre arbeid.',
+        route: 'PositiveStatusDetail',
+        testID: 'catalog-item-positivestatus',
+      },
+      {
         id: 'loader',
         name: 'Loader',
         description: 'Aktivitetsindikator i stor sidevariant og kompakt inline-variant.',
@@ -313,6 +323,7 @@ function CatalogNavigator({
         <Stack.Screen name="NoticeDetail" component={NoticeDetailScreen} options={{ title: 'Notice' }} />
         <Stack.Screen name="ErrorAlertDetail" component={ErrorAlertDetailScreen} options={{ title: 'ErrorAlert' }} />
         <Stack.Screen name="PageStatusDetail" component={PageStatusDetailScreen} options={{ title: 'PageStatus' }} />
+        <Stack.Screen name="PositiveStatusDetail" component={PositiveStatusDetailScreen} options={{ title: 'PositiveStatus' }} />
         <Stack.Screen name="ListContainerDetail" component={ListContainerDetailScreen} options={{ title: 'ListContainer' }} />
         <Stack.Screen name="NavigationRowDetail" component={NavigationRowDetailScreen} options={{ title: 'NavigationRow' }} />
         <Stack.Screen name="SearchFieldDetail" component={SearchFieldDetailScreen} options={{ title: 'SearchField' }} />
@@ -864,6 +875,38 @@ function ErrorAlertDetailScreen() {
   );
 }
 
+export function PositiveStatusDetailScreen() {
+  const { colors } = useAppTheme();
+  const [visible, setVisible] = useState(true);
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-positivestatus">
+      <DetailHeader
+        name="PositiveStatus"
+        description="Tidsstyrt positiv tilbakemelding med ikon, tekst, lukkekontroll og lineær fremdriftsindikator."
+        usage="Bruk etter en vellykket handling når resultatet bør bekreftes uten å avbryte videre arbeid."
+      />
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Interaktiv tilstand</Text>
+        <Text style={[typography.metadata, { color: colors.muted }]}>Meldingen fjernes etter fem sekunder eller med lukkeknappen. Vis den på nytt for å starte tiden på nytt.</Text>
+        <View style={[styles.statusPreview, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <Text style={[typography.body, { color: colors.text }]}>Eksempelinnhold bak statusmeldingen.</Text>
+          {visible ? (
+            <PositiveStatus message="Endringene er lagret." onDismiss={() => setVisible(false)} testID="catalog-positivestatus" />
+          ) : (
+            <Button title="Vis statusmelding" variant="secondary" onPress={() => setVisible(true)} testID="catalog-positivestatus-show" />
+          )}
+        </View>
+      </View>
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Lang tekst</Text>
+        <View style={[styles.statusPreview, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <PositiveStatus durationMs={60000} message="Oppdateringen er fullført, og de nye innstillingene er tatt i bruk." onDismiss={() => {}} testID="catalog-positivestatus-long" />
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
 function NoticeDetailScreen() {
   const { colors } = useAppTheme();
   return (
@@ -1199,4 +1242,12 @@ const styles = StyleSheet.create({
   variantLabel: { fontWeight: '600' },
   errorPreview: { borderRadius: radii.control, borderWidth: 1, padding: 12 },
   dialogExample: { gap: 12 },
+  statusPreview: {
+    borderRadius: radii.container,
+    borderWidth: 1,
+    minHeight: 180,
+    overflow: 'hidden',
+    padding: 16,
+    position: 'relative',
+  },
 });

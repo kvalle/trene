@@ -1,12 +1,13 @@
 import { createRef } from 'react';
-import { Text, View } from 'react-native';
-import { render, screen } from '@testing-library/react-native';
+import { AccessibilityInfo, Text, View } from 'react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { ErrorAlert } from '../ErrorAlert';
 import { Hero } from '../Hero';
 import { Loader } from '../Loader';
 import { Notice } from '../Notice';
 import { PageStatus } from '../PageStatus';
+import { PositiveStatus } from '../PositiveStatus';
 import { AppThemeProvider } from '../AppThemeProvider';
 
 function renderWithTheme(ui: React.ReactElement) {
@@ -72,6 +73,55 @@ describe('Notice', () => {
     expect(screen.getByText('Viktig informasjon')).toBeOnTheScreen();
     expect(screen.getByText('Les dette før du fortsetter.')).toBeOnTheScreen();
     expect(screen.queryByRole('alert')).not.toBeOnTheScreen();
+  });
+});
+
+describe('PositiveStatus', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  it('announces and exposes a positive message with a dismiss action', () => {
+    const onDismiss = jest.fn();
+    renderWithTheme(<PositiveStatus message="Endringene er lagret." onDismiss={onDismiss} testID="status" />);
+
+    expect(screen.getByTestId('status')).toHaveProp('accessibilityRole', 'alert');
+    expect(screen.getByTestId('status')).toHaveProp('accessibilityLiveRegion', 'polite');
+    expect(screen.getByText('Endringene er lagret.')).toBeOnTheScreen();
+    expect(screen.getByTestId('status-progress', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('Endringene er lagret.');
+
+    fireEvent.press(screen.getByRole('button', { name: 'Lukk statusmelding' }));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('dismisses automatically after the configured duration', () => {
+    const onDismiss = jest.fn();
+    renderWithTheme(<PositiveStatus durationMs={1000} message="Lagret." onDismiss={onDismiss} />);
+
+    act(() => jest.advanceTimersByTime(999));
+    expect(onDismiss).not.toHaveBeenCalled();
+    act(() => jest.advanceTimersByTime(1));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('pauses while the message is touched and resumes afterwards', () => {
+    const onDismiss = jest.fn();
+    renderWithTheme(<PositiveStatus durationMs={1000} message="Lagret." onDismiss={onDismiss} testID="status" />);
+
+    act(() => jest.advanceTimersByTime(400));
+    fireEvent(screen.getByTestId('status'), 'touchStart', { nativeEvent: {} });
+    act(() => jest.advanceTimersByTime(1000));
+    expect(onDismiss).not.toHaveBeenCalled();
+    fireEvent(screen.getByTestId('status'), 'touchEnd', { nativeEvent: {} });
+    act(() => jest.advanceTimersByTime(600));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 });
 
