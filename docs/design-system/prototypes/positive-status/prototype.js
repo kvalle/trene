@@ -14,7 +14,7 @@ const variants = {
 };
 
 const keys = Object.keys(variants);
-const duration = 8000;
+const duration = 5000;
 const params = new URLSearchParams(window.location.search);
 let current = variants[params.get('variant')] ? params.get('variant') : 'a';
 let visible = true;
@@ -48,28 +48,32 @@ function statusMarkup() {
     </section>`;
 }
 
-function homeMarkup() {
+function historyMarkup() {
   const status = statusMarkup();
-  const hero = `
-    <section class="hero">
-      <h2>Klar for en økt?</h2>
-      <p>Registrer øvelser og sett mens du trener.</p>
-    </section>`;
-  const actions = `
-    <section class="actions">
-      <button class="button primary" type="button">Start økt</button>
-      <button class="button" type="button">Tidligere økter</button>
-      <button class="button" type="button">Øvelser</button>
-      <button class="button" type="button">Innstillinger</button>
-    </section>`;
+  const sessions = [
+    ['I dag', '45 min', '4 øvelser', '18 sett'],
+    ['3. september', '52 min', '5 øvelser', '21 sett'],
+    ['1. september', '38 min', '3 øvelser', '15 sett'],
+    ['29. august', '49 min', '4 øvelser', '20 sett'],
+  ];
+  const cards = sessions.map(([date, durationLabel, exercises, sets]) => `
+    <article class="history-card">
+      <h2>${date}</h2>
+      <p>Fullført treningsøkt</p>
+      <dl>
+        <div><dt>Varighet</dt><dd>${durationLabel}</dd></div>
+        <div><dt>Øvelser</dt><dd>${exercises}</dd></div>
+        <div><dt>Sett</dt><dd>${sets}</dd></div>
+      </dl>
+    </article>`).join('');
 
-  return `${hero}${actions}${status}`;
+  return `<p class="history-intro">De nyeste øktene vises først.</p>${cards}${status}`;
 }
 
 function render({ announce = false } = {}) {
   const variant = variants[current];
   screen.className = `screen variant-${current}${largeText ? ' large-text' : ''}`;
-  screen.innerHTML = homeMarkup();
+  screen.innerHTML = historyMarkup();
   title.textContent = variant.label;
   description.textContent = variant.description;
   switcherLabel.textContent = variant.label;
