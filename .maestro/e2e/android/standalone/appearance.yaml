@@ -1,0 +1,41 @@
+appId: com.kjetilvalle.trene
+name: Persist appearance preference on Android
+tags:
+  - android
+  - standalone
+  - appearance
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-appearance"
+- assertVisible:
+    id: "appearance-system-selected"
+- tapOn:
+    id: "appearance-dark"
+- assertVisible:
+    id: "appearance-dark-selected"
+- tapOn:
+    id: "appearance-light"
+- assertVisible:
+    id: "appearance-light-selected"
+- tapOn:
+    id: "appearance-system"
+- assertVisible:
+    id: "appearance-system-selected"
+- tapOn:
+    id: "appearance-dark"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Innstillinger"
+- assertVisible: "Utseende, Mørk"
+- tapOn:
+    id: "settings-appearance"
+- assertVisible:
+    id: "appearance-dark-selected"

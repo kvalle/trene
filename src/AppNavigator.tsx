@@ -12,6 +12,7 @@ import { WorkoutScreen } from './screens/WorkoutScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { DataScreen } from './screens/DataScreen';
 import { DeleteTrainingDataScreen } from './screens/DeleteTrainingDataScreen';
+import { AppearanceScreen } from './screens/AppearanceScreen';
 import { useAppTheme } from './ui/AppThemeProvider';
 import { getAppStackScreenOptions } from './ui/appShell';
 import { WorkoutDraftProvider } from './workoutDrafts';
@@ -30,6 +31,7 @@ export type RootStackParamList = {
   } | undefined;
   ExerciseDetail: { exerciseId: number };
   Settings: undefined;
+  Appearance: undefined;
   Data: undefined;
   DeleteTrainingData: undefined;
 };
@@ -49,6 +51,7 @@ export function AppNavigator() {
           <Stack.Screen name="History" component={HistoryScreen} options={{ title: 'Tidligere økter' }} />
           <Stack.Screen name="Exercises" component={ExercisesScreen} options={{ title: 'Øvelser' }} />
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Innstillinger' }} />
+          <Stack.Screen name="Appearance" component={AppearanceScreen} options={{ title: 'Utseende' }} />
           <Stack.Screen name="Data" component={DataScreen} options={{ title: 'Data' }} />
           <Stack.Screen name="DeleteTrainingData" component={DeleteTrainingDataScreen} options={{ title: 'Slett treningsdata' }} />
           <Stack.Screen

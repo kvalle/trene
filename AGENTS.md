@@ -234,17 +234,17 @@ start it outside cplt with the `trene` profile and wait. Never start the broker
 from the agent session, nest cplt, grant Simulator access to the current session,
 or run Xcode, Simulator, or Maestro directly as a workaround.
 
-Submit one allowlisted flow from this repository:
+Submit one standalone flow from this repository:
 
 ```sh
 python3 scripts/request-ios-smoke.py --flow restore-success
 ```
 
-Supported flows are `restore-success`, `damaged-backup`,
-`delete-training-data`, `picker-cancellation`, `restore-failure`, `newer-backup`,
-`rollback-failure`, `storage-failure`, and `share-cancellation`.
-`select-backup-file` is an internal helper. Cross-platform round trips remain CI
-workflows and are not broker requests.
+The broker discovers flows dynamically under `.maestro/e2e/ios/` and validates
+the complete flow graph before execution. Internal helpers such as
+`select-backup-file`, excluded flows such as `cross-platform-round-trip`, and
+commands outside the approved Maestro subset cannot be requested. New fixtures,
+privileges, or host operations require a broker profile change.
 
 The client prints compact JSON containing a `requestId` and repository-relative
 `statusPath`. Poll that `status.json` until its `state` is `passed`, `failed`,

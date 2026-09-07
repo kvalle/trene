@@ -39,24 +39,12 @@ snapshot again, and executes only from that snapshot. The requested source
 identity binds the run to the current Git `HEAD` and all tracked and non-ignored
 worktree files.
 
-## Supported flows
+## Requestable flows
 
-The generated client currently permits these standalone flows:
-
-- `restore-success`
-- `damaged-backup`
-- `delete-training-data`
-- `picker-cancellation`
-- `restore-failure`
-- `newer-backup`
-- `rollback-failure`
-- `storage-failure`
-- `share-cancellation`
-
-`select-backup-file` may be included by another flow but cannot be requested
-directly. `cross-platform-round-trip` remains excluded because it exchanges
-artifacts between runtimes; the existing GitHub Actions workflows own that
-test.
+The broker discovers standalone flows dynamically under `.maestro/e2e/ios/` for
+each request. It rejects internal helpers such as `select-backup-file`, excluded
+flows such as `cross-platform-round-trip`, unsafe slugs, graphs that escape the
+flow root, and commands outside the profile's approved Maestro subset.
 
 ## Adding or changing a flow
 
@@ -66,32 +54,17 @@ profile's default setup:
 
 1. Add or change the graph under `.maestro/e2e/ios/`. Keep its complete include
    graph beneath the configured flow root.
-2. Verify the flow through the normal native CI path and review that it stays
-   within the existing broker profile's trust boundary.
-3. Regenerate `scripts/request-ios-smoke.py` from a normal host terminal:
+2. Review that it stays within the existing broker profile's trust boundary.
+3. With the profile-bound broker already running, request the flow through the
+   generated client:
 
    ```sh
-   /Users/kjetil/code/privat/ios-build-broker/broker.py init-repo "$PWD" --profile trene
+   python3 scripts/request-ios-smoke.py --flow FLOW_NAME
    ```
 
-4. Update the supported-flow list in `AGENTS.md` and this document when the
-   public set changes.
-5. Verify the build and flow from a normal host terminal:
-
-   ```sh
-   /Users/kjetil/code/privat/ios-build-broker/broker.py verify-build "$PWD" --profile trene
-   /Users/kjetil/code/privat/ios-build-broker/broker.py verify-smoke "$PWD" --profile trene --flow FLOW_NAME
-   ```
-
-6. Start the profile-bound broker from a normal host terminal and leave it
-   running:
-
-   ```sh
-   /Users/kjetil/code/privat/ios-build-broker/broker.py serve "$PWD" --profile trene
-   ```
-
-   Then confirm from the Trene agent session that the generated client
-   recognizes its heartbeat:
+   The broker validates and snapshots the graph before building and running it
+   on a disposable simulator. Confirm that the client recognizes the broker's
+   heartbeat when diagnosing request failures:
 
    ```sh
    python3 scripts/request-ios-smoke.py --broker-status
@@ -101,6 +74,6 @@ A flow that needs new fixtures, fault modes, filesystem mutations,
 postconditions, secrets, network permissions, host operations, caller-selected
 values, or cross-platform artifact exchange is not an ordinary flow addition.
 It requires a reviewed change to the broker's `trene` profile, including the
-appropriate validation and injection-resistance tests, before regenerating the
-client. Confirm that each request uses a disposable simulator and that the
-simulator is removed afterward before agents rely on the flow.
+appropriate validation and injection-resistance tests. Confirm that each
+request uses a disposable simulator and that the simulator is removed afterward
+before agents rely on the new capability.

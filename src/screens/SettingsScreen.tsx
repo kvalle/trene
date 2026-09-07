@@ -6,15 +6,23 @@ import { typography } from '../theme';
 import { ListContainer } from '../ui/ListContainer';
 import { NavigationRow } from '../ui/NavigationRow';
 import { useAppTheme } from '../ui/AppThemeProvider';
+import { appearancePreferenceLabels } from '../preferences/appearancePreference';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 export function SettingsScreen({ navigation }: Props) {
-  const { colors } = useAppTheme();
+  const { colors, preference } = useAppTheme();
   return (
     <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
       <Text accessibilityRole="header" style={[typography.screenTitle, styles.heading, { color: colors.text }]}>Innstillinger</Text>
       <ListContainer>
+        <NavigationRow
+          metadata={appearancePreferenceLabels[preference]}
+          onPress={() => navigation.navigate('Appearance')}
+          showSeparator
+          testID="settings-appearance"
+          title="Utseende"
+        />
         <NavigationRow
           onPress={() => navigation.navigate('Data')}
           testID="settings-data"
