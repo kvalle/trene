@@ -12,6 +12,8 @@ import { ErrorAlert } from '../ui/ErrorAlert';
 import { Hero } from '../ui/Hero';
 import { Loader } from '../ui/Loader';
 import { useWorkoutDrafts } from '../workoutDrafts';
+import { useTrainingDataDeletionStatus } from '../trainingDataDeletion';
+import { PositiveStatus } from '../ui/PositiveStatus';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -19,6 +21,7 @@ export function HomeScreen({ navigation, route }: Props) {
   const database = useDatabase();
   const { colors } = useAppTheme();
   const { drafts } = useWorkoutDrafts();
+  const { clearDeleted, deleted } = useTrainingDataDeletionStatus();
   const [activeWorkoutId, setActiveWorkoutId] = useState<number | null>();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState(false);
@@ -34,6 +37,10 @@ export function HomeScreen({ navigation, route }: Props) {
     );
     return () => { active = false; };
   }, [database, reload]));
+  useFocusEffect(useCallback(() => {
+    if (!deleted) return undefined;
+    return clearDeleted;
+  }, [clearDeleted, deleted]));
   useEffect(() => AppState.addEventListener('change', (nextState) => {
     if (nextState === 'active') setReload((value) => value + 1);
   }).remove, []);
@@ -71,17 +78,18 @@ export function HomeScreen({ navigation, route }: Props) {
   );
 
   return (
-    <ScrollView
-      contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}
-      contentInsetAdjustmentBehavior="automatic"
-      style={{ backgroundColor: colors.background }}
-    >
-      <Hero
-        title="Klar for en økt?"
-        description="Registrer øvelser og sett mens du trener."
-        testID="home-hero"
-      />
-      <View style={styles.actions}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <ScrollView
+        contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ backgroundColor: colors.background }}
+      >
+        <Hero
+          title="Klar for en økt?"
+          description="Registrer øvelser og sett mens du trener."
+          testID="home-hero"
+        />
+        <View style={styles.actions}>
         {error ? (
           <Button
             title="Prøv igjen"
@@ -131,12 +139,21 @@ export function HomeScreen({ navigation, route }: Props) {
           onPress={() => navigation.navigate('Settings')}
           testID="home-settings"
         />
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+      {deleted && (
+        <PositiveStatus
+          message="Alle treningsdata er slettet."
+          onDismiss={clearDeleted}
+          testID="training-data-deleted-status"
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   container: {
     flexGrow: 1,
     gap: 12,

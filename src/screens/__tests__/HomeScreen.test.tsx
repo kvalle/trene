@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { AccessibilityInfo, AppState, type AppStateStatus } from 'react-native';
+import { useEffect } from 'react';
 
 import { HomeScreen } from '../HomeScreen';
 import { DatabaseProvider } from '../../database/DatabaseContext';
@@ -8,6 +9,7 @@ import type { Database } from '../../database/types';
 import { getActiveWorkoutId, startWorkout } from '../../database/workouts';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 import { WorkoutDraftProvider } from '../../workoutDrafts';
+import { TrainingDataDeletionProvider, useTrainingDataDeletionStatus } from '../../trainingDataDeletion';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual('react-native/Libraries/ReactNative/RendererProxy'),
@@ -42,6 +44,23 @@ test('shows the empty Home actions and opens them hierarchically', async () => {
 
   fireEvent.press(screen.getByRole('button', { name: 'Tidligere økter' }));
   expect(navigate).toHaveBeenCalledWith('History');
+});
+
+test('shows deletion success on empty Home and removes it on onward navigation', async () => {
+  const navigate = jest.fn();
+  renderScreen({ navigate }, undefined, false, 7, true);
+
+  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+  expect(screen.getByText('Alle treningsdata er slettet.')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: 'Øvelser' }));
+  expect(navigate).toHaveBeenCalledWith('Exercises');
+});
+
+test('does not clear deletion success when an older Home instance unmounts', async () => {
+  const view = renderScreen({}, undefined, false, 7, false);
+  view.rerender(homeTree(true));
+
+  expect(await screen.findByText('Alle treningsdata er slettet.')).toBeOnTheScreen();
 });
 
 test('persists the workout before opening it and resumes an existing workout', async () => {
@@ -169,18 +188,36 @@ function renderScreen(
   params?: { focusStartWorkout?: boolean },
   failedDraft = false,
   draftWorkoutId = 7,
+  deleted = false,
 ) {
-  return render(
-    <AppThemeProvider>
+  return render(homeTree(deleted, navigation, params, failedDraft, draftWorkoutId));
+}
+
+function homeTree(
+  deleted = false,
+  navigation: Record<string, jest.Mock> = {},
+  params?: { focusStartWorkout?: boolean },
+  failedDraft = false,
+  draftWorkoutId = 7,
+) {
+  return (
+    <AppThemeProvider><TrainingDataDeletionProvider>
       <DatabaseProvider database={database}>
         <WorkoutDraftProvider initialDrafts={failedDraft ? {
           6: { workoutId: draftWorkoutId, load: '80', repetitions: '5', unsaved: true },
         } : undefined}>
+          {deleted && <ReportDeletion />}
           <NavigationContainer>
             <HomeScreen navigation={{ navigate: jest.fn(), ...navigation } as never} route={{ params } as never} />
           </NavigationContainer>
         </WorkoutDraftProvider>
       </DatabaseProvider>
-    </AppThemeProvider>,
+    </TrainingDataDeletionProvider></AppThemeProvider>
   );
+}
+
+function ReportDeletion() {
+  const { reportDeleted } = useTrainingDataDeletionStatus();
+  useEffect(reportDeleted, [reportDeleted]);
+  return null;
 }

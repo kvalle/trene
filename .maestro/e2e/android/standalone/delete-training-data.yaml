@@ -1,0 +1,66 @@
+appId: com.kjetilvalle.trene
+name: Delete all training data on Android
+tags:
+  - android
+  - standalone
+  - sqlite
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en økt?"
+    timeout: 120000
+- tapOn: "Start økt"
+- tapOn: "Legg til øvelse"
+- tapOn: "Opprett første øvelse"
+- tapOn:
+    id: "exercise-name-input"
+- inputText: "Knebøy"
+- tapOn:
+    id: "create-exercise-submit"
+- extendedWaitUntil:
+    visible: "Knebøy"
+    timeout: 30000
+- back
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-data"
+- extendedWaitUntil:
+    visible:
+      id: "delete-training-data"
+    timeout: 30000
+- tapOn:
+    id: "delete-training-data"
+- tapOn:
+    id: "open-delete-training-data-confirmation"
+- assertVisible: "Alle treningsøkter, inkludert en eventuell aktiv økt, og alle øvelser slettes permanent. Lag en sikkerhetskopi først hvis du vil beholde dataene."
+- tapOn:
+    id: "cancel-delete-training-data"
+- assertVisible: "Slett treningsdata"
+- tapOn:
+    id: "open-delete-training-data-confirmation"
+- tapOn:
+    id: "confirm-delete-training-data"
+- extendedWaitUntil:
+    visible: "Start økt"
+    timeout: 30000
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-data"
+- tapOn:
+    id: "delete-training-data"
+- assertNotVisible:
+    id: "open-delete-training-data-confirmation"
+- back
+- back
+- tapOn: "Øvelser"
+- assertVisible: "Opprett første øvelse"
+- back
+- tapOn: "Tidligere økter"
+- assertVisible: "Ingen fullførte økter ennå"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Start økt"
+    timeout: 120000
+- tapOn: "Øvelser"
+- assertVisible: "Opprett første øvelse"

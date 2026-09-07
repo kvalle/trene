@@ -45,6 +45,7 @@ The generated client currently permits these standalone flows:
 
 - `restore-success`
 - `damaged-backup`
+- `delete-training-data`
 - `picker-cancellation`
 - `restore-failure`
 - `newer-backup`

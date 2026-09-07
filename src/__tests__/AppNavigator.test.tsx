@@ -90,6 +90,7 @@ describe('AppNavigator', () => {
       { name: 'Exercises', options: { title: 'Øvelser' } },
       { name: 'Settings', options: { title: 'Innstillinger' } },
       { name: 'Data', options: { title: 'Data' } },
+      { name: 'DeleteTrainingData', options: { title: 'Slett treningsdata' } },
       { name: 'ExercisePicker', options: { presentation: 'modal', title: 'Legg til øvelse' } },
       { name: 'CreateExercise', options: { presentation: 'modal', title: 'Ny øvelse' } },
       { name: 'ExerciseDetail', options: { title: 'Øvelse' } },
