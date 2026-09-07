@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="nb" data-theme="light" data-text-size="normal">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trene - Appearance prototype</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="prototype-shell">
+    <aside class="control-panel">
+      <p class="eyebrow">Throwaway prototype - ticket #205</p>
+      <h1>Utseendevalg</h1>
+      <p class="summary">Tre mønstre for ett eksklusivt valg i en realistisk Trene-skjerm. Ingen valg lagres.</p>
+
+      <fieldset>
+        <legend>Visning</legend>
+        <div class="segmented-control" aria-label="Visning">
+          <button type="button" data-theme-option="light" aria-pressed="true">Lys</button>
+          <button type="button" data-theme-option="dark" aria-pressed="false">Mørk</button>
+        </div>
+        <div class="segmented-control" aria-label="Tekststørrelse">
+          <button type="button" data-text-option="normal" aria-pressed="true">Normal tekst</button>
+          <button type="button" data-text-option="large" aria-pressed="false">Stor tekst</button>
+        </div>
+      </fieldset>
+
+      <section class="state-panel" aria-live="polite">
+        <h2>Prototype-state</h2>
+        <dl>
+          <div><dt>Mønster</dt><dd id="state-variant">A - Hakemerke</dd></div>
+          <div><dt>Tema</dt><dd id="state-theme">Lys</dd></div>
+          <div><dt>Tekst</dt><dd id="state-text">Normal</dd></div>
+          <div><dt>Valgt</dt><dd id="state-selection">Følg telefonen</dd></div>
+        </dl>
+      </section>
+
+      <section class="review-notes">
+        <h2>Vurder</h2>
+        <ul>
+          <li>Om valgt tilstand oppfattes uten forklaring</li>
+          <li>Om kontrollen føles som ett eksklusivt valg</li>
+          <li>Om lange etiketter og stor tekst har nok plass</li>
+          <li>Om mønsteret passer Trenes rolige visuelle språk</li>
+        </ul>
+      </section>
+    </aside>
+
+    <section class="preview-panel">
+      <header class="preview-header">
+        <div>
+          <p class="eyebrow">Komplett skjerm i appkontekst</p>
+          <h2 id="variant-title">A - Hakemerke</h2>
+          <p id="variant-description">Valgt rad markeres med et tydelig hakemerke til høyre.</p>
+        </div>
+        <p class="prototype-status">Kun beslutningsgrunnlag</p>
+      </header>
+
+      <div class="phone-wrap">
+        <section class="phone" aria-label="Trene Utseende-prototype">
+          <div class="status-bar"><span>09:41</span><span>5G&nbsp;&nbsp;100%</span></div>
+          <header class="app-header">
+            <button type="button" class="back-button" aria-label="Tilbake">‹</button>
+            <h3>Utseende</h3>
+            <span aria-hidden="true"></span>
+          </header>
+          <div class="screen">
+            <h4>Tema</h4>
+            <div id="choice-group" class="choice-group" role="radiogroup" aria-label="Tema"></div>
+            <p class="support-copy">Velg hvordan Trene skal se ut. Endringen brukes med en gang.</p>
+          </div>
+          <div class="home-indicator" aria-hidden="true"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <nav class="prototype-switcher" aria-label="Prototypevariant">
+    <button id="previous-variant" type="button" aria-label="Forrige variant">←</button>
+    <span id="switcher-label">A - Hakemerke</span>
+    <button id="next-variant" type="button" aria-label="Neste variant">→</button>
+  </nav>
+  <script src="prototype.js"></script>
+</body>
+</html>
