@@ -112,7 +112,6 @@ def compute_source_identity(repo: str | bytes) -> SourceIdentity:
 
 PROTOCOL_VERSION = 1
 PROFILE_ID = 'trene'
-ALLOWED_FLOWS = ('damaged-backup', 'delete-training-data', 'newer-backup', 'picker-cancellation', 'restore-failure', 'restore-success', 'rollback-failure', 'share-cancellation', 'storage-failure')
 UUID_PATTERN = __import__("re").compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
 
@@ -178,7 +177,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Request an allowlisted iOS smoke flow")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--broker-status", action="store_true")
-    group.add_argument("--flow", choices=ALLOWED_FLOWS)
+    group.add_argument("--flow")
     args = parser.parse_args()
     repository = repository_root()
     broker = heartbeat(repository)

@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { SettingsScreen } from '../SettingsScreen';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 
-test('opens Data from one accessible whole-row action', () => {
+test('shows the active appearance and opens both settings destinations', () => {
   const navigate = jest.fn();
   render(
     <AppThemeProvider scheme="light">
@@ -15,6 +15,10 @@ test('opens Data from one accessible whole-row action', () => {
   );
 
   const dataRow = screen.getByTestId('settings-data');
+  const appearanceRow = screen.getByTestId('settings-appearance');
+  expect(appearanceRow).toHaveAccessibleName('Utseende, Lys');
+  fireEvent.press(appearanceRow);
+  expect(navigate).toHaveBeenCalledWith('Appearance');
   expect(dataRow).toHaveProp('accessibilityRole', 'button');
   expect(screen.getByRole('button', { name: 'Data' })).toBe(dataRow);
 

@@ -89,6 +89,7 @@ describe('AppNavigator', () => {
       { name: 'History', options: { title: 'Tidligere økter' } },
       { name: 'Exercises', options: { title: 'Øvelser' } },
       { name: 'Settings', options: { title: 'Innstillinger' } },
+      { name: 'Appearance', options: { title: 'Utseende' } },
       { name: 'Data', options: { title: 'Data' } },
       { name: 'DeleteTrainingData', options: { title: 'Slett treningsdata' } },
       { name: 'ExercisePicker', options: { presentation: 'modal', title: 'Legg til øvelse' } },
