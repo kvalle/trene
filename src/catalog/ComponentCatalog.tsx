@@ -26,6 +26,7 @@ import { PageStatus } from '../ui/PageStatus';
 import { PositiveStatus } from '../ui/PositiveStatus';
 import { SearchField } from '../ui/SearchField';
 import { SelectionRow } from '../ui/SelectionRow';
+import { SingleSelectionGroup } from '../ui/SingleSelectionGroup';
 import { TextField } from '../ui/TextField';
 
 type CatalogStackParamList = {
@@ -51,6 +52,7 @@ type CatalogStackParamList = {
   NavigationRowDetail: undefined;
   SearchFieldDetail: undefined;
   SelectionRowDetail: undefined;
+  SingleSelectionGroupDetail: undefined;
   SectionedDetailDetail: undefined;
   StackExample: undefined;
   ModalExample: undefined;
@@ -136,6 +138,14 @@ const CATALOG_GROUPS: CatalogGroup[] = [
   {
     title: 'Skjema',
     items: [
+      {
+        id: 'singleselectiongroup',
+        name: 'SingleSelectionGroup',
+        description: 'Radiogruppe for ett valgt alternativ blant flere gjensidig utelukkende valg.',
+        usage: 'Bruk når brukeren skal velge nøyaktig ett alternativ fra en kort, synlig liste.',
+        route: 'SingleSelectionGroupDetail',
+        testID: 'catalog-item-singleselectiongroup',
+      },
       {
         id: 'numericfield',
         name: 'NumericField',
@@ -328,6 +338,7 @@ function CatalogNavigator({
         <Stack.Screen name="NavigationRowDetail" component={NavigationRowDetailScreen} options={{ title: 'NavigationRow' }} />
         <Stack.Screen name="SearchFieldDetail" component={SearchFieldDetailScreen} options={{ title: 'SearchField' }} />
         <Stack.Screen name="SelectionRowDetail" component={SelectionRowDetailScreen} options={{ title: 'SelectionRow' }} />
+        <Stack.Screen name="SingleSelectionGroupDetail" component={SingleSelectionGroupDetailScreen} options={{ title: 'SingleSelectionGroup' }} />
         <Stack.Screen name="SectionedDetailDetail" component={SectionedDetailDetailScreen} options={{ title: 'Seksjonert detalj' }} />
         <Stack.Screen name="StackExample" component={StackExampleScreen} options={{ title: 'Stack' }} />
         <Stack.Screen name="ModalExample" component={ModalExampleScreen} options={{ presentation: 'modal', title: 'Modal' }} />
@@ -1080,6 +1091,34 @@ function SelectionRowDetailScreen() {
           <SelectionRow title="Deaktivert" disabled showSeparator onPress={() => {}} testID="catalog-selectionrow-disabled" />
           <SelectionRow title="Opptatt" busy onPress={() => {}} testID="catalog-selectionrow-busy" />
         </ListContainer>
+      </View>
+    </ScrollView>
+  );
+}
+
+export function SingleSelectionGroupDetailScreen() {
+  const { colors } = useAppTheme();
+  const [value, setValue] = useState<'first' | 'second' | 'third'>('first');
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-singleselectiongroup">
+      <DetailHeader
+        name="SingleSelectionGroup"
+        description="Radiogruppe som holder ett gjensidig utelukkende valg synlig og tilgjengelig. Hele raden er trykkbar."
+        usage="Bruk når brukeren skal velge nøyaktig ett alternativ fra en kort, synlig liste."
+      />
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Valgt, ikke valgt og deaktivert</Text>
+        <SingleSelectionGroup
+          accessibilityLabel="Leveringsmåte"
+          onValueChange={setValue}
+          options={[
+            { value: 'first', label: 'Standardlevering', testID: 'catalog-singleselection-selected' },
+            { value: 'second', label: 'Hent på et valgfritt utleveringssted med en lengre etikett som kan brytes over flere linjer', testID: 'catalog-singleselection-unselected' },
+            { value: 'third', label: 'Ekspresslevering', disabled: true, testID: 'catalog-singleselection-disabled' },
+          ]}
+          testID="catalog-singleselectiongroup"
+          value={value}
+        />
       </View>
     </ScrollView>
   );

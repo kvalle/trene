@@ -98,6 +98,12 @@ Små handlinger i rader er kompakte tekstknapper, ikke et eget hierarkinivå. De
 bruker et relevant ikon sammen med en synlig tekstetikett; ikonet skal
 tydeliggjøre handlingen, men teksten skal fortsatt bære betydningen.
 
+Gjensidig utelukkende valg vises som en `SingleSelectionGroup` med én kontrollert
+valgt verdi. Hvert valg bruker en ledende radiokontroll og hele raden som
+trykkflate. Gruppen og valgene eksponerer henholdsvis `radiogroup`- og
+`radio`-semantikk med valgt og deaktivert tilstand. Etiketten kan brytes over
+flere linjer uten at radiokontrollen skjules eller krymper.
+
 Hver komponent i katalogen har en egen «Bruk når»-veiledning. Denne beskriver
 komponentens semantiske rolle og skal brukes ved valg mellom visuelt lignende
 komponenter. Veiledningen er også inkludert i katalogsøket.

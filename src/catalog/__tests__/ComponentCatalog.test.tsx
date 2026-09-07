@@ -1,6 +1,6 @@
 import { AccessibilityInfo } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import ComponentCatalog, { CompactActionDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen } from '../ComponentCatalog';
+import ComponentCatalog, { CompactActionDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen } from '../ComponentCatalog';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 
 jest.mock('@react-navigation/native', () => ({
@@ -38,6 +38,7 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('FieldError')).toBeOnTheScreen();
   expect(screen.getByText('FormSection')).toBeOnTheScreen();
   expect(screen.getByText('NumericField')).toBeOnTheScreen();
+  expect(screen.getByText('SingleSelectionGroup')).toBeOnTheScreen();
   expect(screen.getByText('NAVIGASJON OG STRUKTUR')).toBeOnTheScreen();
   expect(screen.getByText('Hero')).toBeOnTheScreen();
   expect(screen.getByText('ListContainer')).toBeOnTheScreen();
@@ -75,9 +76,20 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('ListContainerDetail')).toBeOnTheScreen();
   expect(screen.getByText('NavigationRowDetail')).toBeOnTheScreen();
   expect(screen.getByText('SearchFieldDetail')).toBeOnTheScreen();
+  expect(screen.getByText('SingleSelectionGroupDetail')).toBeOnTheScreen();
 
   fireEvent(screen.getByLabelText('Mørk modus'), 'valueChange', true);
   expect(screen.getByLabelText('Mørk modus')).toBeOnTheScreen();
+});
+
+it('shows and operates every SingleSelectionGroup state', () => {
+  render(<AppThemeProvider><SingleSelectionGroupDetailScreen /></AppThemeProvider>);
+  expect(screen.getByRole('radio', { name: 'Standardlevering' })).toHaveProp('accessibilityState', { checked: true, disabled: false });
+  expect(screen.getByRole('radio', { name: 'Ekspresslevering' })).toHaveProp('accessibilityState', { checked: false, disabled: true });
+
+  fireEvent.press(screen.getByTestId('catalog-singleselection-unselected'));
+  expect(screen.getByTestId('catalog-singleselection-unselected')).toHaveProp('accessibilityState', { checked: true, disabled: false });
+  expect(screen.getByTestId('catalog-singleselection-selected')).toHaveProp('accessibilityState', { checked: false, disabled: false });
 });
 
 it('shows the interactive and long-text PositiveStatus states', () => {
