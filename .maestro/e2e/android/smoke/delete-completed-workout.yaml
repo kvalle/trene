@@ -7,9 +7,9 @@ tags:
 - launchApp
 
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
-- tapOn: "Start økt"
+- tapOn: "Start trening"
 - tapOn: "Legg til øvelse"
 - tapOn: "Opprett første øvelse"
 - tapOn:
@@ -39,27 +39,27 @@ tags:
     timeout: 30000
 - tapOn: "Ferdig"
 - extendedWaitUntil:
-    visible: "Fullfør økt"
+    visible: "Fullfør trening"
     timeout: 30000
-- tapOn: "Fullfør økt"
+- tapOn: "Fullfør trening"
 - extendedWaitUntil:
-    visible: "Fullført økt"
+    visible: "Fullført trening"
     timeout: 30000
 
 # Cancellation keeps the completed workout available.
-- tapOn: "Slett økt"
+- tapOn: "Slett trening"
 - extendedWaitUntil:
-    visible: "Slett fullført økt?"
+    visible: "Slett fullført trening?"
     timeout: 30000
 - tapOn: "Avbryt"
 - extendedWaitUntil:
-    notVisible: "Slett fullført økt?"
+    notVisible: "Slett fullført trening?"
     timeout: 30000
-- assertVisible: "Fullført økt"
+- assertVisible: "Fullført trening"
 
 # The destructive confirmation removes it and returns to empty history.
-- tapOn: "Slett økt"
+- tapOn: "Slett trening"
 - tapOn: "Slett"
 - extendedWaitUntil:
-    visible: "Ingen fullførte økter ennå"
+    visible: "Ingen fullførte treninger ennå"
     timeout: 30000

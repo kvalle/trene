@@ -2,7 +2,7 @@ appId: com.kjetilvalle.trene
 name: Verify Android restore accessibility journey
 ---
 - launchApp
-- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
+- extendedWaitUntil: { visible: "Klar for en trening?", timeout: 120000 }
 - tapOn: "Innstillinger"
 - tapOn: { id: "settings-data" }
 - assertVisible: { id: "create-backup", enabled: true }

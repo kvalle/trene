@@ -37,7 +37,7 @@ test('announces that completed workouts are loading', () => {
   mockedList.mockImplementation(() => new Promise(() => undefined));
   renderScreen();
 
-  expect(screen.getByLabelText('Laster tidligere økter')).toBeOnTheScreen();
+  expect(screen.getByLabelText('Laster tidligere treninger')).toBeOnTheScreen();
 });
 
 test('shows accessible whole rows with completion time and saved exercise count', async () => {
@@ -55,7 +55,7 @@ test('shows accessible whole rows with completion time and saved exercise count'
   ];
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveProp('accessibilityRole', 'button');
-  expect(rows[0]).toHaveProp('accessibilityHint', 'Åpner den fullførte økten');
+  expect(rows[0]).toHaveProp('accessibilityHint', 'Åpner den fullførte treningen');
   expect(rows[0].props.accessibilityLabel).toMatch(/5. august 2026.*1 øvelse/);
   expect(rows[1].props.accessibilityLabel).toMatch(/4. august 2026.*2 øvelser/);
   fireEvent.press(rows[0]);
@@ -64,8 +64,8 @@ test('shows accessible whole rows with completion time and saved exercise count'
 });
 
 test.each([
-  [null, 'Start økt'],
-  [7, 'Fortsett økt'],
+  [null, 'Start trening'],
+  [7, 'Fortsett trening'],
 ] as const)('offers the durable empty action for active workout %s', async (activeWorkoutId, label) => {
   const navigate = jest.fn();
   mockedList.mockResolvedValue([]);
@@ -85,8 +85,8 @@ test('persists a new workout before leaving the empty state', async () => {
   mockedStart.mockImplementation(() => new Promise((resolve) => { finishStart = resolve; }));
   renderScreen({ navigate });
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Start økt' }));
-  expect(await screen.findByRole('button', { name: 'Starter økt' })).toBeDisabled();
+  fireEvent.press(await screen.findByRole('button', { name: 'Start trening' }));
+  expect(await screen.findByRole('button', { name: 'Starter trening' })).toBeDisabled();
   expect(navigate).not.toHaveBeenCalled();
   await act(async () => finishStart(8));
   expect(navigate).toHaveBeenCalledWith('Workout');
@@ -101,7 +101,7 @@ test('blocks navigation again for each new workout start', async () => {
   mockedStart.mockResolvedValueOnce(8).mockImplementationOnce(() => new Promise(() => undefined));
   const view = renderScreen({ dispatch, navigate });
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Start økt' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Start trening' }));
   await waitFor(() => expect(navigate).toHaveBeenCalledWith('Workout'));
   view.rerender(
     <DatabaseProvider database={database}>
@@ -115,7 +115,7 @@ test('blocks navigation again for each new workout start', async () => {
       </AppThemeProvider>
     </DatabaseProvider>,
   );
-  fireEvent.press(screen.getByRole('button', { name: 'Start økt' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Start trening' }));
   act(() => preventRemove?.({ data: { action: {} } }));
   expect(dispatch).not.toHaveBeenCalled();
 });
@@ -125,11 +125,11 @@ test('retries read failures without presenting an empty history', async () => {
   mockedList.mockRejectedValueOnce(new Error('read failed')).mockResolvedValueOnce([]);
   renderScreen();
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke laste inn tidligere økter.');
+  expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke laste inn tidligere treninger.');
   expect(focus).toHaveBeenCalled();
-  expect(screen.queryByRole('button', { name: 'Start økt' })).not.toBeOnTheScreen();
+  expect(screen.queryByRole('button', { name: 'Start trening' })).not.toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Prøv igjen' }));
-  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Start trening' })).toBeOnTheScreen();
   expect(mockedList).toHaveBeenCalledTimes(2);
 });
 
@@ -138,9 +138,9 @@ test('keeps the empty state available when starting a workout fails', async () =
   mockedStart.mockRejectedValue(new Error('write failed'));
   renderScreen();
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Start økt' }));
-  expect(await screen.findByText('Kunne ikke starte økten.')).toBeOnTheScreen();
-  expect(screen.getByRole('button', { name: 'Start økt' })).toBeEnabled();
+  fireEvent.press(await screen.findByRole('button', { name: 'Start trening' }));
+  expect(await screen.findByText('Kunne ikke starte treningen.')).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Start trening' })).toBeEnabled();
 });
 
 test('focuses the requested remaining workout after reloading history', async () => {
@@ -161,7 +161,7 @@ test.each([null, 7] as const)('focuses the empty action after deleting the last 
   mockedActiveWorkout.mockResolvedValue(activeWorkoutId);
   renderScreen({}, { focusEmptyAction: true });
 
-  await screen.findByRole('button', { name: activeWorkoutId === null ? 'Start økt' : 'Fortsett økt' });
+  await screen.findByRole('button', { name: activeWorkoutId === null ? 'Start trening' : 'Fortsett trening' });
   expect(focus).toHaveBeenCalled();
 });
 

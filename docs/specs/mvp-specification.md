@@ -51,11 +51,11 @@ particular, use `belastning`, not `vekt` or `kilo`, and `repetisjon`, not `rep`.
 
 With no active workout, Home provides three actions:
 
-- `Start økt`
-- `Tidligere økter`
+- `Start trening`
+- `Tidligere treninger`
 - `Øvelser`
 
-With an active workout, `Fortsett økt` replaces `Start økt`. Home does not show
+With an active workout, `Fortsett trening` replaces `Start trening`. Home does not show
 recent workouts.
 
 ### 4.2 Active workout
@@ -95,7 +95,7 @@ Exercise creation asks only for a name.
 
 ### 4.4 Workout history
 
-`Tidligere økter` lists all completed workouts by completion timestamp
+`Tidligere treninger` lists all completed workouts by completion timestamp
 descending, then stable database ID ascending.
 Each row shows the completion date and time and the number of exercises saved
 in that workout. Only exercises with at least one completed set were saved and
@@ -104,8 +104,8 @@ there are no inline row actions. There is no calendar, statistics view, or
 filtering.
 
 If no workout has been completed, the page explains that completed workouts
-will appear here and offers `Start økt`. If an active workout exists, it offers
-`Fortsett økt` instead.
+will appear here and offers `Start trening`. If an active workout exists, it offers
+`Fortsett trening` instead.
 
 A workout detail is read-only and shows:
 
@@ -121,7 +121,7 @@ the entire workout after explicit confirmation.
 
 `Øvelser` lists all exercises alphabetically and supports case-insensitive
 substring search and exercise creation. Each row shows the exercise name and
-`Brukt i 1 økt` or `Brukt i N økter`. The count is the number of remaining
+`Brukt i 1 trening` or `Brukt i N treninger`. The count is the number of remaining
 completed workouts containing at least one completed set for the exercise; a
 deleted workout no longer counts. The whole row is one primary action that
 opens exercise detail, with no inline edit, delete, or menu actions.
@@ -138,7 +138,7 @@ and repetitions. The same screen offers renaming and, when permitted by the
 domain rules, deletion.
 
 If the exercise has no remaining completed-workout history, the history area
-shows `Ingen fullførte økter med denne øvelsen ennå`. Renaming and eligible
+shows `Ingen fullførte treninger med denne øvelsen ennå`. Renaming and eligible
 deletion remain available.
 
 Renaming changes the exercise everywhere, including historical workout views.
@@ -147,7 +147,7 @@ Renaming changes the exercise everywhere, including historical workout views.
 
 ### 5.1 Start and record a workout
 
-1. The user selects `Start økt`; an empty active workout is created immediately.
+1. The user selects `Start trening`; an empty active workout is created immediately.
 2. The user selects `Legg til øvelse` and chooses or creates an exercise.
 3. The app creates planned sets from the first remaining completed workout
    containing that exercise under the deterministic history order. If none
@@ -161,7 +161,7 @@ Renaming changes the exercise everywhere, including historical workout views.
 
 `Legg til sett` creates a new planned set using the first applicable rule:
 
-1. Copy load and repetitions from the most recently confirmed set in that
+1. Copy load and repetitions from the most recently completed set in that
    exercise in the active workout.
 2. Otherwise copy both values from the last planned set if both are valid.
 3. Otherwise create empty fields.
@@ -189,7 +189,7 @@ delete the exercise or affect completed workouts.
 
 Back navigation returns to Home without ending the workout or asking for
 confirmation. The active workout remains durable and Home offers `Fortsett
-økt`. Closing, backgrounding, screen locking, process restart, or reopening the
+trening`. Closing, backgrounding, screen locking, process restart, or reopening the
 app must not lose accepted data.
 
 The app follows the phone's normal screen-lock behavior and does not keep the
@@ -233,10 +233,10 @@ List-to-detail navigation preserves the originating list's search and scroll
 position. Back from a workout detail returns to Home when the detail was opened
 after completion, and to workout history when opened there.
 
-After confirmed workout cancellation, Home opens with focus on `Start økt`.
+After confirmed workout cancellation, Home opens with focus on `Start trening`.
 After successful completed-workout deletion, workout history opens without a
 success message; focus moves to the next newer row, otherwise the next older
-row, otherwise the empty state's `Start økt` or `Fortsett økt` action.
+row, otherwise the empty state's `Start trening` or `Fortsett trening` action.
 
 ## 6. Domain rules
 
@@ -281,11 +281,11 @@ Bokmål alphabetical order, otherwise the previous one, otherwise the empty
 state's `Opprett første øvelse` action. A deletion failure can instead be
 dismissed to continue on the unchanged detail screen without data loss.
 
-### 6.2 Workout and exercise membership
+### 6.2 Workout exercises
 
 - At most one workout has active status.
 - An exercise occurs at most once in a workout.
-- Exercise membership stores an explicit stable position assigned on insertion.
+- A workout exercise stores an explicit stable position assigned on insertion.
 - A completed workout preserves the active workout's exercise order.
 
 ### 6.3 Set values
@@ -311,7 +311,7 @@ from this order and are never stored.
 
 Planned sets show `Planlagt sett` without a number and sort by stable database
 ID ascending. A set retains its ID through persistence and unconfirmation, so
-an unconfirmed set returns to its stable position among the planned sets.
+a reopened set returns to its stable position among the planned sets.
 
 When suggestions are copied from a previous workout, they are created in that
 workout's displayed order, so increasing IDs preserve the suggestion order.
@@ -456,7 +456,7 @@ phones, with the accessibility matrix applied to each core flow.
    numbering after app restart.
 4. **Interleaved exercises:** Add multiple exercises, switch between them, and
    complete sets in interleaved order without changing exercise-card order or
-   creating duplicate exercise membership.
+   adding the same workout exercise twice.
 5. **Recovery:** Enter valid data, navigate away, background and force-stop the
    app, reopen it, and resume the single active workout without accepted-data
    loss.

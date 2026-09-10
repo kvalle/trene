@@ -191,10 +191,10 @@ describe('NavigationRow', () => {
   });
 
   it('renders trailing metadata without a description', () => {
-    renderWithTheme(<NavigationRow title="Benkpress" metadata="Brukt i 1 økt" onPress={() => {}} testID="metadata-row" />);
+    renderWithTheme(<NavigationRow title="Benkpress" metadata="Brukt i 1 trening" onPress={() => {}} testID="metadata-row" />);
 
-    expect(screen.getByTestId('metadata-row')).toHaveProp('accessibilityLabel', 'Benkpress, Brukt i 1 økt');
-    expect(screen.getByText('Brukt i 1 økt')).toBeOnTheScreen();
+    expect(screen.getByTestId('metadata-row')).toHaveProp('accessibilityLabel', 'Benkpress, Brukt i 1 trening');
+    expect(screen.getByText('Brukt i 1 trening')).toBeOnTheScreen();
   });
 });
 

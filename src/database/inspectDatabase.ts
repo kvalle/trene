@@ -47,7 +47,7 @@ type WorkoutRow = {
   started_at: unknown;
   completed_at: unknown;
 };
-type MembershipRow = { id: unknown; workout_id: unknown; exercise_id: unknown; position: unknown };
+type WorkoutExerciseRow = { id: unknown; workout_id: unknown; exercise_id: unknown; position: unknown };
 type SetRow = {
   id: unknown;
   workout_exercise_id: unknown;
@@ -144,26 +144,26 @@ async function inspectDatabaseWithConnection(database: Database): Promise<Databa
     workoutById.set(workout.id, workout);
   }
 
-  const memberships = await database.getAllAsync<MembershipRow>(
+  const workoutExercises = await database.getAllAsync<WorkoutExerciseRow>(
     'SELECT id, workout_id, exercise_id, position FROM workout_exercises ORDER BY workout_id, position',
   );
-  const membershipById = new Map<number, MembershipRow>();
+  const workoutExerciseById = new Map<number, WorkoutExerciseRow>();
   const nextPosition = new Map<number, number>();
-  for (const membership of memberships) {
-    if (!validId(membership.id) || !validId(membership.workout_id)
-      || !validId(membership.exercise_id) || !Number.isSafeInteger(membership.position)
-      || membership.position !== (nextPosition.get(membership.workout_id) ?? 0)) {
+  for (const workoutExercise of workoutExercises) {
+    if (!validId(workoutExercise.id) || !validId(workoutExercise.workout_id)
+      || !validId(workoutExercise.exercise_id) || !Number.isSafeInteger(workoutExercise.position)
+      || workoutExercise.position !== (nextPosition.get(workoutExercise.workout_id) ?? 0)) {
       invalid('Workout exercise positions are not contiguous');
     }
-    nextPosition.set(membership.workout_id, membership.position + 1);
-    membershipById.set(membership.id, membership);
+    nextPosition.set(workoutExercise.workout_id, workoutExercise.position + 1);
+    workoutExerciseById.set(workoutExercise.id, workoutExercise);
   }
-  const workoutIdsWithMemberships = new Set(
-    memberships.map((membership) => membership.workout_id).filter(validId),
+  const workoutIdsWithExercises = new Set(
+    workoutExercises.map((workoutExercise) => workoutExercise.workout_id).filter(validId),
   );
   for (const workout of workouts) {
     if (workout.status === 'completed' && validId(workout.id)
-      && !workoutIdsWithMemberships.has(workout.id)) {
+      && !workoutIdsWithExercises.has(workout.id)) {
       invalid('Completed workout contains no exercises');
     }
   }
@@ -172,20 +172,20 @@ async function inspectDatabaseWithConnection(database: Database): Promise<Databa
     SELECT id, workout_exercise_id, load_kg, repetitions, confirmed_at
     FROM workout_sets ORDER BY id
   `);
-  const completedMemberships = new Set<number>();
+  const completedWorkoutExercises = new Set<number>();
   for (const set of sets) {
     if (!validId(set.id) || !validId(set.workout_exercise_id)
       || (set.load_kg !== null && !isValidLoad(set.load_kg))
       || (set.repetitions !== null && !isValidRepetitions(set.repetitions))) {
       invalid('Workout set contains invalid values');
     }
-    const membership = membershipById.get(set.workout_exercise_id);
-    const workout = membership && validId(membership.workout_id)
-      ? workoutById.get(membership.workout_id)
+    const workoutExercise = workoutExerciseById.get(set.workout_exercise_id);
+    const workout = workoutExercise && validId(workoutExercise.workout_id)
+      ? workoutById.get(workoutExercise.workout_id)
       : undefined;
-    if (!membership || !workout) invalid('Workout set has invalid references');
+    if (!workoutExercise || !workout) invalid('Workout set has invalid references');
     if (set.confirmed_at === null) {
-      if (workout.status === 'completed') invalid('Completed workout contains an unconfirmed set');
+      if (workout.status === 'completed') invalid('Completed workout contains a planned set');
       continue;
     }
     if (!isCanonicalTimestamp(set.confirmed_at) || set.load_kg === null || set.repetitions === null
@@ -194,11 +194,11 @@ async function inspectDatabaseWithConnection(database: Database): Promise<Databa
         && Date.parse(set.confirmed_at) > Date.parse(workout.completed_at as string))) {
       invalid('Workout set has invalid confirmation state or timestamp ordering');
     }
-    completedMemberships.add(membership.id as number);
+    completedWorkoutExercises.add(workoutExercise.id as number);
   }
-  for (const membership of memberships) {
-    const workout = validId(membership.workout_id) ? workoutById.get(membership.workout_id) : undefined;
-    if (workout?.status === 'completed' && !completedMemberships.has(membership.id as number)) {
+  for (const workoutExercise of workoutExercises) {
+    const workout = validId(workoutExercise.workout_id) ? workoutById.get(workoutExercise.workout_id) : undefined;
+    if (workout?.status === 'completed' && !completedWorkoutExercises.has(workoutExercise.id as number)) {
       invalid('Completed workout contains an empty exercise');
     }
   }
@@ -218,7 +218,8 @@ async function inspectDatabaseWithConnection(database: Database): Promise<Databa
     schemaVersion: version,
     tableCounts,
     previewCounts,
-    semanticDigest: digestSemanticRows({ exercises, workouts, memberships, sets }),
+    // Keep the serialized key stable because digests are stored in restore markers.
+    semanticDigest: digestSemanticRows({ exercises, workouts, memberships: workoutExercises, sets }),
   };
 }
 

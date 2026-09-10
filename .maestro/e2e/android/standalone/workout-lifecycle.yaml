@@ -7,9 +7,9 @@ tags:
 ---
 - launchApp
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
-- tapOn: "Start økt"
+- tapOn: "Start trening"
 - tapOn: "Legg til øvelse"
 - tapOn: "Opprett første øvelse"
 - tapOn:
@@ -42,43 +42,43 @@ tags:
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "Fortsett økt"
+    visible: "Fortsett trening"
     timeout: 120000
-- tapOn: "Fortsett økt"
+- tapOn: "Fortsett trening"
 - assertVisible: "80,5 kg · 5 repetisjoner"
 
 # Force-stop again, then finish and inspect both history views.
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "Fortsett økt"
+    visible: "Fortsett trening"
     timeout: 120000
-- tapOn: "Fortsett økt"
+- tapOn: "Fortsett trening"
 - assertVisible: "80,5 kg · 5 repetisjoner"
 - tapOn: "Ferdig"
 - extendedWaitUntil:
-    visible: "Fullfør økt"
+    visible: "Fullfør trening"
     timeout: 30000
-- tapOn: "Fullfør økt"
+- tapOn: "Fullfør trening"
 - extendedWaitUntil:
-    visible: "Fullført økt"
+    visible: "Fullført trening"
     timeout: 30000
 - assertVisible: "80,5 kg · 5 repetisjoner"
 - tapOn: "Tilbake til forsiden"
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 30000
-- tapOn: "Tidligere økter"
+- tapOn: "Tidligere treninger"
 - extendedWaitUntil:
     visible: "1 øvelse"
     timeout: 30000
 - back
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 30000
 - tapOn: "Øvelser"
 - extendedWaitUntil:
-    visible: "Brukt i 1 økt"
+    visible: "Brukt i 1 trening"
     timeout: 30000
 - tapOn: "Knebøy"
 - extendedWaitUntil:

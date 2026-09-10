@@ -44,7 +44,7 @@ export interface CompletedWorkoutDeletion {
 
 type WorkoutRow = { id: number };
 type ExerciseRow = { id: number; name: string };
-type MembershipRow = { id: number; exercise_id: number; name: string; position: number };
+type WorkoutExerciseRow = { id: number; exercise_id: number; name: string; position: number };
 type SetRow = {
   id: number;
   workout_exercise_id: number;
@@ -71,21 +71,21 @@ async function compactWorkoutExercisePositions(
   database: Database,
   workoutId: number,
 ): Promise<void> {
-  const memberships = await database.getAllAsync<{ id: number }>(`
+  const workoutExercises = await database.getAllAsync<{ id: number }>(`
     SELECT id FROM workout_exercises WHERE workout_id = ? ORDER BY position ASC
   `, workoutId);
-  if (memberships.length === 0) return;
+  if (workoutExercises.length === 0) return;
   const offset = (await database.getFirstAsync<{ offset: number }>(`
     SELECT MAX(position) + 1 AS offset FROM workout_exercises WHERE workout_id = ?
-  `, workoutId))?.offset ?? memberships.length;
+  `, workoutId))?.offset ?? workoutExercises.length;
   await database.runAsync(
     'UPDATE workout_exercises SET position = position + ? WHERE workout_id = ?',
     offset, workoutId,
   );
-  for (const [position, membership] of memberships.entries()) {
+  for (const [position, workoutExercise] of workoutExercises.entries()) {
     await database.runAsync(
       'UPDATE workout_exercises SET position = ? WHERE id = ?',
-      position, membership.id,
+      position, workoutExercise.id,
     );
   }
 }
@@ -262,12 +262,12 @@ async function addWorkoutSetWithDatabase(
   workoutExerciseId: number,
 ): Promise<WorkoutSet> {
   return transaction(database, async () => {
-    const membership = await database.getFirstAsync<{ id: number }>(`
+    const workoutExercise = await database.getFirstAsync<{ id: number }>(`
       SELECT workout_exercises.id FROM workout_exercises
       JOIN workouts ON workouts.id = workout_exercises.workout_id
       WHERE workout_exercises.id = ? AND workouts.id = ? AND workouts.status = 'active'
     `, workoutExerciseId, workoutId);
-    if (!membership) throw new Error('Active workout exercise not found');
+    if (!workoutExercise) throw new Error('Active workout exercise not found');
 
     const source = await database.getFirstAsync<{ load_kg: number; repetitions: number }>(`
       SELECT load_kg, repetitions FROM workout_sets
@@ -310,7 +310,7 @@ async function removeExerciseFromWorkoutWithDatabase(
 async function loadActiveWorkoutWithDatabase(database: Database): Promise<ActiveWorkout | null> {
   const id = await getActiveWorkoutIdWithDatabase(database);
   if (id === null) return null;
-  const memberships = await database.getAllAsync<MembershipRow>(`
+  const workoutExercises = await database.getAllAsync<WorkoutExerciseRow>(`
     SELECT workout_exercises.id, workout_exercises.exercise_id, exercises.name,
       workout_exercises.position
     FROM workout_exercises
@@ -329,12 +329,12 @@ async function loadActiveWorkoutWithDatabase(database: Database): Promise<Active
   `, id);
   return {
     id,
-    exercises: memberships.map((membership) => ({
-      id: membership.id,
-      exerciseId: membership.exercise_id,
-      name: membership.name,
-      position: membership.position,
-      sets: sets.filter((set) => set.workout_exercise_id === membership.id).map((set) => ({
+    exercises: workoutExercises.map((workoutExercise) => ({
+      id: workoutExercise.id,
+      exerciseId: workoutExercise.exercise_id,
+      name: workoutExercise.name,
+      position: workoutExercise.position,
+      sets: sets.filter((set) => set.workout_exercise_id === workoutExercise.id).map((set) => ({
         id: set.id,
         loadKg: set.load_kg,
         repetitions: set.repetitions,
@@ -353,7 +353,7 @@ async function loadCompletedWorkoutWithDatabase(
     workoutId,
   );
   if (!workout) return null;
-  const memberships = await database.getAllAsync<MembershipRow>(`
+  const workoutExercises = await database.getAllAsync<WorkoutExerciseRow>(`
     SELECT workout_exercises.id, workout_exercises.exercise_id, exercises.name,
       workout_exercises.position
     FROM workout_exercises
@@ -372,12 +372,12 @@ async function loadCompletedWorkoutWithDatabase(
   return {
     id: workout.id,
     completedAt: workout.completed_at,
-    exercises: memberships.map((membership) => ({
-      id: membership.id,
-      exerciseId: membership.exercise_id,
-      name: membership.name,
-      position: membership.position,
-      sets: sets.filter((set) => set.workout_exercise_id === membership.id).map((set) => ({
+    exercises: workoutExercises.map((workoutExercise) => ({
+      id: workoutExercise.id,
+      exerciseId: workoutExercise.exercise_id,
+      name: workoutExercise.name,
+      position: workoutExercise.position,
+      sets: sets.filter((set) => set.workout_exercise_id === workoutExercise.id).map((set) => ({
         id: set.id,
         loadKg: set.load_kg,
         repetitions: set.repetitions,
@@ -434,7 +434,7 @@ async function countExercisesWithDatabase(database: Database): Promise<number> {
   ))?.count ?? 0;
 }
 
-async function addMembership(database: Database, workoutId: number, exerciseId: number) {
+async function addWorkoutExercise(database: Database, workoutId: number, exerciseId: number) {
   const active = await database.getFirstAsync<WorkoutRow>(
     "SELECT id FROM workouts WHERE id = ? AND status = 'active'", workoutId,
   );
@@ -443,7 +443,7 @@ async function addMembership(database: Database, workoutId: number, exerciseId: 
     'SELECT COALESCE(MAX(position), -1) + 1 AS position FROM workout_exercises WHERE workout_id = ?',
     workoutId,
   ))?.position ?? 0;
-  const membershipId = (await database.runAsync(
+  const workoutExerciseId = (await database.runAsync(
     'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, ?)',
     workoutId, exerciseId, position,
   )).lastInsertRowId;
@@ -461,12 +461,12 @@ async function addMembership(database: Database, workoutId: number, exerciseId: 
     ORDER BY workout_sets.confirmed_at ASC, workout_sets.id ASC
   `, exerciseId);
   if (historySets.length === 0) {
-    await database.runAsync('INSERT INTO workout_sets (workout_exercise_id) VALUES (?)', membershipId);
+    await database.runAsync('INSERT INTO workout_sets (workout_exercise_id) VALUES (?)', workoutExerciseId);
   } else {
     for (const set of historySets) {
       await database.runAsync(
         'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions) VALUES (?, ?, ?)',
-        membershipId, set.load_kg, set.repetitions,
+        workoutExerciseId, set.load_kg, set.repetitions,
       );
     }
   }
@@ -477,7 +477,7 @@ async function addExerciseToWorkoutWithDatabase(
   workoutId: number,
   exerciseId: number,
 ): Promise<void> {
-  await transaction(database, () => addMembership(database, workoutId, exerciseId));
+  await transaction(database, () => addWorkoutExercise(database, workoutId, exerciseId));
 }
 
 async function createExerciseInWorkoutWithDatabase(
@@ -496,7 +496,7 @@ async function createExerciseInWorkoutWithDatabase(
         'INSERT INTO exercises (name, name_key, created_at) VALUES (?, ?, ?)',
         name, key, new Date().toISOString(),
       )).lastInsertRowId;
-      await addMembership(database, workoutId, exerciseId);
+      await addWorkoutExercise(database, workoutId, exerciseId);
       return exerciseId;
     });
   } catch (error) {

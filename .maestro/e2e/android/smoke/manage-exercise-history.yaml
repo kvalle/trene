@@ -7,7 +7,7 @@ tags:
 - launchApp
 
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
 - tapOn: "Øvelser"
 - assertVisible: "Opprett første øvelse"
@@ -23,7 +23,7 @@ tags:
 
 - assertVisible: "Markløft 79"
 - assertVisible: "Historikk"
-- assertVisible: "Ingen fullførte økter med denne øvelsen ennå"
+- assertVisible: "Ingen fullførte treninger med denne øvelsen ennå"
 - assertVisible: "Slett øvelse"
 
 - tapOn: "Navn"
@@ -37,7 +37,7 @@ tags:
 - assertVisible: "Rumensk markløft 79"
 - tapOn: "Rumensk markløft 79"
 
-- assertVisible: "Ingen fullførte økter med denne øvelsen ennå"
+- assertVisible: "Ingen fullførte treninger med denne øvelsen ennå"
 - tapOn: "Slett øvelse"
 - assertVisible: "Slett Rumensk markløft 79?"
 - assertVisible: "Øvelsen slettes permanent. Dette kan ikke angres."

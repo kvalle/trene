@@ -34,8 +34,8 @@ jest.mock('@react-navigation/native-stack', () => ({
   }),
 }));
 
-jest.mock('../workoutDrafts', () => ({
-  WorkoutDraftProvider: ({ children }: { children: React.ReactNode }) => (
+jest.mock('../workoutSetDrafts', () => ({
+  WorkoutSetDraftProvider: ({ children }: { children: React.ReactNode }) => (
     require('react').createElement(require('react-native').View, { testID: 'workout-draft-provider' }, children)
   ),
 }));
@@ -85,8 +85,8 @@ describe('AppNavigator', () => {
     expect(screen.getAllByTestId('route').map((route) => JSON.parse(String(route.props.children)))).toEqual([
       { name: 'Home', options: { title: 'Trene' } },
       { name: 'Workout', options: { title: 'Treningsøkt' } },
-      { name: 'CompletedWorkout', options: { title: 'Fullført økt' } },
-      { name: 'History', options: { title: 'Tidligere økter' } },
+      { name: 'CompletedWorkout', options: { title: 'Fullført trening' } },
+      { name: 'History', options: { title: 'Tidligere treninger' } },
       { name: 'Exercises', options: { title: 'Øvelser' } },
       { name: 'Settings', options: { title: 'Innstillinger' } },
       { name: 'Appearance', options: { title: 'Utseende' } },

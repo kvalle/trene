@@ -90,10 +90,10 @@ export function HistoryScreen({ navigation, route }: Props) {
   }
 
   if (state.status === 'loading') {
-    return <PageStatus variant="loading" loaderLabel="Laster tidligere økter" />;
+    return <PageStatus variant="loading" loaderLabel="Laster tidligere treninger" />;
   }
   if (state.status === 'failed') return (
-    <HistoryStatus title="Kunne ikke laste inn" message="Kunne ikke laste inn tidligere økter." error>
+    <HistoryStatus title="Kunne ikke laste inn" message="Kunne ikke laste inn tidligere treninger." error>
       <Button title="Prøv igjen" onPress={() => {
         setState({ status: 'loading' });
         setReload((value) => value + 1);
@@ -102,14 +102,14 @@ export function HistoryScreen({ navigation, route }: Props) {
   );
 
   if (state.workouts.length === 0) return (
-    <HistoryStatus title="Ingen fullførte økter ennå" message="Fullførte økter vil vises her.">
+    <HistoryStatus title="Ingen fullførte treninger ennå" message="Fullførte treninger vil vises her.">
       <Button
-        title={starting ? 'Starter økt' : state.activeWorkoutId === null ? 'Start økt' : 'Fortsett økt'}
+        title={starting ? 'Starter trening' : state.activeWorkoutId === null ? 'Start trening' : 'Fortsett trening'}
         busy={starting}
         onPress={() => void openWorkout(state.activeWorkoutId)}
         ref={emptyActionRef}
       />
-      {startFailed ? <ErrorAlert message="Kunne ikke starte økten." /> : null}
+      {startFailed ? <ErrorAlert message="Kunne ikke starte treningen." /> : null}
     </HistoryStatus>
   );
 
@@ -121,7 +121,7 @@ export function HistoryScreen({ navigation, route }: Props) {
           const count = `${workout.exerciseCount} ${workout.exerciseCount === 1 ? 'øvelse' : 'øvelser'}`;
           return (
             <NavigationRow
-              accessibilityHint="Åpner den fullførte økten"
+              accessibilityHint="Åpner den fullførte treningen"
               accessibilityLabel={`${completedAt}, ${count}`}
               accessibilityRole="button"
               key={workout.id}

@@ -82,18 +82,18 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
     } catch {
       setDeleteDialogOpen(false);
       setDeleteFailed(true);
-      AccessibilityInfo.announceForAccessibility('Kunne ikke slette økten. Prøv igjen.');
+      AccessibilityInfo.announceForAccessibility('Kunne ikke slette treningen. Prøv igjen.');
     } finally {
       setDeleting(false);
     }
   }
 
-  if (state.status === 'loading') return <PageStatus variant="loading" loaderLabel="Laster fullført økt" />;
+  if (state.status === 'loading') return <PageStatus variant="loading" loaderLabel="Laster fullført trening" />;
   if (state.status === 'failed') return (
     <PageStatus
       variant="error"
       title="Kunne ikke laste inn"
-      message="Kunne ikke laste inn den fullførte økten."
+      message="Kunne ikke laste inn den fullførte treningen."
       actionRef={retryRef}
       actionTitle="Prøv igjen"
       onAction={() => { setState({ status: 'loading' }); setReload((value) => value + 1); }}
@@ -103,7 +103,7 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
     <PageStatus
       variant="missing"
       title="Finnes ikke lenger"
-      actionTitle={route.params.fromCompletion ? 'Tilbake til forsiden' : 'Tilbake til tidligere økter'}
+      actionTitle={route.params.fromCompletion ? 'Tilbake til forsiden' : 'Tilbake til tidligere treninger'}
       onAction={() => {
         allowNavigation.current = true;
         if (route.params.fromCompletion) navigation.popTo('Home', { focusStartWorkout: true });
@@ -114,7 +114,7 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>Fullført økt</Text>
+      <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>Fullført trening</Text>
       <Text style={[styles.completedAt, { color: colors.text }]}>{formatDateTime(new Date(state.workout.completedAt))}</Text>
       {state.workout.exercises.map((exercise) => (
         <Card key={exercise.id}>
@@ -130,10 +130,10 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
           ))}
         </Card>
       ))}
-      <Button ref={deleteRef} variant="destructive" title="Slett økt" onPress={() => { setDeleteFailed(false); setDeleteDialogOpen(true); }} />
+      <Button ref={deleteRef} variant="destructive" title="Slett trening" onPress={() => { setDeleteFailed(false); setDeleteDialogOpen(true); }} />
       {deleteFailed && (
         <View style={styles.failure}>
-          <ErrorAlert message="Kunne ikke slette økten" />
+          <ErrorAlert message="Kunne ikke slette treningen" />
           <Button ref={retryRef} title="Prøv igjen" onPress={() => setDeleteDialogOpen(true)} />
         </View>
       )}
@@ -144,14 +144,14 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
           onPress={() => { allowNavigation.current = true; navigation.popTo('Home', { focusStartWorkout: true }); }}
         />
       )}
-      <Dialog onRequestClose={closeDeleteDialog} visible={deleteDialogOpen} initialFocusRef={confirmDeleteRef} title="Slett fullført økt?">
-        <Text style={[styles.dialogMessage, { color: colors.text }]}>Den fullførte økten slettes permanent. Dette kan ikke angres.</Text>
+      <Dialog onRequestClose={closeDeleteDialog} visible={deleteDialogOpen} initialFocusRef={confirmDeleteRef} title="Slett fullført trening?">
+        <Text style={[styles.dialogMessage, { color: colors.text }]}>Den fullførte treningen slettes permanent. Dette kan ikke angres.</Text>
         <View style={styles.dialogActions}>
           <Button disabled={deleting} title="Avbryt" variant="secondary" onPress={closeDeleteDialog} />
           <Button
             ref={confirmDeleteRef}
             busy={deleting}
-            title={deleting ? 'Sletter økt' : 'Slett'}
+            title={deleting ? 'Sletter trening' : 'Slett'}
             variant="destructive"
             onPress={() => void confirmDeletion(state.workout.id)}
           />

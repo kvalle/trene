@@ -121,7 +121,7 @@ export function ExercisesScreen({ navigation, route }: Props) {
                 }}
                 showSeparator={index < matches.length - 1}
                 title={exercise.name}
-                metadata={`Brukt i ${exercise.workoutCount} ${exercise.workoutCount === 1 ? 'økt' : 'økter'}`}
+                metadata={`Brukt i ${exercise.workoutCount} ${exercise.workoutCount === 1 ? 'trening' : 'treninger'}`}
               />
             ))}
           </ListContainer>

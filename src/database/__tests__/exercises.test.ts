@@ -42,16 +42,16 @@ async function addWorkout(
     'INSERT INTO workouts (status, started_at, completed_at) VALUES (?, ?, ?)',
     status, 'started', completedAt,
   );
-  const membership = await database.runAsync(
+  const workoutExercise = await database.runAsync(
     'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
     workout.lastInsertRowId, exerciseId,
   );
-  return { workoutId: workout.lastInsertRowId, membershipId: membership.lastInsertRowId };
+  return { workoutId: workout.lastInsertRowId, workoutExerciseId: workoutExercise.lastInsertRowId };
 }
 
 async function addSet(
   database: Database,
-  membershipId: number,
+  workoutExerciseId: number,
   loadKg: number | null,
   repetitions: number | null,
   confirmedAt: string | null,
@@ -59,7 +59,7 @@ async function addSet(
   return (await database.runAsync(
     `INSERT INTO workout_sets
       (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, ?, ?, ?)`,
-    membershipId, loadKg, repetitions, confirmedAt,
+    workoutExerciseId, loadKg, repetitions, confirmedAt,
   )).lastInsertRowId;
 }
 
@@ -125,26 +125,26 @@ describe('exercise persistence', () => {
     expect(searchExercises(exercises, 'HEV')).toHaveLength(2);
   });
 
-  test('counts only completed workouts with a confirmed set', async () => {
+  test('counts only completed workouts with a completed set', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
     const workout = await database.runAsync(
       "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'start', 'end')",
     );
-    const membership = await database.runAsync(
+    const workoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
       workout.lastInsertRowId,
       exerciseId,
     );
     await database.runAsync(
       'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions) VALUES (?, 10, 5)',
-      membership.lastInsertRowId,
+      workoutExercise.lastInsertRowId,
     );
     expect((await listExercises(database))[0].workoutCount).toBe(0);
     await database.runAsync(
       'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 10, 5, ?)',
-      membership.lastInsertRowId,
+      workoutExercise.lastInsertRowId,
       'confirmed',
     );
     expect((await listExercises(database))[0].workoutCount).toBe(1);
@@ -162,12 +162,12 @@ describe('exercise persistence', () => {
     const second = await addWorkout(database, exerciseId, 'completed', '2026-02-02T10:00:00Z');
     const older = await addWorkout(database, exerciseId, 'completed', '2026-01-01T10:00:00Z');
     const active = await addWorkout(database, exerciseId, 'active', null);
-    const firstSet = await addSet(database, first.membershipId, 80, 5, 'same');
-    const secondSet = await addSet(database, first.membershipId, 90, 3, 'same');
-    await addSet(database, first.membershipId, null, null, null);
-    const tiedWorkoutSet = await addSet(database, second.membershipId, 100, 1, 'later');
-    const olderSet = await addSet(database, older.membershipId, 70, 8, 'old');
-    await addSet(database, active.membershipId, 120, 1, 'active-confirmed');
+    const firstSet = await addSet(database, first.workoutExerciseId, 80, 5, 'same');
+    const secondSet = await addSet(database, first.workoutExerciseId, 90, 3, 'same');
+    await addSet(database, first.workoutExerciseId, null, null, null);
+    const tiedWorkoutSet = await addSet(database, second.workoutExerciseId, 100, 1, 'later');
+    const olderSet = await addSet(database, older.workoutExerciseId, 70, 8, 'old');
+    await addSet(database, active.workoutExerciseId, 120, 1, 'active-confirmed');
 
     expect(await loadExerciseDetail(database, exerciseId)).toEqual({
       id: exerciseId,
@@ -197,7 +197,7 @@ describe('exercise persistence', () => {
     await expect(loadExerciseDetail(database, 999)).resolves.toBeNull();
   });
 
-  test('reports deletion eligibility for active and completed references, even without confirmed sets', async () => {
+  test('reports deletion eligibility for active and completed references, even without completed sets', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const freeId = await createExercise(database, 'Fri', exerciseNameKey('Fri'));
@@ -216,7 +216,7 @@ describe('exercise persistence', () => {
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const workout = await addWorkout(database, exerciseId, 'completed', 'done');
-    await addSet(database, workout.membershipId, 100, 5, 'confirmed');
+    await addSet(database, workout.workoutExerciseId, 100, 5, 'confirmed');
 
     await expect(renameExercise(database, exerciseId, '  Ny Knebøy  ', 'provided-key'))
       .rejects.toThrow('normalized identity');

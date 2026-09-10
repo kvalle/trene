@@ -2,7 +2,7 @@ appId: com.kjetilvalle.trene
 name: Roll back a failed Android restore
 ---
 - launchApp
-- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
+- extendedWaitUntil: { visible: "Klar for en trening?", timeout: 120000 }
 - tapOn: "Øvelser"
 - tapOn: "Opprett første øvelse"
 - tapOn: { id: "exercise-name-input" }

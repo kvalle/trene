@@ -43,14 +43,14 @@ test('shows the exact read-only completed result in saved card order', async () 
   });
   renderScreen();
 
-  expect(await screen.findByRole('header', { name: 'Fullført økt' })).toBeOnTheScreen();
+  expect(await screen.findByRole('header', { name: 'Fullført trening' })).toBeOnTheScreen();
   expect(screen.getByText(/5. august 2026/)).toBeOnTheScreen();
   const headers = screen.getAllByRole('header').map((node) => node.props.children);
-  expect(headers).toEqual(['Fullført økt', 'Knebøy', 'Benkpress']);
+  expect(headers).toEqual(['Fullført trening', 'Knebøy', 'Benkpress']);
   expect(screen.getByLabelText('Sett 1, 5 repetisjoner med 80 kilogram')).toBeOnTheScreen();
   expect(screen.getByLabelText('Sett 1, 8 repetisjoner med 60 kilogram')).toBeOnTheScreen();
   expect(screen.queryByRole('button', { name: 'Rediger' })).not.toBeOnTheScreen();
-  expect(screen.getByRole('button', { name: 'Slett økt' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Slett trening' })).toBeOnTheScreen();
 });
 
 test('requires explicit confirmation and cancellation preserves the workout', async () => {
@@ -58,14 +58,14 @@ test('requires explicit confirmation and cancellation preserves the workout', as
   mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
   const view = renderScreen();
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Slett økt' }));
-  expect(screen.getByRole('header', { name: 'Slett fullført økt?' })).toBeOnTheScreen();
+  fireEvent.press(await screen.findByRole('button', { name: 'Slett trening' }));
+  expect(screen.getByRole('header', { name: 'Slett fullført trening?' })).toBeOnTheScreen();
   fireEvent(view.UNSAFE_getByType(Modal), 'show');
   expect(focus).toHaveBeenCalledTimes(1);
   fireEvent.press(screen.getByRole('button', { name: 'Avbryt' }));
 
   expect(mockedDelete).not.toHaveBeenCalled();
-  expect(screen.getByRole('header', { name: 'Fullført økt' })).toBeOnTheScreen();
+  expect(screen.getByRole('header', { name: 'Fullført trening' })).toBeOnTheScreen();
   await waitFor(() => expect(focus).toHaveBeenCalledTimes(2));
 });
 
@@ -74,10 +74,10 @@ test('blocks confirmation actions while deletion is pending', async () => {
   mockedDelete.mockImplementation(() => new Promise(() => undefined));
   renderScreen();
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Slett økt' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Slett trening' }));
   fireEvent.press(screen.getByRole('button', { name: 'Slett' }));
 
-  expect(await screen.findByRole('button', { name: 'Sletter økt' })).toBeDisabled();
+  expect(await screen.findByRole('button', { name: 'Sletter trening' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Avbryt' })).toBeDisabled();
 });
 
@@ -87,7 +87,7 @@ test('deletes a post-completion workout before replacing detail with focused his
   mockedDelete.mockResolvedValue({ focusWorkoutId: 2 });
   renderScreen({ replace });
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Slett økt' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Slett trening' }));
   fireEvent.press(screen.getByRole('button', { name: 'Slett' }));
 
   await waitFor(() => expect(replace).toHaveBeenCalledWith('History', { focusWorkoutId: 2 }));
@@ -100,7 +100,7 @@ test('deletes a history workout before popping to focused history', async () => 
   mockedDelete.mockResolvedValue({ focusWorkoutId: 2 });
   renderScreen({ popTo }, false);
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Slett økt' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Slett trening' }));
   fireEvent.press(screen.getByRole('button', { name: 'Slett' }));
 
   await waitFor(() => expect(popTo).toHaveBeenCalledWith('History', { focusWorkoutId: 2 }));
@@ -115,13 +115,13 @@ test('keeps detail, closes confirmation, and offers focused retry after deletion
   mockedDelete.mockRejectedValue(new Error('write failed'));
   renderScreen({ popTo });
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Slett økt' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Slett trening' }));
   fireEvent.press(screen.getByRole('button', { name: 'Slett' }));
 
-  expect(await screen.findByText('Kunne ikke slette økten')).toBeOnTheScreen();
-  expect(screen.queryByRole('header', { name: 'Slett fullført økt?' })).not.toBeOnTheScreen();
-  expect(screen.getByRole('header', { name: 'Fullført økt' })).toBeOnTheScreen();
-  expect(announce).toHaveBeenCalledWith('Kunne ikke slette økten. Prøv igjen.');
+  expect(await screen.findByText('Kunne ikke slette treningen')).toBeOnTheScreen();
+  expect(screen.queryByRole('header', { name: 'Slett fullført trening?' })).not.toBeOnTheScreen();
+  expect(screen.getByRole('header', { name: 'Fullført trening' })).toBeOnTheScreen();
+  expect(announce).toHaveBeenCalledWith('Kunne ikke slette treningen. Prøv igjen.');
   await waitFor(() => expect(focus).toHaveBeenCalled());
   expect(popTo).not.toHaveBeenCalled();
 });
@@ -158,7 +158,7 @@ test('returns to fresh history when a history workout no longer exists', async (
   mockedLoad.mockResolvedValue(null);
   renderScreen({ popTo }, false);
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Tilbake til tidligere økter' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Tilbake til tidligere treninger' }));
   expect(popTo).toHaveBeenCalledWith('History');
 });
 
@@ -166,7 +166,7 @@ test('uses ordinary stack Back when opened from history', async () => {
   mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
   renderScreen({}, false);
 
-  await screen.findByRole('header', { name: 'Fullført økt' });
+  await screen.findByRole('header', { name: 'Fullført trening' });
   expect(usePreventRemove).toHaveBeenCalledWith(false, expect.any(Function));
   expect(screen.queryByRole('button', { name: 'Tilbake til forsiden' })).not.toBeOnTheScreen();
 });

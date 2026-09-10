@@ -19,8 +19,8 @@ import {
   unconfirmWorkoutSet,
 } from '../../database/workouts';
 import { WorkoutScreen } from '../WorkoutScreen';
-import { WorkoutDraftProvider } from '../../workoutDrafts';
 import { TrainingDataDeletionProvider } from '../../trainingDataDeletion';
+import { WorkoutSetDraftProvider } from '../../workoutSetDrafts';
 import { HomeScreen } from '../HomeScreen';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
@@ -202,7 +202,7 @@ test('enables completion only for durable completed sets and warns about planned
   expect(complete).toBeEnabled();
   fireEvent.press(complete);
 
-  expect(screen.getByRole('header', { name: 'Fullfør økten?' })).toBeOnTheScreen();
+  expect(screen.getByRole('header', { name: 'Fullfør treningen?' })).toBeOnTheScreen();
   expect(screen.getByText(
     'Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.',
   )).toBeOnTheScreen();
@@ -239,9 +239,9 @@ test('focuses completion confirmation and restores focus when it is dismissed', 
 
   fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
   fireEvent(UNSAFE_getAllByType(Modal).find((modal) => modal.props.visible)!, 'show');
-  fireEvent.press(screen.getByRole('button', { name: 'Fortsett økten' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Fortsett treningen' }));
 
-  expect(screen.queryByRole('header', { name: 'Fullfør økten?' })).not.toBeOnTheScreen();
+  expect(screen.queryByRole('header', { name: 'Fullfør treningen?' })).not.toBeOnTheScreen();
   expect(focus).toHaveBeenCalledTimes(2);
 });
 
@@ -252,7 +252,7 @@ test('platform Back dismisses completion confirmation without saving', async () 
   fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
   fireEvent(UNSAFE_getAllByType(Modal).find((modal) => modal.props.visible)!, 'requestClose');
 
-  expect(screen.queryByRole('header', { name: 'Fullfør økten?' })).not.toBeOnTheScreen();
+  expect(screen.queryByRole('header', { name: 'Fullfør treningen?' })).not.toBeOnTheScreen();
   expect(mockedComplete).not.toHaveBeenCalled();
 });
 
@@ -276,10 +276,10 @@ test('opens completed detail only after the completion transaction succeeds', as
   renderScreen({ replace });
 
   fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
-  fireEvent.press(screen.getByRole('button', { name: 'Fullfør økt' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Fullfør trening' }));
   expect(replace).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'Fullfører' })).toHaveProp('accessibilityState', { busy: true, disabled: true });
-  expect(screen.getByRole('button', { name: 'Fortsett økten' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Fortsett treningen' })).toBeDisabled();
 
   finish();
   await waitFor(() => expect(replace).toHaveBeenCalledWith('CompletedWorkout', {
@@ -293,10 +293,10 @@ test('does not dismiss the completion dialog while completion is pending', async
   const { UNSAFE_getAllByType } = renderScreen();
 
   fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
-  fireEvent.press(screen.getByRole('button', { name: 'Fullfør økt' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Fullfør trening' }));
   fireEvent(UNSAFE_getAllByType(Modal).find((modal) => modal.props.visible)!, 'requestClose');
 
-  expect(screen.getByRole('header', { name: 'Fullfør økten?' })).toBeOnTheScreen();
+  expect(screen.getByRole('header', { name: 'Fullfør treningen?' })).toBeOnTheScreen();
 });
 
 test('preserves the active workout, announces retry, focuses it, and stays put on completion failure', async () => {
@@ -308,12 +308,12 @@ test('preserves the active workout, announces retry, focuses it, and stays put o
   renderScreen({ replace });
 
   fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
-  fireEvent.press(screen.getByRole('button', { name: 'Fullfør økt' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Fullfør trening' }));
 
-  expect(await screen.findByRole('alert')).toHaveTextContent(/Kunne ikke fullføre økten/);
+  expect(await screen.findByRole('alert')).toHaveTextContent(/Kunne ikke fullføre treningen/);
   expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
   expect(screen.getByText('Knebøy')).toBeOnTheScreen();
-  expect(announce).toHaveBeenCalledWith('Kunne ikke fullføre økten. Prøv igjen.');
+  expect(announce).toHaveBeenCalledWith('Kunne ikke fullføre treningen. Prøv igjen.');
   expect(focus).toHaveBeenCalled();
   expect(replace).not.toHaveBeenCalled();
 });
@@ -395,7 +395,7 @@ test('removes a planned-only exercise immediately', async () => {
   mockedRemoveExercise.mockResolvedValue();
   renderScreen();
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra økten' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra treningen' }));
 
   await waitFor(() => expect(mockedRemoveExercise).toHaveBeenCalledWith(database, 3, 4));
   expect(screen.queryByRole('header', { name: 'Fjern øvelsen?' })).not.toBeOnTheScreen();
@@ -408,7 +408,7 @@ test('requires confirmation before removing an exercise with completed sets', as
   mockedRemoveExercise.mockResolvedValue();
   renderScreen();
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra økten' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra treningen' }));
   expect(screen.getByRole('header', { name: 'Fjern øvelsen?' })).toBeOnTheScreen();
   expect(mockedRemoveExercise).not.toHaveBeenCalled();
   fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av øvelsen' }));
@@ -428,7 +428,7 @@ test('closes the removal modal before unmounting its focus launcher', async () =
   mockedRemoveExercise.mockResolvedValue();
   renderScreen();
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra økten' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra treningen' }));
   fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av øvelsen' }));
 
   await waitFor(() => expect(mockedRemoveExercise).toHaveBeenCalled());
@@ -447,12 +447,12 @@ test('shows busy removal state and restores focus when removal is cancelled', as
   mockedRemoveExercise.mockImplementation(() => new Promise<void>((resolve) => { finishRemove = resolve; }));
   const { UNSAFE_getAllByType } = renderScreen();
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra økten' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra treningen' }));
   fireEvent.press(screen.getByRole('button', { name: 'Behold øvelsen' }));
   expect(screen.queryByText('Fjern øvelsen?')).not.toBeOnTheScreen();
   expect(focus).toHaveBeenCalled();
 
-  fireEvent.press(screen.getByRole('button', { name: 'Fjern Knebøy fra økten' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Fjern Knebøy fra treningen' }));
   fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av øvelsen' }));
   expect(await screen.findByRole('button', { name: 'Bekreft fjerning av øvelsen' })).toHaveProp('accessibilityState', { busy: true, disabled: true });
   expect(screen.getByRole('button', { name: 'Behold øvelsen' })).toBeDisabled();
@@ -490,7 +490,7 @@ test('keeps the exercise and offers retry when removal fails', async () => {
   mockedRemoveExercise.mockRejectedValueOnce(new Error('write failed')).mockResolvedValueOnce();
   renderScreen();
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra økten' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Fjern Knebøy fra treningen' }));
   expect(await screen.findByRole('alert')).toHaveTextContent(/Kunne ikke fjerne øvelsen. Prøv igjen\./);
   expect(focus).toHaveBeenCalled();
   expect(screen.getByText('Knebøy')).toBeOnTheScreen();
@@ -740,7 +740,7 @@ test('retains a failed draft across Home and reopening the workout', async () =>
   expect(await screen.findByText('Endringene er ikke lagret')).toBeOnTheScreen();
 
   view.rerender(sharedScreen('home'));
-  expect(await screen.findByText('Økten har endringer som ikke er lagret')).toBeOnTheScreen();
+  expect(await screen.findByText('Treningen har endringer som ikke er lagret')).toBeOnTheScreen();
   expect(screen.getByTestId('home-unsaved-warning').props.accessibilityRole).toBe('alert');
   view.rerender(sharedScreen('workout'));
   const reopenedLoad = await screen.findByLabelText('Belastning for Knebøy');
@@ -821,9 +821,9 @@ test.each([
   renderScreen({ popTo });
 
   fireEvent.press(await screen.findByRole('button', { name: 'Avbryt' }));
-  expect(screen.getByRole('header', { name: 'Avbryt økten?' })).toBeOnTheScreen();
-  expect(screen.getByText('Økten slettes permanent og vises ikke i historikken.')).toBeOnTheScreen();
-  fireEvent.press(screen.getByRole('button', { name: 'Avbryt økten' }));
+  expect(screen.getByRole('header', { name: 'Avbryt treningen?' })).toBeOnTheScreen();
+  expect(screen.getByText('Treningen slettes permanent og vises ikke i historikken.')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: 'Avbryt treningen' }));
 
   await waitFor(() => expect(mockedCancel).toHaveBeenCalledWith(database, 3));
   expect(popTo).toHaveBeenCalledWith('Home', { focusStartWorkout: true });
@@ -836,9 +836,9 @@ test('closes the dialog without deleting and restores focus to Avbryt', async ()
 
   fireEvent.press(await screen.findByRole('button', { name: 'Avbryt' }));
   expect(UNSAFE_getByType(Modal).props.onShow).toEqual(expect.any(Function));
-  fireEvent.press(screen.getByRole('button', { name: 'Behold økten' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Behold treningen' }));
 
-  expect(screen.queryByText('Avbryt økten?')).not.toBeOnTheScreen();
+  expect(screen.queryByText('Avbryt treningen?')).not.toBeOnTheScreen();
   expect(mockedCancel).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'Avbryt' })).toBeOnTheScreen();
   expect(focus).toHaveBeenCalled();
@@ -851,7 +851,7 @@ test('platform Back closes the confirmation dialog first', async () => {
   fireEvent.press(await screen.findByRole('button', { name: 'Avbryt' }));
   fireEvent(UNSAFE_getByType(Modal), 'requestClose');
 
-  expect(screen.queryByText('Avbryt økten?')).not.toBeOnTheScreen();
+  expect(screen.queryByText('Avbryt treningen?')).not.toBeOnTheScreen();
   expect(mockedCancel).not.toHaveBeenCalled();
 });
 
@@ -861,11 +861,11 @@ test('exposes cancellation busy state and ignores dismissal while cancellation i
   const { UNSAFE_getByType } = renderScreen();
 
   fireEvent.press(await screen.findByRole('button', { name: 'Avbryt' }));
-  fireEvent.press(screen.getByRole('button', { name: 'Avbryt økten' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Avbryt treningen' }));
   expect(screen.getByRole('button', { name: 'Avbryter' })).toHaveProp('accessibilityState', { busy: true, disabled: true });
-  expect(screen.getByRole('button', { name: 'Behold økten' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Behold treningen' })).toBeDisabled();
   fireEvent(UNSAFE_getByType(Modal), 'requestClose');
-  expect(screen.getByRole('header', { name: 'Avbryt økten?' })).toBeOnTheScreen();
+  expect(screen.getByRole('header', { name: 'Avbryt treningen?' })).toBeOnTheScreen();
 });
 
 test('preserves the workout, announces retry, and does not navigate when cancellation fails', async () => {
@@ -877,12 +877,12 @@ test('preserves the workout, announces retry, and does not navigate when cancell
   renderScreen({ popTo });
 
   fireEvent.press(await screen.findByRole('button', { name: 'Avbryt' }));
-  fireEvent.press(screen.getByRole('button', { name: 'Avbryt økten' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Avbryt treningen' }));
 
-  expect(await screen.findByRole('alert')).toHaveTextContent(/Kunne ikke avbryte økten/);
-  expect(screen.queryByText('Avbryt økten?')).not.toBeOnTheScreen();
+  expect(await screen.findByRole('alert')).toHaveTextContent(/Kunne ikke avbryte treningen/);
+  expect(screen.queryByText('Avbryt treningen?')).not.toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
-  expect(announce).toHaveBeenCalledWith('Kunne ikke avbryte økten. Prøv igjen.');
+  expect(announce).toHaveBeenCalledWith('Kunne ikke avbryte treningen. Prøv igjen.');
   expect(focus).toHaveBeenCalled();
   expect(popTo).not.toHaveBeenCalled();
 });
@@ -895,14 +895,14 @@ function renderScreen(
   return render(
     <AppThemeProvider>
       <DatabaseProvider database={database}>
-        <WorkoutDraftProvider>
+        <WorkoutSetDraftProvider>
           <NavigationContainer>
             <WorkoutScreen
             navigation={mergedNavigation as never}
             route={{ params } as never}
           />
           </NavigationContainer>
-        </WorkoutDraftProvider>
+        </WorkoutSetDraftProvider>
       </DatabaseProvider>
     </AppThemeProvider>,
   );
@@ -912,7 +912,7 @@ function sharedScreen(screenName: 'home' | 'workout') {
   return (
     <AppThemeProvider><TrainingDataDeletionProvider>
       <DatabaseProvider database={database}>
-        <WorkoutDraftProvider>
+        <WorkoutSetDraftProvider>
           <NavigationContainer>
           {screenName === 'home' ? (
             <HomeScreen navigation={{ navigate: jest.fn() } as never} route={{ params: undefined } as never} />
@@ -923,7 +923,7 @@ function sharedScreen(screenName: 'home' | 'workout') {
             />
           )}
           </NavigationContainer>
-        </WorkoutDraftProvider>
+        </WorkoutSetDraftProvider>
       </DatabaseProvider>
     </TrainingDataDeletionProvider></AppThemeProvider>
   );

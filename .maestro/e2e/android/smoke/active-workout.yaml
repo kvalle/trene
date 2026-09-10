@@ -6,9 +6,9 @@ tags:
 ---
 - launchApp
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
-- tapOn: "Start økt"
+- tapOn: "Start trening"
 - tapOn: "Legg til øvelse"
 - tapOn: "Opprett første øvelse"
 - tapOn:
@@ -43,9 +43,9 @@ tags:
 # Test cancellation dialog while the screen is short (single confirmed set).
 - tapOn: "Avbryt"
 - extendedWaitUntil:
-    visible: "Avbryt økten?"
+    visible: "Avbryt treningen?"
     timeout: 10000
-- tapOn: "Behold økten"
+- tapOn: "Behold treningen"
 # Verify add-set produces a new planned set and the button re-enables.
 - tapOn: "Legg til sett"
 - assertVisible: "Planlagt sett"
