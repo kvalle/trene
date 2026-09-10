@@ -7,9 +7,9 @@ tags:
 ---
 - launchApp
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
-- tapOn: "Start økt"
+- tapOn: "Start trening"
 - tapOn: "Legg til øvelse"
 - tapOn: "Opprett første øvelse"
 - tapOn:
@@ -32,7 +32,7 @@ tags:
     id: "delete-training-data"
 - tapOn:
     id: "open-delete-training-data-confirmation"
-- assertVisible: "Alle treningsøkter, inkludert en eventuell aktiv økt, og alle øvelser slettes permanent. Lag en sikkerhetskopi først hvis du vil beholde dataene."
+- assertVisible: "Alle treningsøkter, inkludert en eventuell aktiv trening, og alle øvelser slettes permanent. Lag en sikkerhetskopi først hvis du vil beholde dataene."
 - tapOn:
     id: "cancel-delete-training-data"
 - assertVisible: "Slett treningsdata"
@@ -41,7 +41,7 @@ tags:
 - tapOn:
     id: "confirm-delete-training-data"
 - extendedWaitUntil:
-    visible: "Start økt"
+    visible: "Start trening"
     timeout: 30000
 - tapOn: "Innstillinger"
 - tapOn:
@@ -55,12 +55,12 @@ tags:
 - tapOn: "Øvelser"
 - assertVisible: "Opprett første øvelse"
 - back
-- tapOn: "Tidligere økter"
-- assertVisible: "Ingen fullførte økter ennå"
+- tapOn: "Tidligere treninger"
+- assertVisible: "Ingen fullførte treninger ennå"
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "Start økt"
+    visible: "Start trening"
     timeout: 120000
 - tapOn: "Øvelser"
 - assertVisible: "Opprett første øvelse"

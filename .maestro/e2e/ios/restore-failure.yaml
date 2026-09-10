@@ -53,7 +53,7 @@ tags:
 - tapOn: "Ferdig"
 - runFlow:
     when:
-      notVisible: "Fullfør økt"
+      notVisible: "Fullfør trening"
     commands:
       - runFlow:
           when:

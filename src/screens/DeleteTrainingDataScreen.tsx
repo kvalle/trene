@@ -12,7 +12,7 @@ import { Dialog } from '../ui/Dialog';
 import { ErrorAlert } from '../ui/ErrorAlert';
 import { Notice } from '../ui/Notice';
 
-const CONSEQUENCE = 'Alle treningsøkter, inkludert en eventuell aktiv økt, og alle øvelser slettes permanent. Lag en sikkerhetskopi først hvis du vil beholde dataene.';
+const CONSEQUENCE = 'Alle treningsøkter, inkludert en eventuell aktiv trening, og alle øvelser slettes permanent. Lag en sikkerhetskopi først hvis du vil beholde dataene.';
 
 export function DeleteTrainingDataScreen() {
   const runtime = useDatabaseRuntime();
