@@ -100,10 +100,42 @@ async function startWorkoutWithDatabase(database: Database): Promise<number> {
   return transaction(database, async () => {
     const existing = await getActiveWorkoutIdWithDatabase(database);
     if (existing !== null) return existing;
-    return (await database.runAsync(
+    const workoutId = (await database.runAsync(
       "INSERT INTO workouts (status, started_at) VALUES ('active', ?)",
       new Date().toISOString(),
     )).lastInsertRowId;
+    const template = await database.getFirstAsync<WorkoutRow>(`
+      SELECT id FROM workouts WHERE status = 'completed'
+      ORDER BY completed_at DESC, id ASC LIMIT 1
+    `);
+    if (!template) return workoutId;
+
+    const templateExercises = await database.getAllAsync<{
+      id: number;
+      exercise_id: number;
+      position: number;
+    }>(`
+      SELECT id, exercise_id, position FROM workout_exercises
+      WHERE workout_id = ? ORDER BY position ASC
+    `, template.id);
+    for (const templateExercise of templateExercises) {
+      const workoutExerciseId = (await database.runAsync(
+        'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, ?)',
+        workoutId, templateExercise.exercise_id, templateExercise.position,
+      )).lastInsertRowId;
+      const templateSets = await database.getAllAsync<{ load_kg: number; repetitions: number }>(`
+        SELECT load_kg, repetitions FROM workout_sets
+        WHERE workout_exercise_id = ? AND confirmed_at IS NOT NULL
+        ORDER BY confirmed_at ASC, id ASC
+      `, templateExercise.id);
+      for (const set of templateSets) {
+        await database.runAsync(
+          'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions) VALUES (?, ?, ?)',
+          workoutExerciseId, set.load_kg, set.repetitions,
+        );
+      }
+    }
+    return workoutId;
   });
 }
 

@@ -147,9 +147,14 @@ Renaming changes the exercise everywhere, including historical workout views.
 
 ### 5.1 Start and record a workout
 
-1. The user selects `Start trening`; an empty active workout is created immediately.
-2. The user selects `Legg til øvelse` and chooses or creates an exercise.
-3. The app creates planned sets from the first remaining completed workout
+1. The user selects `Start trening`; an active workout is created immediately.
+   If workout history exists, the app copies every exercise from the first
+   completed workout under the deterministic history order, preserving exercise
+   order and copying its completed sets as editable planned sets. Otherwise the
+   active workout is empty. Returning to an existing active workout never
+   changes its contents.
+2. The user may select `Legg til øvelse` and choose or create another exercise.
+3. For a manually added exercise, the app creates planned sets from the first remaining completed workout
    containing that exercise under the deterministic history order. If none
    exists, it creates one planned set with empty fields.
 4. The user accepts a valid planned set with one explicit confirmation action.
