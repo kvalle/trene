@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { NavigationContainer, usePreventRemove } from '@react-navigation/native';
-import { AccessibilityInfo, Modal } from 'react-native';
+import { AccessibilityInfo, Modal, StyleSheet } from 'react-native';
 
 import { DataScreen } from '../DataScreen';
 import { DatabaseProvider } from '../../database/DatabaseContext';
@@ -48,6 +48,24 @@ test('shows deletion third and opens its dedicated screen', async () => {
   expect(navigate).toHaveBeenCalledWith('DeleteTrainingData');
 });
 
+test('introduces backup management without a duplicate heading or notice', () => {
+  renderScreen();
+
+  expect(screen.queryByRole('header', { name: 'Dine data' })).not.toBeOnTheScreen();
+  expect(screen.getByText('Her kan du lagre og gjenopprette en sikkerhetskopi av alle øvelser og treningsøkter du har i Trene.')).toBeOnTheScreen();
+  expect(screen.getByText('Sikkerhetskopien krypteres ikke, så oppbevar og del den på en trygg måte.')).toBeOnTheScreen();
+  expect(screen.queryByTestId('data-notice')).not.toBeOnTheScreen();
+});
+
+test('uses the same secondary hierarchy for restore and delete', async () => {
+  mockedHasTrainingData.mockResolvedValue(true);
+  renderScreen();
+
+  const restore = screen.getByTestId('restore-from-file');
+  const deletion = await screen.findByTestId('delete-training-data');
+  expect(StyleSheet.flatten(deletion.props.style)).toEqual(StyleSheet.flatten(restore.props.style));
+});
+
 test('keeps deletion labelled and disabled when no training data exists', async () => {
   mockedHasTrainingData.mockResolvedValue(false);
   renderScreen();
@@ -55,13 +73,11 @@ test('keeps deletion labelled and disabled when no training data exists', async 
   expect(await screen.findByRole('button', { name: 'Slett treningsdata' })).toBeDisabled();
 });
 
-test('discloses backup sensitivity and does not claim sharing saved it', async () => {
+test('does not claim sharing saved the backup', async () => {
   mockedCreateBackup.mockResolvedValue({} as never);
   renderScreen();
 
-  expect(screen.getByText('Sikkerhetskopien er ikke kryptert av Trene. Oppbevar og del den på en trygg måte.')).toBeOnTheScreen();
   expect(screen.getByTestId('create-backup')).toHaveProp('accessibilityState', { disabled: false, busy: false });
-  expect(screen.getByTestId('data-notice')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Lag sikkerhetskopi' }));
   await act(async () => undefined);
 

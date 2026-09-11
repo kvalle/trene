@@ -1,8 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 
 import type { RootStackParamList } from '../AppNavigator';
-import { typography } from '../theme';
 import { ListContainer } from '../ui/ListContainer';
 import { NavigationRow } from '../ui/NavigationRow';
 import { useAppTheme } from '../ui/AppThemeProvider';
@@ -11,10 +10,9 @@ import { appearancePreferenceLabels } from '../preferences/appearancePreference'
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 export function SettingsScreen({ navigation }: Props) {
-  const { colors, preference } = useAppTheme();
+  const { preference } = useAppTheme();
   return (
     <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
-      <Text accessibilityRole="header" style={[typography.screenTitle, styles.heading, { color: colors.text }]}>Innstillinger</Text>
       <ListContainer>
         <NavigationRow
           metadata={appearancePreferenceLabels[preference]}
@@ -26,7 +24,7 @@ export function SettingsScreen({ navigation }: Props) {
         <NavigationRow
           onPress={() => navigation.navigate('Data')}
           testID="settings-data"
-          title="Data"
+          title="Dine data"
         />
       </ListContainer>
     </ScrollView>
@@ -35,5 +33,4 @@ export function SettingsScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, gap: 20, padding: 20 },
-  heading: { marginTop: 4 },
 });
