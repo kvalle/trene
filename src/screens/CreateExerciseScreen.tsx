@@ -1,7 +1,7 @@
 import { usePreventRemove } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { AccessibilityInfo, ScrollView, StyleSheet, TextInput } from 'react-native';
 
 import type { RootStackParamList } from '../AppNavigator';
 import { useDatabase } from '../database/DatabaseContext';
@@ -12,7 +12,6 @@ import {
 } from '../database/exercises';
 import { createExerciseInWorkout } from '../database/workouts';
 import { validateExerciseName } from '../domain/exerciseName';
-import { typography } from '../theme';
 import { Button } from '../ui/Button';
 import { TextField } from '../ui/TextField';
 import { useAppTheme } from '../ui/AppThemeProvider';
@@ -75,9 +74,6 @@ export function CreateExerciseScreen({ navigation, route }: Props) {
       keyboardShouldPersistTaps="handled"
       style={{ backgroundColor: colors.background }}
     >
-      <Text accessibilityRole="header" style={[typography.screenTitle, { color: colors.text }]}>
-        Opprett øvelse
-      </Text>
       <TextField
         ref={inputRef}
         label="Navn"

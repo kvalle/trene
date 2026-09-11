@@ -1,6 +1,6 @@
 import { AccessibilityInfo } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import ComponentCatalog, { CompactActionDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen } from '../ComponentCatalog';
+import ComponentCatalog, { AppShellDetailScreen, CompactActionDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen } from '../ComponentCatalog';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 
 jest.mock('@react-navigation/native', () => ({
@@ -80,6 +80,16 @@ it('renders production theme contexts and switches theme', () => {
 
   fireEvent(screen.getByLabelText('Mørk modus'), 'valueChange', true);
   expect(screen.getByLabelText('Mørk modus')).toBeOnTheScreen();
+});
+
+it('documents that native screen titles are not repeated in content', () => {
+  render(
+    <AppThemeProvider>
+      <AppShellDetailScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />
+    </AppThemeProvider>,
+  );
+  expect(screen.getByText(/Når den native headeren viser skjermtittelen/)).toBeOnTheScreen();
+  expect(screen.getByText(/Oppgaveheroer, ressursidentiteter, seksjoner, dialoger og sidetilstander/)).toBeOnTheScreen();
 });
 
 it('shows and operates every SingleSelectionGroup state', () => {

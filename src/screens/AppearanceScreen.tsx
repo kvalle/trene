@@ -1,10 +1,9 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 
 import type { RootStackParamList } from '../AppNavigator';
 import { appearancePreferenceLabels, type AppearancePreference } from '../preferences/appearancePreference';
-import { typography } from '../theme';
 import { ErrorAlert } from '../ui/ErrorAlert';
 import { FormSection } from '../ui/FormSection';
 import { SingleSelectionGroup } from '../ui/SingleSelectionGroup';
@@ -17,7 +16,7 @@ const options = (Object.entries(appearancePreferenceLabels) as [AppearancePrefer
 );
 
 export function AppearanceScreen({ navigation }: Props) {
-  const { changingPreference, colors, preference, setPreference } = useAppTheme();
+  const { changingPreference, preference, setPreference } = useAppTheme();
   const [failure, setFailure] = useState(false);
   const screenActive = useRef(true);
 
@@ -43,7 +42,6 @@ export function AppearanceScreen({ navigation }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
-      <Text accessibilityRole="header" style={[typography.screenTitle, styles.heading, { color: colors.text }]}>Utseende</Text>
       <FormSection title="Tema">
         <SingleSelectionGroup
           accessibilityLabel="Tema"
@@ -70,5 +68,4 @@ export function AppearanceScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, gap: 20, padding: 20 },
-  heading: { marginTop: 4 },
 });

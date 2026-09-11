@@ -44,7 +44,6 @@ export function DeleteTrainingDataScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
-      <Text accessibilityRole="header" style={[typography.screenTitle, { color: colors.text }]}>Slett treningsdata</Text>
       <Notice
         title="Dette kan ikke angres"
         message="Alle øvelser og treningsøkter slettes fra Trene. Sikkerhetskopier du allerede har eksportert, blir ikke slettet."

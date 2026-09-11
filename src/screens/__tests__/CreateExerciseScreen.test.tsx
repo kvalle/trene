@@ -30,6 +30,13 @@ const mockedCreateExerciseInWorkout = jest.mocked(createExerciseInWorkout);
 
 beforeEach(() => jest.clearAllMocks());
 
+test('starts with the labeled name field without repeating the native screen title', () => {
+  renderScreen();
+  expect(screen.queryByRole('header', { name: 'Opprett øvelse' })).not.toBeOnTheScreen();
+  expect(screen.getByLabelText('Navn')).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Opprett' })).toBeOnTheScreen();
+});
+
 test('normalizes, persists, and opens detail after creation succeeds', async () => {
   const replace = jest.fn();
   mockedCreateExercise.mockResolvedValue(42);

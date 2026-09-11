@@ -22,8 +22,8 @@ beforeEach(() => {
 
 test('offers one accessible choice for each approved preference', async () => {
   renderScreen(createStore());
-  expect(await screen.findByRole('header', { name: 'Utseende' })).toBeOnTheScreen();
-  expect(screen.getByText('Tema')).toBeOnTheScreen();
+  expect(await screen.findByText('Tema')).toBeOnTheScreen();
+  expect(screen.queryByRole('header', { name: 'Utseende' })).not.toBeOnTheScreen();
   expect(screen.getByTestId('appearance-options')).toHaveProp('accessibilityRole', 'radiogroup');
   expect(screen.getByTestId('appearance-options')).toHaveAccessibleName('Tema');
   expect(screen.getByRole('radio', { name: 'Følg telefonen' })).toBeChecked();
