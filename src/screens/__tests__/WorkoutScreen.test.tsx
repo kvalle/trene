@@ -132,6 +132,27 @@ test('opens and focuses the exercise requested by route params, then consumes th
   expect(setParams).toHaveBeenCalledWith({ focusExerciseId: undefined, focusAddExercise: undefined });
 });
 
+test('opens a newly added exercise without closing an exercise already open', async () => {
+  const navigation = { setParams: jest.fn() };
+  const workout = {
+    id: 3,
+    exercises: [
+      ...workoutWithSets.exercises,
+      { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
+    ],
+  };
+  mockedLoad.mockResolvedValue(workout);
+  const view = renderScreen(navigation, null);
+  const squat = await screen.findByRole('button', { name: 'Knebøy' });
+  fireEvent.press(squat);
+
+  view.rerender(workoutScreen(navigation, { focusExerciseId: 10 }));
+
+  expect(squat).toHaveProp('accessibilityState', { expanded: true });
+  expect(screen.getByRole('button', { name: 'Markløft' })).toHaveProp('accessibilityState', { expanded: true });
+  expect(navigation.setParams).toHaveBeenCalledWith({ focusExerciseId: undefined, focusAddExercise: undefined });
+});
+
 test('focuses the add-exercise action requested by route params, then consumes them', async () => {
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   const setParams = jest.fn();
@@ -237,7 +258,9 @@ test('focuses completion confirmation and restores focus when it is dismissed', 
   mockedLoad.mockResolvedValue(workoutWithSets);
   const { UNSAFE_getAllByType } = renderScreen();
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Ferdig' }));
+  const complete = await screen.findByRole('button', { name: 'Ferdig' });
+  focus.mockClear();
+  fireEvent.press(complete);
   fireEvent(UNSAFE_getAllByType(Modal).find((modal) => modal.props.visible)!, 'show');
   fireEvent.press(screen.getByRole('button', { name: 'Fortsett treningen' }));
 
@@ -367,7 +390,7 @@ test('does not continue navigation when flushing a dirty draft fails', async () 
   expect(navigate).not.toHaveBeenCalled();
 });
 
-test('allows only one expanded card and lets it collapse independently', async () => {
+test('starts collapsed and lets every exercise expand and collapse independently', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
     exercises: [
@@ -375,15 +398,69 @@ test('allows only one expanded card and lets it collapse independently', async (
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
     ],
   });
+  renderScreen({}, null);
+
+  const squat = await screen.findByRole('button', { name: 'Knebøy' });
+  const deadlift = screen.getByRole('button', { name: 'Markløft' });
+  expect(squat).toHaveProp('accessibilityState', { expanded: false });
+  expect(deadlift).toHaveProp('accessibilityState', { expanded: false });
+  expect(screen.queryByText('Planlagt sett')).not.toBeOnTheScreen();
+
+  fireEvent.press(squat);
+  expect(squat).toHaveProp('accessibilityState', { expanded: true });
+  fireEvent.press(screen.getByRole('button', { name: 'Markløft' }));
+  expect(squat).toHaveProp('accessibilityState', { expanded: true });
+  expect(deadlift).toHaveProp('accessibilityState', { expanded: true });
+  expect(screen.getByText('Planlagt sett')).toBeOnTheScreen();
+
+  fireEvent.press(squat);
+  expect(squat).toHaveProp('accessibilityState', { expanded: false });
+  expect(deadlift).toHaveProp('accessibilityState', { expanded: true });
+  fireEvent.press(deadlift);
+  expect(deadlift).toHaveProp('accessibilityState', { expanded: false });
+});
+
+test('preserves expansion while the workout screen instance remains mounted', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  const view = renderScreen({}, null);
+  const squat = await screen.findByRole('button', { name: 'Knebøy' });
+  fireEvent.press(squat);
+
+  view.rerender(workoutScreen({}, null));
+
+  expect(squat).toHaveProp('accessibilityState', { expanded: true });
+});
+
+test('starts collapsed again after the workout screen is remounted', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  const view = renderScreen({}, null);
+  const squat = await screen.findByRole('button', { name: 'Knebøy' });
+  fireEvent.press(squat);
+  expect(squat).toHaveProp('accessibilityState', { expanded: true });
+  view.unmount();
+
+  renderScreen({}, null);
+
+  expect(await screen.findByRole('button', { name: 'Knebøy' })).toHaveProp('accessibilityState', { expanded: false });
+});
+
+test('removes only the deleted exercise from the expansion set', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    exercises: [
+      { ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] },
+      { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
+    ],
+  });
+  mockedRemoveExercise.mockResolvedValue();
   renderScreen();
 
-  expect(await screen.findByText('Planlagt sett')).toBeOnTheScreen();
-  fireEvent.press(screen.getByRole('button', { name: 'Markløft' }));
-  expect(screen.queryByText('Planlagt sett')).not.toBeOnTheScreen();
-  expect(screen.getByRole('button', { name: 'Markløft' })).toHaveProp('accessibilityState', { expanded: true });
-  expect(screen.getByRole('button', { name: 'Knebøy' })).toHaveProp('accessibilityState', { expanded: false });
-  fireEvent.press(screen.getByRole('button', { name: 'Markløft' }));
-  expect(screen.getByRole('button', { name: 'Markløft' })).toHaveProp('accessibilityState', { expanded: false });
+  const deadlift = await screen.findByRole('button', { name: 'Markløft' });
+  fireEvent.press(deadlift);
+  fireEvent.press(screen.getByRole('button', { name: 'Fjern Knebøy fra treningen' }));
+
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Knebøy' })).not.toBeOnTheScreen());
+  expect(deadlift).toHaveProp('accessibilityState', { expanded: true });
 });
 
 test('removes a planned-only exercise immediately', async () => {
@@ -653,6 +730,33 @@ test('reloads the active workout from SQLite on foreground', async () => {
   expect(mockedLoad).toHaveBeenCalledTimes(2);
 });
 
+test('preserves expanded exercises when the mounted screen reloads', async () => {
+  let onAppStateChange: ((state: AppStateStatus) => void) | undefined;
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => {
+    onAppStateChange = listener;
+    return { remove: jest.fn() };
+  });
+  const workout = {
+    id: 3,
+    exercises: [
+      ...workoutWithSets.exercises,
+      { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
+    ],
+  };
+  mockedLoad.mockResolvedValue(workout);
+  renderScreen({}, null);
+  const squat = await screen.findByRole('button', { name: 'Knebøy' });
+  const deadlift = screen.getByRole('button', { name: 'Markløft' });
+  fireEvent.press(squat);
+  fireEvent.press(deadlift);
+
+  act(() => onAppStateChange?.('active'));
+
+  await waitFor(() => expect(mockedLoad).toHaveBeenCalledTimes(2));
+  expect(squat).toHaveProp('accessibilityState', { expanded: true });
+  expect(deadlift).toHaveProp('accessibilityState', { expanded: true });
+});
+
 test('waits for every background save before foreground reload', async () => {
   let onAppStateChange: ((state: AppStateStatus) => void) | undefined;
   let finishFirst: () => void = () => undefined;
@@ -889,22 +993,29 @@ test('preserves the workout, announces retry, and does not navigate when cancell
 
 function renderScreen(
   navigation: Record<string, jest.Mock> = {},
-  params?: { focusExerciseId?: number; focusAddExercise?: boolean },
+  params: { focusExerciseId?: number; focusAddExercise?: boolean } | null = { focusExerciseId: 5 },
+) {
+  return render(workoutScreen(navigation, params));
+}
+
+function workoutScreen(
+  navigation: Record<string, jest.Mock> = {},
+  params: { focusExerciseId?: number; focusAddExercise?: boolean } | null = { focusExerciseId: 5 },
 ) {
   const mergedNavigation = { navigate: jest.fn(), popTo: jest.fn(), replace: jest.fn(), setParams: jest.fn(), ...navigation };
-  return render(
+  return (
     <AppThemeProvider>
       <DatabaseProvider database={database}>
         <WorkoutSetDraftProvider>
           <NavigationContainer>
             <WorkoutScreen
             navigation={mergedNavigation as never}
-            route={{ params } as never}
+            route={{ params: params ?? undefined } as never}
           />
           </NavigationContainer>
         </WorkoutSetDraftProvider>
       </DatabaseProvider>
-    </AppThemeProvider>,
+    </AppThemeProvider>
   );
 }
 
@@ -919,7 +1030,7 @@ function sharedScreen(screenName: 'home' | 'workout') {
           ) : (
             <WorkoutScreen
               navigation={{ navigate: jest.fn(), popTo: jest.fn(), setParams: jest.fn() } as never}
-              route={{ params: undefined } as never}
+              route={{ params: { focusExerciseId: 5 } } as never}
             />
           )}
           </NavigationContainer>

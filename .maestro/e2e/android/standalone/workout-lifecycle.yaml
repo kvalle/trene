@@ -45,6 +45,7 @@ tags:
     visible: "Fortsett trening"
     timeout: 120000
 - tapOn: "Fortsett trening"
+- tapOn: "Knebøy"
 - assertVisible: "80,5 kg · 5 repetisjoner"
 
 # Force-stop again, then finish and inspect both history views.
@@ -54,6 +55,7 @@ tags:
     visible: "Fortsett trening"
     timeout: 120000
 - tapOn: "Fortsett trening"
+- tapOn: "Knebøy"
 - assertVisible: "80,5 kg · 5 repetisjoner"
 - tapOn: "Ferdig"
 - extendedWaitUntil:

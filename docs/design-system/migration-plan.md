@@ -679,9 +679,9 @@ Treningsøkt har den største atferdsoverflaten. Ticket 11 skal prototype
 presentasjonen uten å forenkle følgende kontrakter, og ticket 12 skal bevare dem
 ved implementering.
 
-- Treningen lastes på fokus. Første øvelse åpnes som standard, med mindre en
-  returparameter peker på en annen øvelse eller Legg til-handlingen.
-- Bare ett øvelseskort er åpent samtidig. Gjennomførte sett sorteres før planlagte
+- Treningen lastes på fokus. Alle øvelser er lukket ved ny montering. En
+  returparameter åpner den nye øvelsen uten å lukke andre åpne øvelser.
+- Øvelseskort åpnes og lukkes uavhengig. Gjennomførte sett sorteres før planlagte
   sett med dagens stabile rekkefølge.
 - Utkast forblir strengverdier i delt state og overlever navigasjon.
 - Belastning og repetisjoner beholder dagens valideringsgrenser, tastaturtyper og

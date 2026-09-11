@@ -56,3 +56,32 @@ tags:
 - assertVisible:
     text: "Legg til sett"
     enabled: true
+# A newly added exercise opens without collapsing the existing card.
+- scrollUntilVisible:
+    element:
+      text: "Legg til øvelse"
+    direction: DOWN
+- tapOn: "Legg til øvelse"
+- tapOn: "Opprett øvelse"
+- tapOn:
+    id: "exercise-name-input"
+- setClipboard: "Markløft"
+- pasteText
+- tapOn:
+    id: "create-exercise-submit"
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Markløft"
+    direction: DOWN
+    centerElement: true
+- assertVisible: "Belastning for Markløft"
+- scrollUntilVisible:
+    element:
+      text: "80 kg · 5 repetisjoner"
+    direction: UP
+- assertVisible: "80 kg · 5 repetisjoner"
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Markløft"
+    direction: DOWN
+- assertVisible: "Belastning for Markløft"

@@ -63,8 +63,8 @@ recent workouts.
 The active-workout screen contains:
 
 - the exercises in one vertically scrollable list of cards;
-- at most one expanded exercise card at a time; the expanded card can be
-  collapsed without expanding another;
+- independently expandable exercise cards, allowing zero, one, several, or all
+  cards to be open; all cards start collapsed when the screen is newly mounted;
 - a collapsed-card status in the form `x av y sett gjennomført`;
 - completed sets grouped above planned sets inside the expanded card;
 - completed sets rendered as compact receipt rows;

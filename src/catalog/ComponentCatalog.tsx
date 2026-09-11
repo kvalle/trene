@@ -113,7 +113,7 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         id: 'disclosurecard',
         name: 'DisclosureCard',
         description: 'Utvidbart kort med sammendrag og detaljinnhold.',
-        usage: 'Bruk når flere innholdsrike elementer deler skjerm, men bare ett trenger detaljert oppmerksomhet om gangen.',
+        usage: 'Bruk når hvert innholdselement skal kunne vise eller skjule detaljer uavhengig av de andre.',
         route: 'DisclosureCardDetail',
         testID: 'catalog-item-disclosurecard',
       },
@@ -522,7 +522,7 @@ function DisclosureCardDetailScreen() {
   const { colors } = useAppTheme();
   return (
     <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-disclosurecard">
-      <DetailHeader name="DisclosureCard" description="Utvidbart kort med sammendrag og detaljinnhold." usage="Bruk når flere innholdsrike elementer deler skjerm, men bare ett trenger detaljert oppmerksomhet om gangen." />
+      <DetailHeader name="DisclosureCard" description="Utvidbart kort med sammendrag og detaljinnhold." usage="Bruk når hvert innholdselement skal kunne vise eller skjule detaljer uavhengig av de andre." />
       <DisclosureCard expanded={false} onPress={() => {}} summary="2 av 3 elementer ferdige" title="Kollapset" testID="catalog-disclosurecard-collapsed" />
       <DisclosureCard expanded onPress={() => {}} summary="2 av 3 elementer ferdige" title="Åpen" testID="catalog-disclosurecard-expanded">
         <Text style={[typography.body, { color: colors.text }]}>Detaljinnholdet vises når kortet er åpent.</Text>

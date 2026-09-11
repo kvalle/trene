@@ -63,7 +63,9 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const { drafts, setDrafts } = useWorkoutSetDrafts();
   const [state, setState] = useState<State>({ status: 'loading' });
   const [reload, setReload] = useState(0);
-  const [expandedId, setExpandedId] = useState<number>();
+  const [expandedIds, setExpandedIds] = useState(() => route.params?.focusExerciseId
+    ? new Set([route.params.focusExerciseId])
+    : new Set<number>());
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [removeExerciseId, setRemoveExerciseId] = useState<number>();
@@ -107,7 +109,6 @@ export function WorkoutScreen({ navigation, route }: Props) {
         if (!workout) setState({ status: 'failed' });
         else {
           setState({ status: 'ready', workout });
-          setExpandedId((current) => route.params?.focusExerciseId ?? current ?? workout.exercises[0]?.exerciseId);
         }
       },
       () => active && setState({ status: 'failed' }),
@@ -131,13 +132,17 @@ export function WorkoutScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     if (state.status !== 'ready') return;
+    const focusExerciseId = route.params?.focusExerciseId;
+    if (focusExerciseId && !expandedIds.has(focusExerciseId)) {
+      setExpandedIds((current) => new Set(current).add(focusExerciseId));
+    }
     const target = route.params?.focusExerciseId
       ? cardRefs.current.get(route.params.focusExerciseId)
       : route.params?.focusAddExercise ? addExerciseRef.current : null;
     const handle = target && findNodeHandle(target);
     if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
     if (target) navigation.setParams({ focusExerciseId: undefined, focusAddExercise: undefined });
-  }, [navigation, route.params, state]);
+  }, [expandedIds, navigation, route.params, state]);
 
   const hasDirtyDraft = state.status === 'ready' && state.workout.exercises.some((exercise) =>
     exercise.sets.some((set) => set.confirmedAt === null && isDirty(
@@ -460,7 +465,16 @@ export function WorkoutScreen({ navigation, route }: Props) {
         }
         return next;
       });
-      setExpandedId(undefined);
+      const exerciseId = state.status === 'ready'
+        ? state.workout.exercises.find((exercise) => exercise.id === workoutExerciseId)?.exerciseId
+        : undefined;
+      if (exerciseId) {
+        setExpandedIds((current) => {
+          const next = new Set(current);
+          next.delete(exerciseId);
+          return next;
+        });
+      }
       AccessibilityInfo.announceForAccessibility(`${exerciseName} fjernet fra treningen.`);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       requestAnimationFrame(() => focus(addExerciseRef));
@@ -496,14 +510,19 @@ export function WorkoutScreen({ navigation, route }: Props) {
         <Text style={[styles.empty, { color: colors.text }]}>Ingen øvelser lagt til ennå</Text>
       )}
       {state.workout.exercises.map((exercise) => {
-        const expanded = expandedId === exercise.exerciseId;
+        const expanded = expandedIds.has(exercise.exerciseId);
         const completed = exercise.sets.filter((set) => set.confirmedAt !== null).length;
         return (
           <DisclosureCard
             key={exercise.id}
             expanded={expanded}
             headerRef={(node) => { if (node) cardRefs.current.set(exercise.exerciseId, node); }}
-            onPress={() => setExpandedId(expanded ? undefined : exercise.exerciseId)}
+            onPress={() => setExpandedIds((current) => {
+              const next = new Set(current);
+              if (expanded) next.delete(exercise.exerciseId);
+              else next.add(exercise.exerciseId);
+              return next;
+            })}
             summary={`${completed} av ${exercise.sets.length} sett gjennomført`}
             title={exercise.name}
           >
