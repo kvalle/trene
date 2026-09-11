@@ -46,6 +46,7 @@ tags:
     timeout: 120000
 - tapOn: "Fortsett trening"
 - assertVisible: "Knebøy"
+- tapOn: "Knebøy"
 - assertVisible: "80,5"
 - assertVisible: "5"
 
@@ -69,6 +70,7 @@ tags:
     timeout: 120000
 - tapOn: "Fortsett trening"
 - assertVisible: "Knebøy"
+- tapOn: "Knebøy"
 - assertVisible: "Sett 1"
 - assertVisible: "80,5 kg · 5 repetisjoner"
 - tapOn: "Rediger sett 1"
