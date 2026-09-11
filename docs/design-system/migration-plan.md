@@ -14,7 +14,7 @@ er ikke registrert i navigasjonen og inngår derfor ikke i migreringen.
 | Oppstart | Sidestatus | Primær | – | – | Stor loader, feil, låst sikkerhetsstopp | – |
 | Forside | Hero-layout | Primær, sekundær, opptatt, deaktivert | – | – | Kompakt loader, feilvarsel | – |
 | Treningsøkt | Stakk-header | Primær, sekundær, tekst, destruktiv, liten, opptatt, deaktivert | Tallfelt, feltfeil, skjemadel | Utvidbart kort, datarad | Sidestatus for lasting/feil/tomt innhold, lokale feilvarsler | Bekreftende og destruktiv |
-| Fullført økt | Stakk-header | Primær, destruktiv, opptatt, deaktivert | – | Kort, datarad | Sidestatus for lasting/feil/manglende ressurs, feilvarsel | Destruktiv |
+| Fullført trening | Stakk-header | Primær, destruktiv, opptatt, deaktivert | – | Kort, datarad | Sidestatus for lasting/feil/manglende ressurs, feilvarsel | Destruktiv |
 | Historikk | Stakk-header | Primær, opptatt | – | Listebeholder, navigasjonsrad | Sidestatus for lasting/feil/tomt innhold, feilvarsel | – |
 | Øvelser | Stakk-header | Primær, sekundær | Søkefelt | Listebeholder, navigasjonsrad | Sidestatus for lasting/feil/tomt innhold/ingen treff | – |
 | Innstillinger | Stakk-header | – | – | Listebeholder, navigasjonsrad | – | – |
@@ -42,8 +42,8 @@ Kilde: `src/screens/HomeScreen.tsx`
 
 - Skjermen bruker hero-layout med én primær start-/fortsett-handling.
 - Historikk, øvelser og innstillinger er sekundære handlinger.
-- Oppstart av økt bruker opptatt primærknapp og deaktiverte støttehandlinger.
-- Oppslag av aktiv økt bruker kompakt loader i handlingsområdet.
+- Oppstart av trening bruker opptatt primærknapp og deaktiverte støttehandlinger.
+- Oppslag av aktiv trening bruker kompakt loader i handlingsområdet.
 - Feil ved oppslag eller oppstart og varsel om ulagrede endringer bruker
   `Feilvarsel`.
 
@@ -52,24 +52,24 @@ Kilde: `src/screens/HomeScreen.tsx`
 Kilde: `src/screens/WorkoutScreen.tsx`
 
 - Hver øvelse bruker `Utvidbart kort` i kollapset eller åpen tilstand.
-- Bekreftede sett bruker datarader med valgfri liten redigeringshandling.
+- Gjennomførte sett bruker datarader med valgfri liten redigeringshandling.
 - Planlagte sett bruker skjemadel, tallfelt og feltfeil.
 - Bekreft, legg til sett og ferdig er primære handlinger i hver sin kontekst.
 - Slett planlagt sett og legg til øvelse er sekundære handlinger.
-- Fjern øvelse er destruktiv; avbryt økten er teksthandling på siden.
+- Fjern øvelse er destruktiv; avbryt treningen er teksthandling på siden.
 - Operasjonsfeil bruker lokale feilvarsler med eventuell
   gjenopprettingshandling.
-- Lasting og total innlastingsfeil bruker sidestatus. Tom økt bruker en lokal
+- Lasting og total innlastingsfeil bruker sidestatus. Tom trening bruker en lokal
   tomtilstand fordi resten av arbeidsflaten fortsatt er tilgjengelig.
 - Fjerning og avbryting bruker destruktive dialoger. Fullføring bruker
   bekreftelsesdialog.
 
-### Fullført økt
+### Fullført trening
 
 Kilde: `src/screens/CompletedWorkoutScreen.tsx`
 
 - Oppsummeringen bygges av kort med datarader.
-- Lasting, total feil og manglende økt bruker sidestatus.
+- Lasting, total feil og manglende trening bruker sidestatus.
 - Sletting bruker destruktiv knapp og destruktiv dialog.
 - Feil ved sletting bruker lokalt feilvarsel med gjenopprettingshandling.
 - Tilbake til forsiden er primær handling når skjermen åpnes etter fullføring.
@@ -78,9 +78,9 @@ Kilde: `src/screens/CompletedWorkoutScreen.tsx`
 
 Kilde: `src/screens/HistoryScreen.tsx`
 
-- Fullførte økter bruker én listebeholder med navigasjonsrader.
+- Fullførte treninger bruker én listebeholder med navigasjonsrader.
 - Lasting, total feil og tom historikk bruker sidestatus.
-- Start eller fortsett økt fra tomtilstanden bruker primær/opptatt knapp.
+- Start eller fortsett trening fra tomtilstanden bruker primær/opptatt knapp.
 - Feil ved oppstart bruker lokalt feilvarsel.
 
 ### Øvelser
@@ -153,16 +153,16 @@ Kilde: `src/screens/CreateExerciseScreen.tsx`
 | Tema, typografi og stakk-header | Alle ruteskjermer |
 | Primærknapp | Alle skjermer unntatt Innstillinger |
 | Sekundær- og tekstknapp | Forside, Treningsøkt, Data, Øvelsesvelger, Ny øvelse og dialoger |
-| Destruktiv knapp | Treningsøkt, Fullført økt, Data og Øvelsesdetalj |
-| Opptatte/deaktiverte handlinger | Forside, Treningsøkt, Fullført økt, Historikk, Data, Øvelsesdetalj, Øvelsesvelger og Ny øvelse |
+| Destruktiv knapp | Treningsøkt, Fullført trening, Data og Øvelsesdetalj |
+| Opptatte/deaktiverte handlinger | Forside, Treningsøkt, Fullført trening, Historikk, Data, Øvelsesdetalj, Øvelsesvelger og Ny øvelse |
 | Tekstfelt og feltfeil | Ny øvelse og Øvelsesdetalj |
 | Søkefelt | Øvelser og Øvelsesvelger |
 | Listebeholder og navigasjonsrad | Historikk, Øvelser og Innstillinger |
 | Valgrad | Øvelsesvelger |
-| Kort og datarad | Treningsøkt, Fullført økt, Data og Øvelsesdetalj |
+| Kort og datarad | Treningsøkt, Fullført trening, Data og Øvelsesdetalj |
 | Sidestatus og loader | Oppstart og alle asynkrone dataskjermer |
 | Feilvarsel | Oppstart og alle skjermer med lokale operasjoner |
-| Dialog | Treningsøkt, Fullført økt, Data og Øvelsesdetalj |
+| Dialog | Treningsøkt, Fullført trening, Data og Øvelsesdetalj |
 
 ## Udekkede tilstander
 
@@ -192,7 +192,7 @@ reelle brukstilfeller i stedet for å bli ferdigdesignet på forhånd.
 | 4 | Navigasjonslister, Innstillinger og Historikk | Listebeholder, rad og navigasjonsrad | 3 |
 | 5 | Søkbar liste og Øvelser | Søkefelt og navigasjonsrad med metadata | 4 |
 | 6 | Valgflyt og Øvelsesvelger | Valgrad med opptatt/deaktivert tilstand og modal komposisjon | 5 |
-| 7 | Kort, destruktiv dialog og Fullført økt | Kort, datarad, dialoggrunnlag og destruktive handlinger | 3 |
+| 7 | Kort, destruktiv dialog og Fullført trening | Kort, datarad, dialoggrunnlag og destruktive handlinger | 3 |
 | 8 | Øvelsesdetalj | Seksjonert detaljlayout og gjenbruk av felt, kort, datarad og dialog | 2, 3 og 7 |
 | 9 | Designprototype for Data | Godkjent gjenopprettingsflyt og sikkerhetstilstander, ingen produksjonskomponenter | – |
 | 10 | Data og sikkerhetskritiske tilstander | Informasjonsvarsel, dialogforhåndsvisning og låst dialog | 3, 7 og 9 |
@@ -208,7 +208,7 @@ Avhengighetsgraf:
         ├── 4 Navigasjonslister, Innstillinger og Historikk
         │   └── 5 Søkbar liste og Øvelser
         │       └── 6 Valgflyt og Øvelsesvelger
-        └── 7 Kort, dialog og Fullført økt
+        └── 7 Kort, dialog og Fullført trening
             ├── 8 Øvelsesdetalj
             └── 10 Data
 
@@ -245,7 +245,7 @@ Avhengighetsgraf:
   at samme radmodell fungerer for flere elementer og sidestatuser.
 - Ticket 5 og 6 holdes adskilt. Først etableres søk og filtrering uten
   sideeffekter, deretter valg, opptatt tilstand og modal navigasjon.
-- Ticket 7 bruker Fullført økt som den enkleste reelle forbrukeren av kort,
+- Ticket 7 bruker Fullført trening som den enkleste reelle forbrukeren av kort,
   datarader og destruktiv dialog.
 - Ticket 8 gjenbruker etablerte komponenter på en mer sammensatt detaljside og
   skal ikke lage et domenespesifikt historikkort.
@@ -286,7 +286,7 @@ produksjonsimplementering:
 | Oppstart | B | Komplett komposisjon for lasting, gjentatt feil og helsides sikkerhetsstopp |
 | Forside | A | Kan bygges direkte fra hero-layout, handlinger og feedback |
 | Treningsøkt | C | Informasjonstetthet, tastatur, stor tekst, lokale operasjoner og handlingshierarki må prøves samlet |
-| Fullført økt | B | Dialogrekkefølge, opptatt tilstand og stor tekst |
+| Fullført trening | B | Dialogrekkefølge, opptatt tilstand og stor tekst |
 | Historikk | A | Kan bygges direkte fra liste og sidestatus |
 | Øvelser | B | Søk, tastatur, rulling og stor tekst |
 | Innstillinger | A | Kan bygges direkte som liste med navigasjonsrad |
@@ -372,7 +372,7 @@ Anbefalt regel:
 - Trygg avbryt-/behold-handling kommer først i leserekkefølgen.
 - Bekreftende eller destruktiv handling kommer sist.
 - Destruktive handlinger bruker destruktiv variant, også «Fjern øvelse» og
-  «Avbryt økten» når data slettes permanent.
+  «Avbryt treningen» når data slettes permanent.
 - Handlingene stables i full bredde når teksten blir stor.
 - Under commit eller sletting deaktiveres alle handlinger, dialogen kan ikke
   avvises, og opptatt status vises på handlingen som startet operasjonen.
@@ -443,25 +443,25 @@ Den nåværende katalogvisningen er ikke tilstrekkelig for skjermens mengde data
 lokale operasjoner og redigering med tastatur. Ticket 11 skal levere en
 interaktiv prototype som minst viser:
 
-- tom økt og tydelig «Legg til øvelse»
-- normal økt med flere øvelser og sett
+- tom trening og tydelig «Legg til øvelse»
+- normal trening med flere øvelser og sett
 - kollapsede og åpne øvelseskort med lange navn
 - flere planlagte sett samtidig
 - lokal feltfeil, lagringsfeil og retry
 - en pågående lokal operasjon og korrekte deaktiverte områder
 - tastatur og stor tekst rundt aktiv skjemadel
-- handlingsnivåene for sett, øvelse og hele økten
+- handlingsnivåene for sett, øvelse og hele treningen
 - bekreftelsesdialog og begge destruktive dialoger
 
 Godkjenningskriteriet er at brukeren uten tvil kan se hvilken handling som
-gjelder settet, øvelsen eller hele økten, samtidig som aktiv skjemadel forblir
+gjelder settet, øvelsen eller hele treningen, samtidig som aktiv skjemadel forblir
 brukbar med tastatur og stor tekst.
 
 Foreslåtte lokale regler som prototypen skal validere:
 
 - Sletting av et ubekreftet planlagt sett er sekundær, fordi den bare fjerner en
   lokal plan. Bekreftede eller historiske data bruker destruktiv handling.
-- Tom økt bruker lokal tomtekst med synlig «Legg til øvelse», ikke en helsides
+- Tom trening bruker lokal tomtekst med synlig «Legg til øvelse», ikke en helsides
   `Sidestatus`, fordi arbeidsflaten fortsatt er tilgjengelig.
 
 Ticket 12 er blokkert til prototypen er godkjent. Eventuelle nye varianter som
@@ -531,13 +531,13 @@ Kilder: `src/StartupGate.tsx`, `src/__tests__/StartupGate.test.tsx`.
 
 ### Forside
 
-- Aktiv økt lastes på fokus og når appen kommer tilbake i forgrunnen.
-- `Start økt` oppretter økten før navigasjon; `Fortsett økt` gjenbruker den
-  eksisterende økten.
+- Aktiv trening lastes på fokus og når appen kommer tilbake i forgrunnen.
+- `Start trening` oppretter treningen før navigasjon; `Fortsett trening` gjenbruker den
+  eksisterende treningen.
 - Alle handlinger er deaktivert og stack-fjerning blokkert under oppretting.
-- Retry gjør et nytt oppslag av aktiv økt.
+- Retry gjør et nytt oppslag av aktiv trening.
 - Varsel om ulagrede endringer vises bare for utkast som tilhører den aktive
-  økten.
+  treningen.
 - `focusStartWorkout` fokuserer startknappen én gang og konsumeres deretter.
 
 Kilder: `src/screens/HomeScreen.tsx`,
@@ -546,10 +546,10 @@ Kilder: `src/screens/HomeScreen.tsx`,
 ### Historikk
 
 - Listen lastes på fokus og beholder dato, antall øvelser, sortering,
-  tilgjengelighetsnavn og navigasjon til riktig fullførte økt.
-- Aktiv økt slås bare opp for den tomme historikken.
+  tilgjengelighetsnavn og navigasjon til riktig fullførte trening.
+- Aktiv trening slås bare opp for den tomme historikken.
 - Start fra tomtilstand lagrer før navigasjon og blokkerer navigasjon mens den
-  pågår. Fortsett åpner eksisterende økt direkte.
+  pågår. Fortsett åpner eksisterende trening direkte.
 - Lesefeil annonseres og fokuserer retry; oppstartsfeil lar tomtilstanden forbli
   brukbar.
 - `focusWorkoutId` og `focusEmptyAction` gjenoppretter fokus etter sletting og
@@ -594,7 +594,7 @@ Kilder: `src/screens/ExercisePickerScreen.tsx`,
   og tastatur kan sende inn skjemaet.
 - Normalisering, validering, duplikatkontroll og grensen på 100 grafemer endres
   ikke.
-- Vanlig oppretting erstatter ruten med Øvelsesdetalj. Oppretting fra en økt
+- Vanlig oppretting erstatter ruten med Øvelsesdetalj. Oppretting fra en trening
   legger øvelsen atomisk til og returnerer med `focusExerciseId`.
 - Validerings- og lagringsfeil beholder teksten, annonseres og refokuserer feltet.
 - Felt, lagring, avbryt og stack-fjerning er deaktivert under lagring.
@@ -603,9 +603,9 @@ Kilder: `src/screens/ExercisePickerScreen.tsx`,
 Kilder: `src/screens/CreateExerciseScreen.tsx`,
 `src/screens/__tests__/CreateExerciseScreen.test.tsx`.
 
-### Fullført økt
+### Fullført trening
 
-- Lasting, lesefeil, manglende økt og ferdig innhold forblir separate tilstander.
+- Lasting, lesefeil, manglende trening og ferdig innhold forblir separate tilstander.
 - Tidspunkt, øvelsesrekkefølge, settrekkefølge og formatterte verdier beholdes.
 - `fromCompletion` beholder egen tilbakeflyt til Forside; vanlig åpning beholder
   tilbakeflyt til Historikk.
@@ -679,9 +679,9 @@ Treningsøkt har den største atferdsoverflaten. Ticket 11 skal prototype
 presentasjonen uten å forenkle følgende kontrakter, og ticket 12 skal bevare dem
 ved implementering.
 
-- Økten lastes på fokus. Første øvelse åpnes som standard, med mindre en
+- Treningen lastes på fokus. Første øvelse åpnes som standard, med mindre en
   returparameter peker på en annen øvelse eller Legg til-handlingen.
-- Bare ett øvelseskort er åpent samtidig. Bekreftede sett sorteres før planlagte
+- Bare ett øvelseskort er åpent samtidig. Gjennomførte sett sorteres før planlagte
   sett med dagens stabile rekkefølge.
 - Utkast forblir strengverdier i delt state og overlever navigasjon.
 - Belastning og repetisjoner beholder dagens valideringsgrenser, tastaturtyper og
@@ -693,16 +693,16 @@ ved implementering.
   beholdes synlig mens forrige lagrede verdi brukes.
 - Bekreftelse validerer begge felt før én atomisk databaseoperasjon. Ved feil
   fokuseres første ugyldige felt eller relevant retry.
-- Redigering av et bekreftet sett opphever bekreftelsen på samme stabile rad.
+- Redigering av et gjennomført sett opphever bekreftelsen på samme stabile rad.
   Sletting gjelder bare planlagte sett.
 - Legg til sett og Legg til øvelse flusher utkast først og fortsetter bare hvis
   alt som skal lagres lykkes.
-- En øvelse med bare planlagte sett fjernes direkte. En øvelse med bekreftede sett
-  krever dialog. Bare medlemskapet og øktens sett slettes, ikke katalogøvelsen.
-- `Ferdig` krever minst ett varig bekreftet sett og er deaktivert ved pågående,
-  dirty eller feilet arbeid. Fullføring fjerner ubekreftede sett atomisk før
+- En øvelse med bare planlagte sett fjernes direkte. En øvelse med gjennomførte sett
+  krever dialog. Bare medlemskapet og treningens sett slettes, ikke katalogøvelsen.
+- `Ferdig` krever minst ett varig gjennomført sett og er deaktivert ved pågående,
+  dirty eller feilet arbeid. Fullføring fjerner planlagte sett atomisk før
   navigasjon til kvitteringen.
-- Avbryt krever alltid bekreftelse og sletter den aktive økten først etter
+- Avbryt krever alltid bekreftelse og sletter den aktive treningen først etter
   bekreftelse.
 - Alle vellykkede navigasjoner skjer først etter varig databaseendring. Feil
   beholder data og relevant skjermkontekst.
@@ -773,7 +773,7 @@ av stilobjekter eller én test per fargetoken.
 | 4 Navigasjonslister, Innstillinger og Historikk | `HistoryScreen`, `locale`, `workouts` og ny `SettingsScreen`-test | Android og iOS-simulator | Innstillinger-kontrakt, loading-label og busy tomtilstand |
 | 5 Søkbar liste og Øvelser | `ExercisesScreen`, `exercises`, `exerciseName` | Android og iOS-simulator | Fokus-refresh, retry-fokus, loading-label, tastatur og en ny søke-Maestro-flyt |
 | 6 Valgflyt og Øvelsesvelger | `ExercisePickerScreen`, `CreateExerciseScreen`, `workouts` | Android og iOS-simulator | Autofokus, alle kontroller blokkert under valg, retry med bevart søk og ny valg-Maestro-flyt |
-| 7 Kort, dialog og Fullført økt | `CompletedWorkoutScreen`, `workouts`, `locale` og dialogkontrakter | Android og iOS-simulator | Blokkert plattformtilbake, stack-blokkering, busy-state og ny slette-Maestro-flyt |
+| 7 Kort, dialog og Fullført trening | `CompletedWorkoutScreen`, `workouts`, `locale` og dialogkontrakter | Android og iOS-simulator | Blokkert plattformtilbake, stack-blokkering, busy-state og ny slette-Maestro-flyt |
 | 8 Øvelsesdetalj | `ExerciseDetailScreen`, `exerciseName`, `exercises`, `locale` | Android og iOS-simulator | Rename-busy, dobbel delete-vakt, blokkert dialoglukking og tastatur |
 | 9 Prototype Data | Ingen ny Jest-test når bare prototypen endres | Ikke påkrevd | Manuell godkjenning av hele flyten i lys/mørk, smal bredde og stor tekst |
 | 10 Data | `DataScreen`, alle backup-tester, `DatabaseRuntime`, `inspectDatabase`, `locale` | Full Android- og iOS-restoreverifikasjon | ID-kontrakter, fokus ved avbryt, annonseringer, commit-lås og visuell kontroll av alle sikkerhetstilstander |
@@ -882,7 +882,7 @@ Dagens smoke-flyter dekker bare tom katalog og oppretting. Ticketen skal legge
 til en fokusert Android-flyt med eksisterende øvelser, søk, valg, avbryt og
 alle-allerede-lagt-til. iOS swipe-avbryt og tastaturlayout prøves manuelt.
 
-### Ticket 7: kort, dialog og Fullført økt
+### Ticket 7: kort, dialog og Fullført trening
 
 Eksisterende dekning:
 
@@ -985,7 +985,7 @@ Før push kjøres full vanlig Android-smoke og release-lik kvalifisering. iOS ha
 ingen Treningsøkt-Maestro-flyt, så start, opprett/velg, rediger,
 bakgrunn/forgrunn, fullfør og avbryt må prøves manuelt i simulator.
 
-Ticketen skal også legge til en fokusert Android-flyt for en tett økt med
+Ticketen skal også legge til en fokusert Android-flyt for en tett trening med
 feil/opptatt tilstand; dagens flyter dekker i hovedsak én øvelse og ett sett.
 
 ### Native minimumskrav
@@ -1030,23 +1030,23 @@ særlig relevant, men erstatter ikke de matchede Android-parene.
 | 4 Navigasjonslister, Innstillinger og Historikk | Innstillinger lys; fylt Historikk mørk; tom Historikk under oppstart med stor tekst |
 | 5 Søkbar liste og Øvelser | Aktivt søk med treff og tastatur lys; ingen treff med tastatur mørk/stor tekst |
 | 6 Valgflyt og Øvelsesvelger | Valgbare rader med tastatur/stor tekst; opptatt valgrad mørk; valgfeil med bevart søk |
-| 7 Kort, dialog og Fullført økt | Oppsummering med flere kort lys; slettedialog mørk/stor tekst; sletting pågår lys |
+| 7 Kort, dialog og Fullført trening | Oppsummering med flere kort lys; slettedialog mørk/stor tekst; sletting pågår lys |
 | 8 Øvelsesdetalj | Langt navn og flere historikkort lys; navnefeil med tastatur mørk/stor tekst; sletting pågår i dialog |
 | 9 Prototype Data | Godkjenningsbilder av valideringsfeil, forhåndsvisning, destruktiv bekreftelse, commit, gjenopprettbar feil og sikkerhetsstopp |
 | 10 Data | Klar skjerm lys; backup pågår mørk; restore-forhåndsvisning lys/stor tekst; destruktiv bekreftelse mørk/stor tekst; commit pågår; låst sikkerhetsstopp mørk/stor tekst |
 | 11 Prototype Treningsøkt | Godkjenningsbilder, ikke før-/etter-par; se egen liste nedenfor |
-| 12 Treningsøkt | Tom økt; tett økt mørk; feltfeil med tastatur/stor tekst; lagringsfeil; lokal operasjon pågår; fullføringsdialog; begge destruktive dialoger |
+| 12 Treningsøkt | Tom trening; tett trening mørk; feltfeil med tastatur/stor tekst; lagringsfeil; lokal operasjon pågår; fullføringsdialog; begge destruktive dialoger |
 
 ### Stabile fixtures
 
-- Tema/app-shell bruker tom aktiv økt og minst tre øvelser.
+- Tema/app-shell bruker tom aktiv trening og minst tre øvelser.
 - Historikk bruker én tom database og én database med nøyaktig tre fullførte
-  økter på faste tidspunkt.
+  treninger på faste tidspunkt.
 - Øvelseslister bruker seks alfabetisk stabile øvelser, inkludert ett langt
   navn, og faste søk med flere eller ingen treff.
-- Øvelsesvelger bruker en aktiv økt med én valgt og tre tilgjengelige øvelser.
-- Fullført økt bruker to øvelser med tre sett hver og faste tidspunkt.
-- Øvelsesdetalj bruker et langt navn og historikk fra to faste økter.
+- Øvelsesvelger bruker en aktiv trening med én valgt og tre tilgjengelige øvelser.
+- Fullført trening bruker to øvelser med tre sett hver og faste tidspunkt.
+- Øvelsesdetalj bruker et langt navn og historikk fra to faste treninger.
 - Data bruker en versjonert restore-fil med fast tidspunkt og faste tellinger,
   samt kjente nåværende tellinger.
 - Treningsøkt bruker tre navngitte øvelser med lange navn, flere bekreftede og
@@ -1060,15 +1060,15 @@ løfter. De skal ikke avhenge av tilfeldig timing, nettverksfeil eller tilfeldig
 
 Ticket 11 dokumenterer designgodkjenningen med minst disse bildene:
 
-- tom økt i lyst tema
-- tett økt i mørkt tema
+- tom trening i lyst tema
+- tett trening i mørkt tema
 - lange navn med åpne og kollapsede kort
 - feltfeil med simulert tastatur og stor tekst
 - lagringsfeil med retry
 - lokal operasjon i opptatt tilstand
 - fullføringsdialog med stor tekst
 - dialog for å fjerne øvelse
-- dialog for å avbryte økten
+- dialog for å avbryte treningen
 
 Bruk fast smal viewport, for eksempel `390 x 844`. Bildene navngis med
 `approval-` og trenger ikke et `origin/main`-motstykke.

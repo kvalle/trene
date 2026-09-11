@@ -75,8 +75,8 @@ test('shows the exact usage phrase and opens detail from each whole row', async 
   renderScreen({ navigate });
 
   await screen.findByText('Benkpress');
-  expect(screen.getByText('Brukt i 1 økt')).toBeOnTheScreen();
-  expect(screen.getByText('Brukt i 3 økter')).toBeOnTheScreen();
+  expect(screen.getByText('Brukt i 1 trening')).toBeOnTheScreen();
+  expect(screen.getByText('Brukt i 3 treninger')).toBeOnTheScreen();
   const [singularRow, pluralRow] = screen.getAllByRole('button')
     .filter((node) => node.props.accessibilityHint === 'Åpner detaljer for øvelsen');
   expect(singularRow).toHaveProp('accessibilityRole', 'button');

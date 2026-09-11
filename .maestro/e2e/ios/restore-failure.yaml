@@ -6,7 +6,7 @@ tags:
 ---
 - launchApp
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
 - tapOn: "Øvelser"
 - extendedWaitUntil:
@@ -28,9 +28,9 @@ tags:
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 60000
-- tapOn: "Start økt"
+- tapOn: "Start trening"
 - tapOn: "Legg til øvelse"
 - tapOn: "B"
 - tapOn: "Belastning for B"
@@ -53,7 +53,7 @@ tags:
 - tapOn: "Ferdig"
 - runFlow:
     when:
-      notVisible: "Fullfør økt"
+      notVisible: "Fullfør trening"
     commands:
       - runFlow:
           when:
@@ -61,9 +61,9 @@ tags:
           commands:
             - tapOn: "Ferdig"
 - extendedWaitUntil:
-    visible: "Fullfør økt"
+    visible: "Fullfør trening"
     timeout: 30000
-- tapOn: "Fullfør økt"
+- tapOn: "Fullfør trening"
 - tapOn: "Tilbake til forsiden"
 - tapOn: "Innstillinger"
 - tapOn:
@@ -93,15 +93,15 @@ tags:
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 60000
 - tapOn: "Øvelser"
 - assertVisible: "B.*"
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 60000
-- tapOn: "Tidligere økter"
+- tapOn: "Tidligere treninger"
 - tapOn: ".*, 1 øvelse"
 - assertVisible: "Sett 1, 6 repetisjoner med 42,5 kilogram"

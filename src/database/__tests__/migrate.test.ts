@@ -74,19 +74,19 @@ describe('migrateDatabase', () => {
       workout!.id,
       exercise!.id,
     );
-    const membership = await database.getFirstAsync<{ id: number }>(
+    const workoutExercise = await database.getFirstAsync<{ id: number }>(
       'SELECT id FROM workout_exercises',
     );
     expect(() =>
       database.run(
         'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions) VALUES (?, 10.12, 5)',
-        membership!.id,
+        workoutExercise!.id,
       ),
     ).toThrow();
     expect(() =>
       database.run(
         'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions) VALUES (?, 10.1, 5.5)',
-        membership!.id,
+        workoutExercise!.id,
       ),
     ).toThrow();
     expect(() =>

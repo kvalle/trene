@@ -6,7 +6,7 @@ tags:
 ---
 - launchApp
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
 - tapOn: "Øvelser"
 - extendedWaitUntil:
@@ -37,7 +37,7 @@ tags:
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
 - tapOn: "Innstillinger"
 - tapOn:
@@ -71,7 +71,7 @@ tags:
 - tapOn:
     id: "confirm-restore"
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 30000
 - tapOn: "Øvelser"
 - assertVisible: "Knebøy.*"
@@ -80,7 +80,7 @@ tags:
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 30000
 - tapOn: "Øvelser"
 - assertVisible: "Knebøy.*"

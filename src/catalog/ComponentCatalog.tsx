@@ -783,9 +783,9 @@ function HeroDetailScreen() {
         <Text style={[typography.metadata, { color: colors.muted }]}>
           Generisk eksempel med nøytral tittel, beskrivelse og primær/sekundære handlinger. Domeneinnhold vises bare i eksempler.
         </Text>
-        <Hero title="Klar for en økt?" description="Registrer øvelser og sett mens du trener." testID="catalog-hero-example">
-          <Button title="Start økt" variant="primary" onPress={() => {}} testID="catalog-hero-primary" />
-          <Button title="Tidligere økter" variant="secondary" onPress={() => {}} testID="catalog-hero-secondary-1" />
+        <Hero title="Klar for en trening?" description="Registrer øvelser og sett mens du trener." testID="catalog-hero-example">
+          <Button title="Start trening" variant="primary" onPress={() => {}} testID="catalog-hero-primary" />
+          <Button title="Tidligere treninger" variant="secondary" onPress={() => {}} testID="catalog-hero-secondary-1" />
           <Button title="Øvelser" variant="secondary" onPress={() => {}} testID="catalog-hero-secondary-2" />
           <Button title="Innstillinger" variant="secondary" onPress={() => {}} testID="catalog-hero-secondary-3" />
         </Hero>
@@ -796,9 +796,9 @@ function HeroDetailScreen() {
         <Text style={[typography.metadata, { color: colors.muted }]}>
           Primær handling viser opptatt spinner og deaktiverer sekundære valg mens en operasjon pågår.
         </Text>
-        <Hero title="Klar for en økt?" description="Registrer øvelser og sett mens du trener." testID="catalog-hero-busy">
-          <Button title="Starter økt" variant="primary" busy onPress={() => {}} testID="catalog-hero-busy-primary" />
-          <Button title="Tidligere økter" variant="secondary" disabled onPress={() => {}} testID="catalog-hero-busy-secondary" />
+        <Hero title="Klar for en trening?" description="Registrer øvelser og sett mens du trener." testID="catalog-hero-busy">
+          <Button title="Starter trening" variant="primary" busy onPress={() => {}} testID="catalog-hero-busy-primary" />
+          <Button title="Tidligere treninger" variant="secondary" disabled onPress={() => {}} testID="catalog-hero-busy-secondary" />
         </Hero>
       </View>
     </ScrollView>
@@ -835,7 +835,7 @@ function LoaderDetailScreen() {
         <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>I kontekst</Text>
         <Text style={[typography.metadata, { color: colors.muted }]}>Kompakt loader vises i handlingsområdet der en primær handling ellers står.</Text>
         <View style={[styles.controlGroup, { alignItems: 'center' }]}>
-          <Loader label="Laster aktiv økt" size="compact" testID="catalog-loader-home" />
+          <Loader label="Laster aktiv trening" size="compact" testID="catalog-loader-home" />
         </View>
       </View>
     </ScrollView>
@@ -879,7 +879,7 @@ function ErrorAlertDetailScreen() {
 
         <View style={styles.controlGroup}>
           <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Ulagret varsel</Text>
-          <ErrorAlert message="Økten har endringer som ikke er lagret" testID="catalog-erroralert-unsaved" />
+          <ErrorAlert message="Treningen har endringer som ikke er lagret" testID="catalog-erroralert-unsaved" />
         </View>
       </View>
     </ScrollView>

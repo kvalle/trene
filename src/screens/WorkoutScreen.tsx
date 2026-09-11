@@ -40,7 +40,7 @@ import { ErrorAlert } from '../ui/ErrorAlert';
 import { FormSection } from '../ui/FormSection';
 import { NumericField } from '../ui/NumericField';
 import { PageStatus } from '../ui/PageStatus';
-import { type WorkoutSetDraft, useWorkoutDrafts } from '../workoutDrafts';
+import { type WorkoutSetDraft, useWorkoutSetDrafts } from '../workoutSetDrafts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Workout'>;
 type State = { status: 'loading' } | { status: 'failed' } | { status: 'ready'; workout: ActiveWorkout };
@@ -60,7 +60,7 @@ function compareWorkoutSets(left: WorkoutSet, right: WorkoutSet): number {
 export function WorkoutScreen({ navigation, route }: Props) {
   const database = useDatabase();
   const { colors } = useTheme();
-  const { drafts, setDrafts } = useWorkoutDrafts();
+  const { drafts, setDrafts } = useWorkoutSetDrafts();
   const [state, setState] = useState<State>({ status: 'loading' });
   const [reload, setReload] = useState(0);
   const [expandedId, setExpandedId] = useState<number>();
@@ -401,7 +401,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
     } catch {
       setCancelDialogOpen(false);
       setCancelFailed(true);
-      AccessibilityInfo.announceForAccessibility('Kunne ikke avbryte økten. Prøv igjen.');
+      AccessibilityInfo.announceForAccessibility('Kunne ikke avbryte treningen. Prøv igjen.');
     } finally {
       setCancelling(false);
     }
@@ -419,7 +419,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
     } catch {
       setCompleteDialogOpen(false);
       setCompleteFailed(true);
-      AccessibilityInfo.announceForAccessibility('Kunne ikke fullføre økten. Prøv igjen.');
+      AccessibilityInfo.announceForAccessibility('Kunne ikke fullføre treningen. Prøv igjen.');
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setCompleting(false);
@@ -461,7 +461,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
         return next;
       });
       setExpandedId(undefined);
-      AccessibilityInfo.announceForAccessibility(`${exerciseName} fjernet fra økten.`);
+      AccessibilityInfo.announceForAccessibility(`${exerciseName} fjernet fra treningen.`);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       requestAnimationFrame(() => focus(addExerciseRef));
     } catch {
@@ -509,7 +509,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
           >
             {expanded && (
               <CompactAction
-                accessibilityLabel={`Fjern ${exercise.name} fra økten`}
+                accessibilityLabel={`Fjern ${exercise.name} fra treningen`}
                 disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
                 icon="×"
                 label="Fjern øvelse"
@@ -622,7 +622,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                       disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || draft.unsaved || draft.confirmationFailed}
                       busy={busy}
                       style={styles.completeSet}
-                      title={busy ? 'Lagrer' : 'Utført'}
+                      title={busy ? 'Lagrer' : 'Bekreft'}
                       onPress={() => void confirmSet(state.workout.id, set, exercise.name)}
                     />
                   </View>
@@ -680,7 +680,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
       )}
       {completeFailed && (
         <View style={styles.failure}>
-          <ErrorAlert message="Kunne ikke fullføre økten" />
+          <ErrorAlert message="Kunne ikke fullføre treningen" />
           <Button ref={retryCompleteRef} title="Prøv igjen" variant="secondary" onPress={() => setCompleteDialogOpen(true)} />
         </View>
       )}
@@ -697,7 +697,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
       )}
       {cancelFailed && (
         <View style={styles.failure}>
-          <ErrorAlert message="Kunne ikke avbryte økten" />
+          <ErrorAlert message="Kunne ikke avbryte treningen" />
           <Button ref={retryCancelRef} title="Prøv igjen" variant="secondary" onPress={() => setCancelDialogOpen(true)} />
         </View>
       )}
@@ -708,7 +708,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
           initialFocusRef={confirmRemoveRef}
           title="Fjern øvelsen?"
         >
-          <Text style={{ color: colors.text }}>Gjennomførte og planlagte sett for øvelsen fjernes fra denne økten.</Text>
+          <Text style={{ color: colors.text }}>Gjennomførte og planlagte sett for øvelsen fjernes fra denne treningen.</Text>
           <Button disabled={pendingExerciseOperation === 'remove-exercise'} title="Behold øvelsen" variant="secondary" onPress={closeRemoveDialog} />
           <Button
             accessibilityLabel="Bekreft fjerning av øvelsen"
@@ -731,26 +731,26 @@ export function WorkoutScreen({ navigation, route }: Props) {
           }}
           visible
           initialFocusRef={confirmCompleteRef}
-          title="Fullfør økten?"
+          title="Fullfør treningen?"
         >
-          <Text style={{ color: colors.text }}>Økten lagres i historikken.</Text>
+          <Text style={{ color: colors.text }}>Treningen lagres i historikken.</Text>
           {hasPlannedSet && <Text style={{ color: colors.text }}>Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.</Text>}
-          <Button disabled={completing} title="Fortsett økten" variant="secondary" onPress={() => {
+          <Button disabled={completing} title="Fortsett treningen" variant="secondary" onPress={() => {
             setCompleteDialogOpen(false);
             requestAnimationFrame(() => focus(completeRef));
           }} />
-          <Button ref={confirmCompleteRef} busy={completing} disabled={completing} title={completing ? 'Fullfører' : 'Fullfør økt'} onPress={() => void confirmCompletion(state.workout.id)} />
+          <Button ref={confirmCompleteRef} busy={completing} disabled={completing} title={completing ? 'Fullfører' : 'Fullfør trening'} onPress={() => void confirmCompletion(state.workout.id)} />
         </Dialog>
       )}
       <Dialog
         onRequestClose={closeCancelDialog}
         visible={cancelDialogOpen}
         initialFocusRef={confirmCancelRef}
-        title="Avbryt økten?"
+        title="Avbryt treningen?"
       >
-        <Text style={{ color: colors.text }}>Økten slettes permanent og vises ikke i historikken.</Text>
-        <Button disabled={cancelling} title="Behold økten" variant="secondary" onPress={closeCancelDialog} />
-        <Button ref={confirmCancelRef} busy={cancelling} disabled={cancelling} title={cancelling ? 'Avbryter' : 'Avbryt økten'} variant="destructive" onPress={() => void confirmCancellation(state.workout.id)} />
+        <Text style={{ color: colors.text }}>Treningen slettes permanent og vises ikke i historikken.</Text>
+        <Button disabled={cancelling} title="Behold treningen" variant="secondary" onPress={closeCancelDialog} />
+        <Button ref={confirmCancelRef} busy={cancelling} disabled={cancelling} title={cancelling ? 'Avbryter' : 'Avbryt treningen'} variant="destructive" onPress={() => void confirmCancellation(state.workout.id)} />
       </Dialog>
     </ScrollView>
   );

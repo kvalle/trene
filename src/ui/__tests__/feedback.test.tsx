@@ -17,9 +17,9 @@ function renderWithTheme(ui: React.ReactElement) {
 
 describe('Loader', () => {
   it('renders large and compact with label and testID', () => {
-    renderWithTheme(<Loader label="Laster aktiv økt" size="large" testID="loader-large" />);
+    renderWithTheme(<Loader label="Laster aktiv trening" size="large" testID="loader-large" />);
     expect(screen.getByTestId('loader-large')).toBeOnTheScreen();
-    expect(screen.getByLabelText('Laster aktiv økt')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Laster aktiv trening')).toBeOnTheScreen();
 
     renderWithTheme(<Loader label="Lagrer" size="compact" testID="loader-compact" />);
     expect(screen.getByTestId('loader-compact')).toBeOnTheScreen();
@@ -234,12 +234,12 @@ describe('PageStatus', () => {
 describe('Hero', () => {
   it('renders title, description and actions', () => {
     renderWithTheme(
-      <Hero title="Klar for en økt?" description="Registrer øvelser" testID="hero">
+      <Hero title="Klar for en trening?" description="Registrer øvelser" testID="hero">
         <Text>Action</Text>
       </Hero>,
     );
     expect(screen.getByTestId('hero')).toBeOnTheScreen();
-    expect(screen.getByRole('header', { name: 'Klar for en økt?' })).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Klar for en trening?' })).toBeOnTheScreen();
     expect(screen.getByText('Registrer øvelser')).toBeOnTheScreen();
     expect(screen.getByText('Action')).toBeOnTheScreen();
   });

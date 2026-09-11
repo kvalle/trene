@@ -2,7 +2,7 @@ appId: com.kjetilvalle.trene
 name: Restore a synthetic backup on Android
 ---
 - launchApp
-- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 120000 }
+- extendedWaitUntil: { visible: "Klar for en trening?", timeout: 120000 }
 - tapOn: "Øvelser"
 - tapOn: "Opprett første øvelse"
 - tapOn: { id: "exercise-name-input" }
@@ -28,7 +28,7 @@ name: Restore a synthetic backup on Android
 - extendedWaitUntil: { visible: { id: "restore-confirmation" }, timeout: 30000 }
 - assertVisible: "Dette erstatter alle data i Trene og kan ikke angres."
 - tapOn: { id: "confirm-restore" }
-- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 30000 }
+- extendedWaitUntil: { visible: "Klar for en trening?", timeout: 30000 }
 - tapOn: "Øvelser"
 - assertVisible: "Knebøy"
 - assertVisible: "Markløft"
@@ -40,11 +40,11 @@ name: Restore a synthetic backup on Android
 - assertVisible: "100 kg · 3 repetisjoner"
 - back
 - back
-- tapOn: "Tidligere økter"
+- tapOn: "Tidligere treninger"
 - assertVisible: "2 øvelser"
 - stopApp
 - launchApp
-- extendedWaitUntil: { visible: "Klar for en økt?", timeout: 30000 }
+- extendedWaitUntil: { visible: "Klar for en trening?", timeout: 30000 }
 - tapOn: "Øvelser"
 - assertVisible: "Knebøy"
 - assertVisible: "Markløft"

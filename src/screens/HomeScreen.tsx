@@ -11,17 +11,17 @@ import { Button } from '../ui/Button';
 import { ErrorAlert } from '../ui/ErrorAlert';
 import { Hero } from '../ui/Hero';
 import { Loader } from '../ui/Loader';
-import { useWorkoutDrafts } from '../workoutDrafts';
 import { useTrainingDataDeletionStatus } from '../trainingDataDeletion';
 import { PositiveStatus } from '../ui/PositiveStatus';
+import { useWorkoutSetDrafts } from '../workoutSetDrafts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export function HomeScreen({ navigation, route }: Props) {
   const database = useDatabase();
   const { colors } = useAppTheme();
-  const { drafts } = useWorkoutDrafts();
   const { clearDeleted, deleted } = useTrainingDataDeletionStatus();
+  const { drafts } = useWorkoutSetDrafts();
   const [activeWorkoutId, setActiveWorkoutId] = useState<number | null>();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState(false);
@@ -85,7 +85,7 @@ export function HomeScreen({ navigation, route }: Props) {
         style={{ backgroundColor: colors.background }}
       >
         <Hero
-          title="Klar for en økt?"
+          title="Klar for en trening?"
           description="Registrer øvelser og sett mens du trener."
           testID="home-hero"
         />
@@ -102,11 +102,11 @@ export function HomeScreen({ navigation, route }: Props) {
             testID="home-retry"
           />
         ) : activeWorkoutId === undefined ? (
-          <Loader label="Laster aktiv økt" size="compact" testID="home-loader" />
+          <Loader label="Laster aktiv trening" size="compact" testID="home-loader" />
         ) : (
           <Button
             ref={startWorkoutRef}
-            title={starting ? 'Starter økt' : activeWorkoutId === null ? 'Start økt' : 'Fortsett økt'}
+            title={starting ? 'Starter trening' : activeWorkoutId === null ? 'Start trening' : 'Fortsett trening'}
             variant="primary"
             busy={starting}
             disabled={starting}
@@ -115,11 +115,11 @@ export function HomeScreen({ navigation, route }: Props) {
           />
         )}
         {hasUnsavedDraft && (
-          <ErrorAlert message="Økten har endringer som ikke er lagret" testID="home-unsaved-warning" />
+          <ErrorAlert message="Treningen har endringer som ikke er lagret" testID="home-unsaved-warning" />
         )}
         {error && <ErrorAlert message="Kunne ikke laste inn" testID="home-error" />}
         <Button
-          title="Tidligere økter"
+          title="Tidligere treninger"
           variant="secondary"
           disabled={starting}
           onPress={() => navigation.navigate('History')}

@@ -4,7 +4,7 @@ Research for [GitHub issue 32](https://github.com/kvalle/trene/issues/32), check
 
 ## Executive conclusion
 
-Design and test every MVP task (create a training session, choose an exercise, add/edit/delete a set, and finish/review a session) against the applicable WCAG 2.1 A and AA criteria. The highest-risk prototype constraints are: 200% scalable text without lost content or function; 4.5:1 text and 3:1 meaningful non-text contrast in every theme/state; 48 x 48 dp Android and 44 x 44 pt iOS hit targets; complete labels, roles, values and state for assistive technology; logical reading/focus order; textual, announced validation and save status; no color-, gesture-, motion-, haptic- or orientation-only operation.
+Design and test every MVP task (start a workout, choose an exercise, add/edit/delete a set, and complete/review a workout) against the applicable WCAG 2.1 A and AA criteria. The highest-risk prototype constraints are: 200% scalable text without lost content or function; 4.5:1 text and 3:1 meaningful non-text contrast in every theme/state; 48 x 48 dp Android and 44 x 44 pt iOS hit targets; complete labels, roles, values and state for assistive technology; logical reading/focus order; textual, announced validation and save status; no color-, gesture-, motion-, haptic- or orientation-only operation.
 
 This is a conservative product target, not a conclusion that every WCAG 2.1 A/AA criterion is legally binding on Trene. Uu-tilsynet says many mobile apps are regulated when they need an internet connection at least once after download to serve their purpose, and says the relevant minimum differs by sector and content: currently 29 app criteria for private-sector organizations and 42 for public-sector organizations, with six criteria excepted for apps ([Uu-tilsynet: Universell utforming av apper](https://www.uutilsynet.no/regelverk/universell-utforming-av-apper/230)). Whether Trene is offered by a regulated organization, needs a network connection for its purpose, or falls within an exception is not established by issue 32. That legal scope must be assessed before claiming statutory compliance.
 
@@ -78,7 +78,7 @@ This is a conservative product target, not a conclusion that every WCAG 2.1 A/AA
 - With TalkBack and VoiceOver, every control announces a concise Norwegian name, role, state/value and useful hint only where the action is not evident. Examples: `Legg til sett, knapp`; `Belastning, tekstfelt, 80 kilogram`; `Sett 2, 8 repetisjoner med 80 kilogram`.
 - Icon-only delete/edit/add controls have action-specific names that include context, such as `Slett sett 2`, not `Søppelbøtte` or `Knapp`.
 - A set row is exposed as a meaningful group. Do not make a parent and all duplicate children separately focusable. Decorative separators/icons are hidden from the accessibility tree.
-- Increment/decrement controls expose the resulting value. Toggle and selected exercise/session states expose selected/checked/expanded state rather than encoding it only visually.
+- Increment/decrement controls expose the resulting value. Toggle and selected exercise/workout states expose selected/checked/expanded state rather than encoding it only visually.
 - Use standard native controls and semantics where possible. Apple states standard UIKit controls are accessible by default and provides the accessibility API for custom UI ([Apple Accessibility Programming Guide for iOS](https://developer.apple.com/library/archive/documentation/UserExperience/Conceptual/iPhoneAccessibility/Introduction/Introduction.html)); the implementation must still be tested because this archived guide is not current API documentation.
 
 ### Reading order, focus and navigation
@@ -107,7 +107,7 @@ This is a conservative product target, not a conclusion that every WCAG 2.1 A/AA
 - Invalid or missing belastning/repetisjoner shows an inline message next to the field, marks the field invalid programmatically, and includes a correction such as `Skriv inn et helt antall repetisjoner fra 1 til 999`.
 - On submit, show an error summary when multiple errors exist, announce it once, and allow navigation to each field. Never clear valid entries because another field failed.
 - `Sett lagt til`, `Treningsøkt lagret`, offline/pending state and save failure are visible and announced without stealing focus. Persistent failures remain available until resolved; brief snackbars are not the only record of a failure.
-- Destructive actions such as deleting a set/session provide confirmation or an immediate, accessible undo. WCAG 3.3.4 specifically mandates reversibility/checking for legal, financial and user-modifiable stored-data transactions when applicable ([WCAG 2.1, 3.3.4](https://www.w3.org/TR/WCAG21/#error-prevention-legal-financial-data)); adopting undo for Trene is also an MVP safety decision.
+- Destructive actions such as deleting a set/workout provide confirmation or an immediate, accessible undo. WCAG 3.3.4 specifically mandates reversibility/checking for legal, financial and user-modifiable stored-data transactions when applicable ([WCAG 2.1, 3.3.4](https://www.w3.org/TR/WCAG21/#error-prevention-legal-financial-data)); adopting undo for Trene is also an MVP safety decision.
 
 ### Color independence
 

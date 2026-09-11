@@ -52,7 +52,7 @@ test('filters deterministically, pre-fills no-match creation, and selects after 
   expect(popTo).toHaveBeenLastCalledWith('Workout', { focusExerciseId: 2 });
 });
 
-test('distinguishes the all-added state and cancellation changes no membership', async () => {
+test('distinguishes the all-added state and cancellation changes no workout exercise', async () => {
   const popTo = jest.fn();
   mockedCount.mockResolvedValue(2);
   mockedList.mockResolvedValue([]);

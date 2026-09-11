@@ -60,7 +60,7 @@ describe('active workout persistence', () => {
     expect(await loadActiveWorkout(database)).toEqual({ id: workoutId, exercises: [] });
   });
 
-  test('hides existing membership and adds exercises at stable positions with an empty planned set', async () => {
+  test('hides existing workout exercises and adds exercises at stable positions with an empty planned set', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const workoutId = await startWorkout(database);
@@ -86,35 +86,35 @@ describe('active workout persistence', () => {
     await expect(addExerciseToWorkout(database, workoutId, aloftId)).rejects.toThrow();
   });
 
-  test('copies confirmed sets from the newest completed workout in displayed order', async () => {
+  test('copies completed sets from the newest completed workout in displayed order', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
     const oldWorkout = await database.runAsync(
       "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-01-01')",
     );
-    const oldMembership = await database.runAsync(
+    const oldWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
       oldWorkout.lastInsertRowId, exerciseId,
     );
     await database.runAsync(
       'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, ?)',
-      oldMembership.lastInsertRowId, '2026-01-01T10:00:00Z',
+      oldWorkoutExercise.lastInsertRowId, '2026-01-01T10:00:00Z',
     );
     const newestWorkout = await database.runAsync(
       "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'b', '2026-02-01')",
     );
-    const newestMembership = await database.runAsync(
+    const newestWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
       newestWorkout.lastInsertRowId, exerciseId,
     );
     await database.runAsync(
       'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 100, 3, ?)',
-      newestMembership.lastInsertRowId, '2026-02-01T10:02:00Z',
+      newestWorkoutExercise.lastInsertRowId, '2026-02-01T10:02:00Z',
     );
     await database.runAsync(
       'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 90, 4, ?)',
-      newestMembership.lastInsertRowId, '2026-02-01T10:01:00Z',
+      newestWorkoutExercise.lastInsertRowId, '2026-02-01T10:01:00Z',
     );
 
     const activeId = await startWorkout(database);
@@ -138,25 +138,25 @@ describe('active workout persistence', () => {
     const secondWorkout = await database.runAsync(
       "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'b', '2026-02-01')",
     );
-    const firstMembership = await database.runAsync(
+    const firstWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
       firstWorkout.lastInsertRowId, exerciseId,
     );
-    const secondMembership = await database.runAsync(
+    const secondWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
       secondWorkout.lastInsertRowId, exerciseId,
     );
     await database.runAsync(
       "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'same')",
-      firstMembership.lastInsertRowId,
+      firstWorkoutExercise.lastInsertRowId,
     );
     await database.runAsync(
       "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 90, 3, 'same')",
-      firstMembership.lastInsertRowId,
+      firstWorkoutExercise.lastInsertRowId,
     );
     await database.runAsync(
       "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 100, 1, 'later')",
-      secondMembership.lastInsertRowId,
+      secondWorkoutExercise.lastInsertRowId,
     );
 
     const activeId = await startWorkout(database);
@@ -176,24 +176,24 @@ describe('active workout persistence', () => {
       const oldWorkout = await database.runAsync(
         "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-01-01')",
       );
-      const oldMembership = await database.runAsync(
+      const oldWorkoutExercise = await database.runAsync(
         'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
         oldWorkout.lastInsertRowId, exerciseId,
       );
       await database.runAsync(
         "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'old')",
-        oldMembership.lastInsertRowId,
+        oldWorkoutExercise.lastInsertRowId,
       );
       const deletedWorkout = await database.runAsync(
         "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'b', '2026-02-01')",
       );
-      const deletedMembership = await database.runAsync(
+      const deletedWorkoutExercise = await database.runAsync(
         'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
         deletedWorkout.lastInsertRowId, exerciseId,
       );
       await database.runAsync(
         "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 100, 3, 'new')",
-        deletedMembership.lastInsertRowId,
+        deletedWorkoutExercise.lastInsertRowId,
       );
       await deleteCompletedWorkout(database, deletedWorkout.lastInsertRowId);
 
@@ -217,24 +217,24 @@ describe('active workout persistence', () => {
     }
   });
 
-  test('rolls back membership and every suggestion when suggestion insertion fails', async () => {
+  test('rolls back the workout exercise and every suggestion when suggestion insertion fails', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
     const history = await database.runAsync(
       "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-01-01')",
     );
-    const historyMembership = await database.runAsync(
+    const historyWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
       history.lastInsertRowId, exerciseId,
     );
     await database.runAsync(
       "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'first')",
-      historyMembership.lastInsertRowId,
+      historyWorkoutExercise.lastInsertRowId,
     );
     await database.runAsync(
       "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 90, 3, 'second')",
-      historyMembership.lastInsertRowId,
+      historyWorkoutExercise.lastInsertRowId,
     );
     const activeId = await startWorkout(database);
     await database.execAsync(`
@@ -271,13 +271,13 @@ describe('active workout persistence', () => {
     const completed = await database.runAsync(
       "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'before', 'after')",
     );
-    const completedMembership = await database.runAsync(
+    const completedWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
       completed.lastInsertRowId, exerciseId,
     );
     await database.runAsync(
       "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'after')",
-      completedMembership.lastInsertRowId,
+      completedWorkoutExercise.lastInsertRowId,
     );
     const activeId = await startWorkout(database);
     await addExerciseToWorkout(database, activeId, exerciseId);
@@ -289,7 +289,7 @@ describe('active workout persistence', () => {
       .toEqual({ id: completed.lastInsertRowId });
     expect(await database.getFirstAsync(
       'SELECT load_kg, repetitions, confirmed_at FROM workout_sets WHERE workout_exercise_id = ?',
-      completedMembership.lastInsertRowId,
+      completedWorkoutExercise.lastInsertRowId,
     )).toEqual({ load_kg: 80, repetitions: 5, confirmed_at: 'after' });
     expect(await countExercises(database)).toBe(1);
     expect(await database.getFirstAsync('SELECT id FROM workout_exercises WHERE workout_id = ?', activeId)).toBeNull();
@@ -322,15 +322,15 @@ describe('active workout persistence', () => {
         "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'start', ?)",
         completedAt,
       );
-      const membership = await database.runAsync(
+      const workoutExercise = await database.runAsync(
         'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
         workout.lastInsertRowId, exerciseId,
       );
       await database.runAsync(
         "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'done')",
-        membership.lastInsertRowId,
+        workoutExercise.lastInsertRowId,
       );
-      workouts.push({ workoutId: workout.lastInsertRowId, membershipId: membership.lastInsertRowId });
+      workouts.push({ workoutId: workout.lastInsertRowId, workoutExerciseId: workoutExercise.lastInsertRowId });
     }
     const activeId = await startWorkout(database);
 
@@ -339,8 +339,8 @@ describe('active workout persistence', () => {
     });
 
     expect(await database.getFirstAsync('SELECT id FROM workouts WHERE id = ?', workouts[1].workoutId)).toBeNull();
-    expect(await database.getFirstAsync('SELECT id FROM workout_exercises WHERE id = ?', workouts[1].membershipId)).toBeNull();
-    expect(await database.getFirstAsync('SELECT id FROM workout_sets WHERE workout_exercise_id = ?', workouts[1].membershipId)).toBeNull();
+    expect(await database.getFirstAsync('SELECT id FROM workout_exercises WHERE id = ?', workouts[1].workoutExerciseId)).toBeNull();
+    expect(await database.getFirstAsync('SELECT id FROM workout_sets WHERE workout_exercise_id = ?', workouts[1].workoutExerciseId)).toBeNull();
     expect((await listCompletedWorkouts(database)).map(({ id }) => id)).toEqual([
       workouts[0].workoutId, workouts[2].workoutId,
     ]);
@@ -359,24 +359,24 @@ describe('active workout persistence', () => {
     const newest = await database.runAsync(
       "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'b', '2026-02-01')",
     );
-    const membership = await database.runAsync(
+    const workoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
       newest.lastInsertRowId, exerciseId,
     );
     await database.runAsync(
       "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'done')",
-      membership.lastInsertRowId,
+      workoutExercise.lastInsertRowId,
     );
     await database.execAsync(`
-      CREATE TRIGGER reject_membership_delete AFTER DELETE ON workout_exercises
-      WHEN OLD.id = ${membership.lastInsertRowId}
+      CREATE TRIGGER reject_workout_exercise_delete AFTER DELETE ON workout_exercises
+      WHEN OLD.id = ${workoutExercise.lastInsertRowId}
       BEGIN SELECT RAISE(ABORT, 'write failed'); END;
     `);
 
     await expect(deleteCompletedWorkout(database, newest.lastInsertRowId)).rejects.toThrow('write failed');
     expect(await loadCompletedWorkout(database, newest.lastInsertRowId)).not.toBeNull();
-    expect(await database.getFirstAsync('SELECT id FROM workout_sets WHERE workout_exercise_id = ?', membership.lastInsertRowId)).not.toBeNull();
-    await database.execAsync('DROP TRIGGER reject_membership_delete;');
+    expect(await database.getFirstAsync('SELECT id FROM workout_sets WHERE workout_exercise_id = ?', workoutExercise.lastInsertRowId)).not.toBeNull();
+    await database.execAsync('DROP TRIGGER reject_workout_exercise_delete;');
     await expect(deleteCompletedWorkout(database, newest.lastInsertRowId)).resolves.toEqual({
       focusWorkoutId: older.lastInsertRowId,
     });
@@ -437,37 +437,37 @@ describe('active workout persistence', () => {
     await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
       oldest.lastInsertRowId, exerciseId,
-    ).then((membership) => database.runAsync(
+    ).then((workoutExercise) => database.runAsync(
       "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'done')",
-      membership.lastInsertRowId,
+      workoutExercise.lastInsertRowId,
     ));
     await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 1)',
       firstTie.lastInsertRowId, secondExerciseId,
-    ).then((membership) => database.runAsync(
+    ).then((workoutExercise) => database.runAsync(
       "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 60, 8, 'done')",
-      membership.lastInsertRowId,
+      workoutExercise.lastInsertRowId,
     ));
     await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
       firstTie.lastInsertRowId, exerciseId,
-    ).then(async (membership) => {
+    ).then(async (workoutExercise) => {
       await database.runAsync(
         "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'done')",
-        membership.lastInsertRowId,
+        workoutExercise.lastInsertRowId,
       );
       await database.runAsync(
         'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions) VALUES (?, 90, 3)',
-        membership.lastInsertRowId,
+        workoutExercise.lastInsertRowId,
       );
     });
-    const unconfirmedMembership = await database.runAsync(
+    const plannedWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
       secondTie.lastInsertRowId, exerciseId,
     );
     await database.runAsync(
       'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions) VALUES (?, 90, 3)',
-      unconfirmedMembership.lastInsertRowId,
+      plannedWorkoutExercise.lastInsertRowId,
     );
     await startWorkout(database);
 
@@ -543,10 +543,10 @@ describe('active workout persistence', () => {
     const workoutId = await startWorkout(database);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     await addExerciseToWorkout(database, workoutId, exerciseId);
-    const membershipId = (await loadActiveWorkout(database))!.exercises[0].id;
+    const workoutExerciseId = (await loadActiveWorkout(database))!.exercises[0].id;
     const firstId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
     const secondId = (await database.runAsync(
-      'INSERT INTO workout_sets (workout_exercise_id) VALUES (?)', membershipId,
+      'INSERT INTO workout_sets (workout_exercise_id) VALUES (?)', workoutExerciseId,
     )).lastInsertRowId;
 
     await savePlannedWorkoutSet(database, workoutId, firstId, 80.5, 5);
@@ -584,20 +584,20 @@ describe('active workout persistence', () => {
     expect((await loadActiveWorkout(database))!.exercises[0].sets).toEqual([]);
   });
 
-  test('adds sets from the latest active confirmed set without querying history', async () => {
+  test('adds sets from the latest active completed set without querying history', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const history = await database.runAsync(
       "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'before', 'after')",
     );
-    const historyMembership = await database.runAsync(
+    const historyWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
       history.lastInsertRowId, exerciseId,
     );
     await database.runAsync(
       "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 200, 1, 'after')",
-      historyMembership.lastInsertRowId,
+      historyWorkoutExercise.lastInsertRowId,
     );
     const workoutId = await startWorkout(database);
     await addExerciseToWorkout(database, workoutId, exerciseId);
@@ -611,7 +611,7 @@ describe('active workout persistence', () => {
     expect(copied).toEqual({ id: expect.any(Number), loadKg: 80, repetitions: 5, confirmedAt: null });
   });
 
-  test('does not query history added after exercise membership when adding a set', async () => {
+  test('does not query history added after the workout exercise when adding a set', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
@@ -621,13 +621,13 @@ describe('active workout persistence', () => {
     const history = await database.runAsync(
       "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'before', 'after')",
     );
-    const historyMembership = await database.runAsync(
+    const historyWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
       history.lastInsertRowId, exerciseId,
     );
     await database.runAsync(
       "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 200, 1, 'after')",
-      historyMembership.lastInsertRowId,
+      historyWorkoutExercise.lastInsertRowId,
     );
 
     expect(await addWorkoutSet(database, workoutId, activeExercise.id)).toMatchObject({
@@ -659,7 +659,7 @@ describe('active workout persistence', () => {
     });
   });
 
-  test('removes only active membership and keeps remaining positions contiguous', async () => {
+  test('removes only the active workout exercise and keeps remaining positions contiguous', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const workoutId = await startWorkout(database);
@@ -728,7 +728,7 @@ describe('active workout persistence', () => {
     await database.execAsync(`
       CREATE TRIGGER reject_set_insert BEFORE INSERT ON workout_sets
       BEGIN SELECT RAISE(ABORT, 'write failed'); END;
-      CREATE TRIGGER reject_membership_delete BEFORE DELETE ON workout_exercises
+      CREATE TRIGGER reject_workout_exercise_delete BEFORE DELETE ON workout_exercises
       BEGIN SELECT RAISE(ABORT, 'write failed'); END;
     `);
 

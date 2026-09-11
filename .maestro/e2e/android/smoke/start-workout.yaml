@@ -7,9 +7,9 @@ tags:
 - launchApp
 
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
-- tapOn: "Start økt"
+- tapOn: "Start trening"
 - assertVisible: "Ingen øvelser lagt til ennå"
 - assertNotVisible: "Ferdig"
 - tapOn: "Legg til øvelse"
@@ -42,9 +42,9 @@ tags:
 - pressKey: HOME
 - launchApp
 - extendedWaitUntil:
-    visible: "Fortsett økt"
+    visible: "Fortsett trening"
     timeout: 120000
-- tapOn: "Fortsett økt"
+- tapOn: "Fortsett trening"
 - assertVisible: "Knebøy"
 - assertVisible: "80,5"
 - assertVisible: "5"
@@ -65,9 +65,9 @@ tags:
 - launchApp
 
 - extendedWaitUntil:
-    visible: "Fortsett økt"
+    visible: "Fortsett trening"
     timeout: 120000
-- tapOn: "Fortsett økt"
+- tapOn: "Fortsett trening"
 - assertVisible: "Knebøy"
 - assertVisible: "Sett 1"
 - assertVisible: "80,5 kg · 5 repetisjoner"
@@ -87,13 +87,13 @@ tags:
 - assertVisible: "Sett 1"
 
 - tapOn: "Avbryt"
-- assertVisible: "Avbryt økten?"
-- assertVisible: "Økten slettes permanent og vises ikke i historikken."
-- tapOn: "Behold økten"
+- assertVisible: "Avbryt treningen?"
+- assertVisible: "Treningen slettes permanent og vises ikke i historikken."
+- tapOn: "Behold treningen"
 - assertVisible: "Knebøy"
 
 - tapOn: "Avbryt"
-- tapOn: "Avbryt økten"
+- tapOn: "Avbryt treningen"
 - extendedWaitUntil:
-    visible: "Start økt"
+    visible: "Start trening"
     timeout: 30000

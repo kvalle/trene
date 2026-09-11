@@ -7,12 +7,12 @@ tags:
 - launchApp
 
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
-- tapOn: "Tidligere økter"
-- assertVisible: "Ingen fullførte økter ennå"
-- assertVisible: "Start økt"
-- tapOn: "Start økt"
+- tapOn: "Tidligere treninger"
+- assertVisible: "Ingen fullførte treninger ennå"
+- assertVisible: "Start trening"
+- tapOn: "Start trening"
 - tapOn: "Legg til øvelse"
 - tapOn: "Opprett første øvelse"
 
@@ -44,25 +44,25 @@ tags:
     timeout: 30000
 - tapOn: "Ferdig"
 - extendedWaitUntil:
-    visible: "Fullfør økten?"
+    visible: "Fullfør treningen?"
     timeout: 30000
-- tapOn: "Fullfør økt"
+- tapOn: "Fullfør trening"
 - extendedWaitUntil:
-    visible: "Fullført økt"
+    visible: "Fullført trening"
     timeout: 30000
 - assertVisible: "Knebøy"
 - tapOn: "Tilbake til forsiden"
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 30000
 
-- tapOn: "Tidligere økter"
+- tapOn: "Tidligere treninger"
 - extendedWaitUntil:
     visible: "1 øvelse"
     timeout: 30000
 - tapOn: "1 øvelse"
 - extendedWaitUntil:
-    visible: "Fullført økt"
+    visible: "Fullført trening"
     timeout: 30000
 - assertVisible: "80 kg · 5 repetisjoner"
 
@@ -70,9 +70,9 @@ tags:
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
-- tapOn: "Tidligere økter"
+- tapOn: "Tidligere treninger"
 - extendedWaitUntil:
     visible: "1 øvelse"
     timeout: 30000

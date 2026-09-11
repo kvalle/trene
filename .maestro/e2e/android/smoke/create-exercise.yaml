@@ -7,7 +7,7 @@ tags:
 - launchApp
 
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
 - tapOn: "Øvelser"
 - tapOn: "Opprett første øvelse"
@@ -27,7 +27,7 @@ tags:
 - launchApp
 
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
 - tapOn: "Øvelser"
 - assertVisible: "Knebøy"

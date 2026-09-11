@@ -15,7 +15,7 @@ import { DeleteTrainingDataScreen } from './screens/DeleteTrainingDataScreen';
 import { AppearanceScreen } from './screens/AppearanceScreen';
 import { useAppTheme } from './ui/AppThemeProvider';
 import { getAppStackScreenOptions } from './ui/appShell';
-import { WorkoutDraftProvider } from './workoutDrafts';
+import { WorkoutSetDraftProvider } from './workoutSetDrafts';
 
 export type RootStackParamList = {
   Home: { focusStartWorkout?: boolean } | undefined;
@@ -42,13 +42,13 @@ export function AppNavigator() {
   const { colors, navigation: theme } = useAppTheme();
 
   return (
-    <WorkoutDraftProvider>
+    <WorkoutSetDraftProvider>
       <NavigationContainer theme={theme}>
         <Stack.Navigator screenOptions={getAppStackScreenOptions(colors)}>
           <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Trene' }} />
           <Stack.Screen name="Workout" component={WorkoutScreen} options={{ title: 'Treningsøkt' }} />
-          <Stack.Screen name="CompletedWorkout" component={CompletedWorkoutScreen} options={{ title: 'Fullført økt' }} />
-          <Stack.Screen name="History" component={HistoryScreen} options={{ title: 'Tidligere økter' }} />
+          <Stack.Screen name="CompletedWorkout" component={CompletedWorkoutScreen} options={{ title: 'Fullført trening' }} />
+          <Stack.Screen name="History" component={HistoryScreen} options={{ title: 'Tidligere treninger' }} />
           <Stack.Screen name="Exercises" component={ExercisesScreen} options={{ title: 'Øvelser' }} />
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Innstillinger' }} />
           <Stack.Screen name="Appearance" component={AppearanceScreen} options={{ title: 'Utseende' }} />
@@ -71,6 +71,6 @@ export function AppNavigator() {
           />
         </Stack.Navigator>
       </NavigationContainer>
-    </WorkoutDraftProvider>
+    </WorkoutSetDraftProvider>
   );
 }

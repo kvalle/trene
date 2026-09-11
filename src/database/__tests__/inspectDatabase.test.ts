@@ -48,14 +48,14 @@ async function createRichDatabase(): Promise<TestDatabase> {
     "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', ?, ?)",
     '2026-08-14T11:00:00.000Z', '2026-08-14T12:00:00.000Z',
   );
-  const membership = await database.runAsync(
+  const workoutExercise = await database.runAsync(
     'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
     workout.lastInsertRowId, exercise.lastInsertRowId,
   );
   await database.runAsync(`
     INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at)
     VALUES (?, 80.5, 5, ?)
-  `, membership.lastInsertRowId, '2026-08-14T11:30:00.000Z');
+  `, workoutExercise.lastInsertRowId, '2026-08-14T11:30:00.000Z');
   return database;
 }
 
@@ -147,7 +147,7 @@ describe('inspectDatabase', () => {
     await database.closeAsync();
   });
 
-  test('rejects completed memberships without confirmed sets', async () => {
+  test('rejects completed workout exercises without completed sets', async () => {
     const database = await createRichDatabase();
     await database.runAsync('DELETE FROM workout_sets');
 

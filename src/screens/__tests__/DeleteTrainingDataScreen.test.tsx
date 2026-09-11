@@ -23,7 +23,7 @@ test('explains consequences and allows cancellation without offering backup crea
   const view = renderScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Slett alle treningsdata' }));
 
-  expect(screen.getByText('Alle treningsøkter, inkludert en eventuell aktiv økt, og alle øvelser slettes permanent. Lag en sikkerhetskopi først hvis du vil beholde dataene.')).toBeOnTheScreen();
+  expect(screen.getByText('Alle treningsøkter, inkludert en eventuell aktiv trening, og alle øvelser slettes permanent. Lag en sikkerhetskopi først hvis du vil beholde dataene.')).toBeOnTheScreen();
   expect(screen.queryByText('Lag sikkerhetskopi')).not.toBeOnTheScreen();
   expect(screen.queryByRole('button', { name: 'Lag sikkerhetskopi' })).not.toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Avbryt' }));

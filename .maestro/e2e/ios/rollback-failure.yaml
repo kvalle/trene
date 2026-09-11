@@ -6,7 +6,7 @@ tags:
 ---
 - launchApp
 - extendedWaitUntil:
-    visible: "Klar for en økt?"
+    visible: "Klar for en trening?"
     timeout: 120000
 - tapOn: "Innstillinger"
 - tapOn:
@@ -36,4 +36,4 @@ tags:
     visible: "Trene kan ikke åpne dataene trygt"
     timeout: 30000
 - assertVisible: "Gjenopprettingen ble avbrutt, og ingen av databasene kunne bekreftes. Dataene er bevart for hjelp med gjenoppretting."
-- assertNotVisible: "Klar for en økt?"
+- assertNotVisible: "Klar for en trening?"

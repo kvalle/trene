@@ -196,7 +196,7 @@ export function ExerciseDetailScreen({ navigation, route }: Props) {
       <View style={styles.section}>
         <Text accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>Historikk</Text>
         {exercise.history.length === 0 ? (
-          <Text style={[typography.body, { color: colors.text }]}>Ingen fullførte økter med denne øvelsen ennå</Text>
+          <Text style={[typography.body, { color: colors.text }]}>Ingen fullførte treninger med denne øvelsen ennå</Text>
         ) : exercise.history.map((workout) => (
           <Card key={workout.id}>
             <Text accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>

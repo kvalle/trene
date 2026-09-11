@@ -8,8 +8,8 @@ import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
 import { getActiveWorkoutId, startWorkout } from '../../database/workouts';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
-import { WorkoutDraftProvider } from '../../workoutDrafts';
 import { TrainingDataDeletionProvider, useTrainingDataDeletionStatus } from '../../trainingDataDeletion';
+import { WorkoutSetDraftProvider } from '../../workoutSetDrafts';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual('react-native/Libraries/ReactNative/RendererProxy'),
@@ -37,12 +37,12 @@ test('shows the empty Home actions and opens them hierarchically', async () => {
   const navigate = jest.fn();
   renderScreen({ navigate });
 
-  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
-  expect(screen.getByRole('button', { name: 'Tidligere økter' })).toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Start trening' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Tidligere treninger' })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Øvelser' })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Innstillinger' })).toBeOnTheScreen();
 
-  fireEvent.press(screen.getByRole('button', { name: 'Tidligere økter' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Tidligere treninger' }));
   expect(navigate).toHaveBeenCalledWith('History');
 });
 
@@ -50,7 +50,7 @@ test('shows deletion success on empty Home and removes it on onward navigation',
   const navigate = jest.fn();
   renderScreen({ navigate }, undefined, false, 7, true);
 
-  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Start trening' })).toBeOnTheScreen();
   expect(screen.getByText('Alle treningsdata er slettet.')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Øvelser' }));
   expect(navigate).toHaveBeenCalledWith('Exercises');
@@ -69,22 +69,22 @@ test('persists the workout before opening it and resumes an existing workout', a
   mockedStartWorkout.mockImplementation(() => new Promise((resolve) => { finishStart = resolve; }));
   renderScreen({ navigate });
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Start økt' }));
-  expect(await screen.findByRole('button', { name: 'Starter økt' })).toBeDisabled();
+  fireEvent.press(await screen.findByRole('button', { name: 'Start trening' }));
+  expect(await screen.findByRole('button', { name: 'Starter trening' })).toBeDisabled();
   await act(async () => finishStart(7));
   await waitFor(() => expect(navigate).toHaveBeenCalledWith('Workout'));
 
   mockedGetActiveWorkoutId.mockResolvedValue(7);
   renderScreen();
-  expect(await screen.findByRole('button', { name: 'Fortsett økt' })).toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Fortsett trening' })).toBeOnTheScreen();
 });
 
-test('focuses Start økt after a cancelled workout', async () => {
+test('focuses Start trening after a cancelled workout', async () => {
   const setParams = jest.fn();
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   renderScreen({ setParams }, { focusStartWorkout: true });
 
-  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Start trening' })).toBeOnTheScreen();
   await waitFor(() => expect(focus).toHaveBeenCalled());
   expect(setParams).toHaveBeenCalledWith({ focusStartWorkout: undefined });
 });
@@ -93,7 +93,7 @@ test('marks an active workout when a set edit has not been saved', async () => {
   mockedGetActiveWorkoutId.mockResolvedValue(7);
   renderScreen({}, undefined, true);
 
-  expect(await screen.findByText('Økten har endringer som ikke er lagret')).toBeOnTheScreen();
+  expect(await screen.findByText('Treningen har endringer som ikke er lagret')).toBeOnTheScreen();
   expect(screen.getByTestId('home-unsaved-warning').props.accessibilityRole).toBe('alert');
 });
 
@@ -105,11 +105,11 @@ test('refreshes the active workout from SQLite on foreground', async () => {
   });
   mockedGetActiveWorkoutId.mockResolvedValueOnce(null).mockResolvedValueOnce(7);
   renderScreen();
-  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Start trening' })).toBeOnTheScreen();
 
   act(() => onAppStateChange?.('active'));
 
-  expect(await screen.findByRole('button', { name: 'Fortsett økt' })).toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Fortsett trening' })).toBeOnTheScreen();
   expect(mockedGetActiveWorkoutId).toHaveBeenCalledTimes(2);
 });
 
@@ -117,8 +117,8 @@ test('ignores save errors belonging to another workout', async () => {
   mockedGetActiveWorkoutId.mockResolvedValue(7);
   renderScreen({}, undefined, true, 8);
 
-  expect(await screen.findByRole('button', { name: 'Fortsett økt' })).toBeOnTheScreen();
-  expect(screen.queryByText('Økten har endringer som ikke er lagret')).not.toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Fortsett trening' })).toBeOnTheScreen();
+  expect(screen.queryByText('Treningen har endringer som ikke er lagret')).not.toBeOnTheScreen();
 });
 
 test('shows loading with accessible label while resolving active workout', async () => {
@@ -126,11 +126,11 @@ test('shows loading with accessible label while resolving active workout', async
   mockedGetActiveWorkoutId.mockImplementation(() => new Promise((resolve) => { resolveLookup = resolve; }));
   renderScreen();
 
-  expect(screen.getByLabelText('Laster aktiv økt')).toBeOnTheScreen();
-  expect(screen.queryByRole('button', { name: 'Start økt' })).not.toBeOnTheScreen();
+  expect(screen.getByLabelText('Laster aktiv trening')).toBeOnTheScreen();
+  expect(screen.queryByRole('button', { name: 'Start trening' })).not.toBeOnTheScreen();
 
   await act(async () => resolveLookup(null));
-  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Start trening' })).toBeOnTheScreen();
 });
 
 test('shows error and primary retry when active workout lookup fails and recovers on retry', async () => {
@@ -144,7 +144,7 @@ test('shows error and primary retry when active workout lookup fails and recover
   mockedGetActiveWorkoutId.mockResolvedValueOnce(null);
   fireEvent.press(screen.getByRole('button', { name: 'Prøv igjen' }));
 
-  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Start trening' })).toBeOnTheScreen();
   expect(screen.queryByText('Kunne ikke laste inn')).not.toBeOnTheScreen();
 });
 
@@ -153,7 +153,7 @@ test('shows error when durable workout creation fails and allows retry', async (
   mockedStartWorkout.mockRejectedValueOnce(new Error('failed'));
   renderScreen({ navigate });
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Start økt' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Start trening' }));
 
   expect(await screen.findByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
   expect(screen.getByText('Kunne ikke laste inn')).toBeOnTheScreen();
@@ -162,7 +162,7 @@ test('shows error when durable workout creation fails and allows retry', async (
   // retry lookup resolves to empty again
   mockedGetActiveWorkoutId.mockResolvedValueOnce(null);
   fireEvent.press(screen.getByRole('button', { name: 'Prøv igjen' }));
-  expect(await screen.findByRole('button', { name: 'Start økt' })).toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Start trening' })).toBeOnTheScreen();
 });
 
 test('disables all secondary actions and blocks navigation while starting', async () => {
@@ -171,16 +171,16 @@ test('disables all secondary actions and blocks navigation while starting', asyn
   mockedStartWorkout.mockImplementation(() => new Promise((resolve) => { finishStart = resolve; }));
   renderScreen();
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Start økt' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Start trening' }));
 
-  expect(await screen.findByRole('button', { name: 'Starter økt' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Tidligere økter' })).toBeDisabled();
+  expect(await screen.findByRole('button', { name: 'Starter trening' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Tidligere treninger' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Øvelser' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Innstillinger' })).toBeDisabled();
   expect(usePreventRemove).toHaveBeenCalledWith(true, expect.any(Function));
 
   await act(async () => finishStart(7));
-  await waitFor(() => expect(screen.queryByRole('button', { name: 'Starter økt' })).not.toBeOnTheScreen());
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Starter trening' })).not.toBeOnTheScreen());
 });
 
 function renderScreen(
@@ -203,14 +203,14 @@ function homeTree(
   return (
     <AppThemeProvider><TrainingDataDeletionProvider>
       <DatabaseProvider database={database}>
-        <WorkoutDraftProvider initialDrafts={failedDraft ? {
+        <WorkoutSetDraftProvider initialDrafts={failedDraft ? {
           6: { workoutId: draftWorkoutId, load: '80', repetitions: '5', unsaved: true },
         } : undefined}>
           {deleted && <ReportDeletion />}
           <NavigationContainer>
             <HomeScreen navigation={{ navigate: jest.fn(), ...navigation } as never} route={{ params } as never} />
           </NavigationContainer>
-        </WorkoutDraftProvider>
+        </WorkoutSetDraftProvider>
       </DatabaseProvider>
     </TrainingDataDeletionProvider></AppThemeProvider>
   );

@@ -88,7 +88,7 @@ test('renders newest-first workout groups and every completed set in supplied or
 test('shows the exact no-history message while keeping management available', async () => {
   renderScreen();
 
-  expect(await screen.findByText('Ingen fullførte økter med denne øvelsen ennå')).toBeOnTheScreen();
+  expect(await screen.findByText('Ingen fullførte treninger med denne øvelsen ennå')).toBeOnTheScreen();
   expect(screen.getByLabelText('Navn')).toHaveDisplayValue('Knebøy');
   expect(screen.getByRole('button', { name: 'Slett øvelse' })).toBeOnTheScreen();
 });
