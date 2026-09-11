@@ -21,7 +21,6 @@ import { Card } from '../ui/Card';
 import { DataRow } from '../ui/DataRow';
 import { Dialog } from '../ui/Dialog';
 import { ErrorAlert } from '../ui/ErrorAlert';
-import { Notice } from '../ui/Notice';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Data'>;
 
@@ -144,13 +143,8 @@ export function DataScreen({ navigation }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
-      <Text accessibilityRole="header" style={[typography.screenTitle, { color: colors.text }]}>Dine data</Text>
-      <Text style={[typography.body, { color: colors.text }]}>Lag en fil med alle øvelser og treningsøkter i Trene.</Text>
-      <Notice
-        testID="data-notice"
-        title="Filen inneholder treningsdata"
-        message="Sikkerhetskopien er ikke kryptert av Trene. Oppbevar og del den på en trygg måte."
-      />
+      <Text style={[typography.body, { color: colors.text }]}>Her kan du lagre og gjenopprette en sikkerhetskopi av alle øvelser og treningsøkter du har i Trene.</Text>
+      <Text style={[typography.body, { color: colors.text }]}>Sikkerhetskopien krypteres ikke, så oppbevar og del den på en trygg måte.</Text>
       <Button
         testID="create-backup"
         disabled={busy}
@@ -171,7 +165,7 @@ export function DataScreen({ navigation }: Props) {
       />
       <Button
         testID="delete-training-data"
-        variant="destructive"
+        variant="secondary"
         disabled={busy || !canDelete}
         title="Slett treningsdata"
         onPress={() => navigation.navigate('DeleteTrainingData')}

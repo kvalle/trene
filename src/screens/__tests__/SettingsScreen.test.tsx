@@ -16,11 +16,12 @@ test('shows the active appearance and opens both settings destinations', () => {
 
   const dataRow = screen.getByTestId('settings-data');
   const appearanceRow = screen.getByTestId('settings-appearance');
+  expect(screen.queryByRole('header', { name: 'Innstillinger' })).not.toBeOnTheScreen();
   expect(appearanceRow).toHaveAccessibleName('Utseende, Lys');
   fireEvent.press(appearanceRow);
   expect(navigate).toHaveBeenCalledWith('Appearance');
   expect(dataRow).toHaveProp('accessibilityRole', 'button');
-  expect(screen.getByRole('button', { name: 'Data' })).toBe(dataRow);
+  expect(screen.getByRole('button', { name: 'Dine data' })).toBe(dataRow);
 
   fireEvent.press(dataRow);
   expect(navigate).toHaveBeenCalledWith('Data');
