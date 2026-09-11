@@ -43,10 +43,10 @@ test('shows the exact read-only completed result in saved card order', async () 
   });
   renderScreen();
 
-  expect(await screen.findByRole('header', { name: 'Fullført trening' })).toBeOnTheScreen();
-  expect(screen.getByText(/5. august 2026/)).toBeOnTheScreen();
+  expect(await screen.findByText(/5. august 2026/)).toBeOnTheScreen();
+  expect(screen.queryByRole('header', { name: 'Fullført trening' })).not.toBeOnTheScreen();
   const headers = screen.getAllByRole('header').map((node) => node.props.children);
-  expect(headers).toEqual(['Fullført trening', 'Knebøy', 'Benkpress']);
+  expect(headers).toEqual(['Knebøy', 'Benkpress']);
   expect(screen.getByLabelText('Sett 1, 5 repetisjoner med 80 kilogram')).toBeOnTheScreen();
   expect(screen.getByLabelText('Sett 1, 8 repetisjoner med 60 kilogram')).toBeOnTheScreen();
   expect(screen.queryByRole('button', { name: 'Rediger' })).not.toBeOnTheScreen();
@@ -65,7 +65,7 @@ test('requires explicit confirmation and cancellation preserves the workout', as
   fireEvent.press(screen.getByRole('button', { name: 'Avbryt' }));
 
   expect(mockedDelete).not.toHaveBeenCalled();
-  expect(screen.getByRole('header', { name: 'Fullført trening' })).toBeOnTheScreen();
+  expect(screen.queryByRole('header', { name: 'Fullført trening' })).not.toBeOnTheScreen();
   await waitFor(() => expect(focus).toHaveBeenCalledTimes(2));
 });
 
@@ -120,7 +120,7 @@ test('keeps detail, closes confirmation, and offers focused retry after deletion
 
   expect(await screen.findByText('Kunne ikke slette treningen')).toBeOnTheScreen();
   expect(screen.queryByRole('header', { name: 'Slett fullført trening?' })).not.toBeOnTheScreen();
-  expect(screen.getByRole('header', { name: 'Fullført trening' })).toBeOnTheScreen();
+  expect(screen.queryByRole('header', { name: 'Fullført trening' })).not.toBeOnTheScreen();
   expect(announce).toHaveBeenCalledWith('Kunne ikke slette treningen. Prøv igjen.');
   await waitFor(() => expect(focus).toHaveBeenCalled());
   expect(popTo).not.toHaveBeenCalled();
@@ -166,7 +166,7 @@ test('uses ordinary stack Back when opened from history', async () => {
   mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
   renderScreen({}, false);
 
-  await screen.findByRole('header', { name: 'Fullført trening' });
+  await screen.findByRole('button', { name: 'Slett trening' });
   expect(usePreventRemove).toHaveBeenCalledWith(false, expect.any(Function));
   expect(screen.queryByRole('button', { name: 'Tilbake til forsiden' })).not.toBeOnTheScreen();
 });

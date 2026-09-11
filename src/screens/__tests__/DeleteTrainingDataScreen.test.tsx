@@ -21,8 +21,11 @@ beforeEach(() => jest.clearAllMocks());
 
 test('explains consequences and allows cancellation without offering backup creation', () => {
   const view = renderScreen();
+  expect(screen.queryByRole('header', { name: 'Slett treningsdata' })).not.toBeOnTheScreen();
+  expect(screen.getByText('Alle øvelser og treningsøkter slettes fra Trene. Sikkerhetskopier du allerede har eksportert, blir ikke slettet.')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Slett alle treningsdata' }));
 
+  expect(screen.getByRole('header', { name: 'Slett alle treningsdata?' })).toBeOnTheScreen();
   expect(screen.getByText('Alle treningsøkter, inkludert en eventuell aktiv trening, og alle øvelser slettes permanent. Lag en sikkerhetskopi først hvis du vil beholde dataene.')).toBeOnTheScreen();
   expect(screen.queryByText('Lag sikkerhetskopi')).not.toBeOnTheScreen();
   expect(screen.queryByRole('button', { name: 'Lag sikkerhetskopi' })).not.toBeOnTheScreen();
@@ -69,7 +72,7 @@ test('keeps the screen and announces that data was unchanged after failure', asy
   expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(
     'Kunne ikke slette treningsdataene. Dataene ble ikke endret.',
   );
-  expect(screen.getByRole('header', { name: 'Slett treningsdata' })).toBeOnTheScreen();
+  expect(screen.queryByRole('header', { name: 'Slett treningsdata' })).not.toBeOnTheScreen();
   expect(screen.queryByTestId('delete-training-data-confirmation')).not.toBeOnTheScreen();
   expect(screen.getByText('present')).toBeOnTheScreen();
 });

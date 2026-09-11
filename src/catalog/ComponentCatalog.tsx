@@ -187,7 +187,7 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         id: 'appshell',
         name: 'App-shell',
         description: 'Native stack og modal med delt tema og navigasjonsoppsett.',
-        usage: 'Bruk samme app-shell og navigator-tema som produksjonsappen for konsistent header, bakgrunn og overganger.',
+        usage: 'Bruk samme app-shell og navigator-tema som produksjonsappen. Når den native headeren viser skjermtittelen, skal innholdet ikke gjenta tittelen eller et synonymt skjermnavn.',
         route: 'AppShellDetail',
         testID: 'catalog-item-appshell',
       },
@@ -1157,14 +1157,14 @@ function SectionedDetailDetailScreen() {
   );
 }
 
-function AppShellDetailScreen({ navigation }: NativeStackScreenProps<CatalogStackParamList, 'AppShellDetail'>) {
+export function AppShellDetailScreen({ navigation }: NativeStackScreenProps<CatalogStackParamList, 'AppShellDetail'>) {
   const { colors } = useAppTheme();
   return (
     <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-appshell">
       <DetailHeader
         name="App-shell"
         description="Native stack og modal med delt tema og navigasjonsoppsett via getAppStackScreenOptions."
-        usage="Bruk samme app-shell og navigator-tema som produksjonsappen for konsistent header, bakgrunn og overganger."
+        usage="Bruk samme app-shell og navigator-tema som produksjonsappen. Når den native headeren viser skjermtittelen, skal innholdet ikke gjenta tittelen eller et synonymt skjermnavn. Oppgaveheroer, ressursidentiteter, seksjoner, dialoger og sidetilstander er fortsatt gyldige innholdsoverskrifter."
       />
 
       <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -1198,20 +1198,17 @@ function AppShellDetailScreen({ navigation }: NativeStackScreenProps<CatalogStac
 }
 
 function StackExampleScreen() {
-  return <ExampleScreen title="Native stack-header" />;
+  return <ExampleScreen />;
 }
 
 function ModalExampleScreen() {
-  return <ExampleScreen title="Native modalpresentasjon" />;
+  return <ExampleScreen />;
 }
 
-function ExampleScreen({ title }: { title: string }) {
+function ExampleScreen() {
   const { colors } = useAppTheme();
   return (
     <View style={styles.example}>
-      <Text accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>
-        {title}
-      </Text>
       <Text style={[typography.body, { color: colors.muted }]}>
         Denne ruten bruker samme navigator-tema og screen options som produksjonsappen.
       </Text>

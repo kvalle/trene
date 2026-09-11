@@ -68,6 +68,10 @@ app-token.
 - Bruk systemtypografi inntil en annen font er eksplisitt valgt og testet.
 - Bruk få semantiske nivåer: skjermtittel, seksjonstittel, vanlig tekst,
   metadata/hjelpetekst og kontrolltekst.
+- Når en native navigasjonsheader viser skjermtittelen, skal innholdet ikke gjenta
+  tittelen eller et synonymt skjermnavn som skjermoverskrift. Oppgaveheroer,
+  ressursidentiteter, seksjoner, dialoger og sidetilstander kan fortsatt bruke
+  innholdsoverskrifter.
 - Ikke lag nye fontstørrelser eller vekter lokalt dersom et eksisterende nivå
   dekker behovet.
 - Sekundær tekst bruker `muted`; den skal fortsatt møte kontrastkravene.

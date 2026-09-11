@@ -114,7 +114,6 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>Fullført trening</Text>
       <Text style={[styles.completedAt, { color: colors.text }]}>{formatDateTime(new Date(state.workout.completedAt))}</Text>
       {state.workout.exercises.map((exercise) => (
         <Card key={exercise.id}>
@@ -163,7 +162,6 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, gap: 16, padding: 20 },
-  title: typography.screenTitle,
   completedAt: typography.body,
   exerciseTitle: typography.sectionTitle,
   failure: { gap: 10 },
