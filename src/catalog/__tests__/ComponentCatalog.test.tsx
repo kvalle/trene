@@ -1,6 +1,6 @@
 import { AccessibilityInfo } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import ComponentCatalog, { AppShellDetailScreen, CompactActionDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen } from '../ComponentCatalog';
+import ComponentCatalog, { AppShellDetailScreen, CompactActionDetailScreen, IconDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen } from '../ComponentCatalog';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 
 jest.mock('@react-navigation/native', () => ({
@@ -30,6 +30,8 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText(/Aktuell systemskala:/)).toBeOnTheScreen();
   // overview groups and components
   expect(screen.getByText('HANDLINGER')).toBeOnTheScreen();
+  expect(screen.getByText('VISUELLE GRUNNELEMENTER')).toBeOnTheScreen();
+  expect(screen.getByText('Icon')).toBeOnTheScreen();
   expect(screen.getByText('Button')).toBeOnTheScreen();
   expect(screen.getByText('CompactAction')).toBeOnTheScreen();
   expect(screen.getByText('Dialog')).toBeOnTheScreen();
@@ -58,6 +60,7 @@ it('renders production theme contexts and switches theme', () => {
   // detail screens are mounted via mock as text fallbacks
   expect(screen.getByText('ButtonDetail')).toBeOnTheScreen();
   expect(screen.getByText('CompactActionDetail')).toBeOnTheScreen();
+  expect(screen.getByText('IconDetail')).toBeOnTheScreen();
   expect(screen.getByText('CardDetail')).toBeOnTheScreen();
   expect(screen.getByText('DataRowDetail')).toBeOnTheScreen();
   expect(screen.getByText('DisclosureCardDetail')).toBeOnTheScreen();
@@ -122,6 +125,19 @@ it('shows every CompactAction state', () => {
   expect(screen.getByTestId('catalog-compactaction-remove')).toBeEnabled();
   expect(screen.getByTestId('catalog-compactaction-disabled')).toBeDisabled();
   expect(screen.getByTestId('catalog-compactaction-busy')).toHaveProp('accessibilityState', { busy: true, disabled: true });
+});
+
+it('shows every icon, supported size and representative states', () => {
+  render(<AppThemeProvider><IconDetailScreen /></AppThemeProvider>);
+  for (const name of ['check', 'edit', 'hourglass', 'chevron-up', 'trash', 'plus', 'restore']) {
+    expect(screen.getByTestId(`catalog-icon-${name}`, { includeHiddenElements: true })).toBeOnTheScreen();
+  }
+  for (const size of [16, 20, 24]) {
+    expect(screen.getByTestId(`catalog-icon-size-${size}`, { includeHiddenElements: true })).toBeOnTheScreen();
+  }
+  expect(screen.getByText('Primær')).toBeOnTheScreen();
+  expect(screen.getByText('Destruktiv')).toBeOnTheScreen();
+  expect(screen.getByText('Deaktivert')).toBeOnTheScreen();
 });
 
 it('shows every NumericField state and keyboard kind', () => {

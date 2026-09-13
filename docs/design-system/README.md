@@ -76,6 +76,29 @@ app-token.
   dekker behovet.
 - Sekundær tekst bruker `muted`; den skal fortsatt møte kontrastkravene.
 
+## Ikoner
+
+Trene bruker en kompakt, avrundet ikonfamilie på et optisk `24 x 24` rutenett.
+Ikonene tegnes hovedsakelig med `2` punkters strek, avrundede ender og avrundede
+sammenføyninger. Begrensede fylte detaljer kan brukes når de gjør små statusikoner
+tydeligere. Støttede størrelser er `16`, `20` og `24`; formen justeres ikke ved å
+legge luft inn i selve ikonflaten.
+
+- Ikoner arver farge fra konteksten og inneholder ingen semantiske farger.
+- Bruk `16` i kompakte statusmarkører, `20` ved tekst og `24` i ikonknapper.
+- Ikoner er dekorative for hjelpemidler. Meningsbærende tekst eller kontrollen som
+  eier ikonet, skal ha et tilgjengelig navn.
+- Et ikon kan stå alene i en velkjent, gjentatt handling når kontrollen har et
+  eksplisitt tilgjengelig navn. Nye, sjeldne, irreversible eller tvetydige
+  handlinger skal ha synlig tekst.
+- Bruk ikon og synlig tekst sammen i kompakte radhandlinger og for viktige
+  tilstander. Ikke bruk ikonet som eneste signal.
+- Trykkflaten eies av kontrollen rundt ikonet og skal fortsatt være minst `44 x 44`
+  punkter på iOS og `48 x 48` dp på Android.
+
+Det første settet er `check`, `edit`, `hourglass`, `chevron-up`, `trash`, `plus`
+og `restore`. Navnene beskriver generell betydning, ikke treningsdomenet.
+
 ## Implementeringsstatus
 
 Katalogen beskriver ønsket bibliotek, men komponentene er ennå ikke samlet i en

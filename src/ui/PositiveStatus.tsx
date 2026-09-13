@@ -13,6 +13,7 @@ import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { radii, typography } from '../theme';
 import { useAppTheme } from './AppThemeProvider';
+import { Icon } from './Icon';
 
 const DEFAULT_DURATION_MS = 5000;
 
@@ -162,9 +163,7 @@ export function PositiveStatus({
       ]}
     >
       <View style={[styles.icon, { backgroundColor: colors.primary }]} accessibilityElementsHidden>
-        <Text style={[styles.iconText, { color: colors.onPrimary }]} allowFontScaling={false}>
-          ✓
-        </Text>
+        <Icon color={colors.onPrimary} name="check" size={16} />
       </View>
       <Text
         accessibilityLiveRegion="polite"
@@ -229,11 +228,6 @@ const styles = StyleSheet.create({
     height: 24,
     justifyContent: 'center',
     width: 24,
-  },
-  iconText: {
-    fontSize: 15,
-    fontWeight: '900',
-    lineHeight: 18,
   },
   message: {
     flex: 1,
