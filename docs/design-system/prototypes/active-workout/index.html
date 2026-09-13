@@ -3,63 +3,93 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trene - Active Workout prototype</title>
+  <title>Trene - tettere aktiv trening-prototype</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="prototype-shell">
-    <aside class="control-panel">
-      <p class="eyebrow">Trene designsystem</p>
-      <h1>Active Workout</h1>
-      <p class="summary">Interaktiv prototype for godkjenning. Den endrer ikke produksjonsappen.</p>
+    <aside class="control-panel" aria-label="Prototypekontroller">
+      <p class="eyebrow">Throwaway prototype - #219</p>
+      <h1>Tettere treningsøkt</h1>
+      <p class="prototype-question">Hvilken presentasjons- og redigeringsmodell gir best nyttig informasjonstetthet uten å gjøre registreringen vanskeligere eller mindre forståelig?</p>
 
       <fieldset>
-        <legend>Eksempel</legend>
-        <button class="scenario active" data-scenario="dense" type="button">Full treningsøkt</button>
-        <button class="scenario" data-scenario="empty" type="button">Tom treningsøkt</button>
-        <button class="scenario" data-scenario="error" type="button">Lagringsfeil</button>
-        <button class="scenario" data-scenario="busy" type="button">Lokal lagring</button>
-        <button class="scenario" data-scenario="large" type="button">Stor tekst</button>
+        <legend>Scenario</legend>
+        <div class="control-grid" id="scenario-controls">
+          <button class="control active" data-setting="scenario" data-value="dense" type="button">Tett økt</button>
+          <button class="control" data-setting="scenario" data-value="empty" type="button">Tom økt</button>
+        </div>
       </fieldset>
 
       <fieldset>
-        <legend>Visning</legend>
-        <button id="theme-toggle" class="control-button" type="button">Mørk modus</button>
-        <button id="keyboard-toggle" class="control-button" type="button">Vis tastatur</button>
+        <legend>Tilstand</legend>
+        <div class="control-grid" id="state-controls">
+          <button class="control active" data-setting="state" data-value="normal" type="button">Normal</button>
+          <button class="control" data-setting="state" data-value="invalid" type="button">Ugyldig</button>
+          <button class="control" data-setting="state" data-value="failed" type="button">Feilet</button>
+          <button class="control" data-setting="state" data-value="busy" type="button">Lagrer</button>
+        </div>
       </fieldset>
 
-      <section class="review-notes">
-        <h2>Se etter</h2>
-        <ul>
-          <li>Tydelige handlinger for sett, øvelse og trening</li>
-          <li>Hva som kan endres mens noe lagres</li>
-          <li>Dialogenes rekkefølge og konsekvenser</li>
-          <li>Lesbarhet med tett innhold og stor tekst</li>
-        </ul>
+      <fieldset>
+        <legend>Øvelseskort</legend>
+        <div class="control-grid" id="expansion-controls">
+          <button class="control" data-setting="expansion" data-value="zero" type="button">Ingen åpne</button>
+          <button class="control active" data-setting="expansion" data-value="one" type="button">Ett åpent</button>
+          <button class="control" data-setting="expansion" data-value="several" type="button">Flere åpne</button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Gjennomgang</legend>
+        <div class="control-grid two-column">
+          <button id="theme-toggle" class="control" type="button" aria-pressed="false">Mørk modus</button>
+          <button id="text-toggle" class="control" type="button" aria-pressed="false">Stor tekst</button>
+          <button id="width-toggle" class="control" type="button" aria-pressed="false">Smal telefon</button>
+          <button id="keyboard-toggle" class="control" type="button" aria-pressed="false">Vis tastatur</button>
+        </div>
+      </fieldset>
+
+      <section class="review-prompt">
+        <h2>Sammenlign</h2>
+        <p>Hvor mye nyttig informasjon er synlig? Hvor lett er det å skanne, velge og bytte sett? Hva skjer med tastatur og stor tekst?</p>
       </section>
     </aside>
 
     <section class="preview-panel">
       <header class="preview-header">
         <div>
-          <p class="eyebrow">Prototype - ticket #165</p>
-          <h2 id="scenario-title">Full treningsøkt</h2>
-          <p id="scenario-description">Flere øvelser, utvidede og kollapsede kort, og planlagte sett.</p>
+          <p class="eyebrow" id="variant-kicker">Variant A</p>
+          <h2 id="variant-title">Inline ekspansjon</h2>
+          <p id="variant-description"></p>
         </div>
-        <p class="prototype-status">Kun forslag. Krever eksplisitt godkjenning.</p>
+        <p class="prototype-status">Kun prototype. Ingen data lagres.</p>
       </header>
 
       <div class="phone-wrap">
-        <section class="phone" aria-label="Trene Active Workout prototype">
-          <div class="status-bar"><span>09:41</span><span>5G 100%</span></div>
-          <header class="app-header"><button class="icon-button" data-action="back" type="button" aria-label="Tilbake">‹</button><h3>Treningsøkt</h3><span></span></header>
-          <div id="screen" class="screen"></div>
-          <div id="keyboard" class="keyboard" hidden><div>q w e r t y u i o p å</div><div>a s d f g h j k l ø æ</div><div>⇧ z x c v b n m ⌫</div><div class="keyboard-actions"><span>123</span><span>mellomrom</span><span>ferdig</span></div></div>
+        <section class="phone" id="phone" aria-label="Interaktiv prototype av aktiv treningsøkt">
+          <div class="status-bar" aria-hidden="true"><span>09:41</span><span>5G&nbsp;&nbsp;100%</span></div>
+          <header class="app-header">
+            <button class="back-button" type="button" aria-label="Tilbake">‹</button>
+            <h3>Treningsøkt</h3>
+            <span></span>
+          </header>
+          <div id="screen" class="screen" aria-live="polite"></div>
+          <div id="keyboard" class="keyboard" hidden aria-hidden="true">
+            <div>1&nbsp;&nbsp;2&nbsp;&nbsp;3</div><div>4&nbsp;&nbsp;5&nbsp;&nbsp;6</div><div>7&nbsp;&nbsp;8&nbsp;&nbsp;9</div>
+            <div class="keyboard-bottom"><span>,</span><span>0</span><span>Ferdig</span></div>
+          </div>
           <div id="dialog-layer" class="dialog-layer" hidden></div>
         </section>
       </div>
     </section>
   </main>
+
+  <nav class="variant-switcher" aria-label="Velg prototypevariant">
+    <button id="previous-variant" type="button" aria-label="Forrige variant">←</button>
+    <div><span>Variant</span><strong id="variant-switcher-label">A - Inline ekspansjon</strong></div>
+    <button id="next-variant" type="button" aria-label="Neste variant">→</button>
+  </nav>
   <script src="prototype.js"></script>
 </body>
 </html>
