@@ -1,7 +1,7 @@
 const variants = {
   a: {
     name: 'Inline ekspansjon',
-    description: 'Planlagte sett er kompakte rader. Den valgte raden åpner sin egen editor på stedet.',
+    description: 'Alle sett hviler som kompakte rader. Status endres på raden, mens redigering åpner romslige felt på stedet.',
   },
   b: {
     name: 'Delt editor',
@@ -23,8 +23,8 @@ const exerciseSeed = [
       { id: 'b3', status: 'completed', load: '82,5', reps: '7' },
       { id: 'b4', status: 'completed', load: '80', reps: '8' },
       { id: 'b5', status: 'planned', load: '80', reps: '8' },
-      { id: 'b6', status: 'planned', load: '82,5', reps: '' },
-      { id: 'b7', status: 'planned', load: '', reps: '' },
+      { id: 'b6', status: 'planned', load: '82,5', reps: '8' },
+      { id: 'b7', status: 'planned', load: '85', reps: '6' },
     ],
   },
   { id: 'squat', name: 'Knebøy', sets: [{ id: 's1', status: 'completed', load: '110', reps: '5' }, { id: 's2', status: 'planned', load: '110', reps: '5' }] },
@@ -39,13 +39,14 @@ const keyboard = document.querySelector('#keyboard');
 const dialogLayer = document.querySelector('#dialog-layer');
 const variantKeys = Object.keys(variants);
 const params = new URLSearchParams(window.location.search);
+if (params.has('capture')) document.body.dataset.capture = 'true';
 
 let variant = variants[params.get('variant')] ? params.get('variant') : 'a';
 let scenario = params.get('scenario') === 'empty' ? 'empty' : 'dense';
 let reviewState = 'normal';
 let expansion = 'one';
 let openExerciseIds = new Set(['bench']);
-let selectedSetId = 'b6';
+let selectedSetId = variant === 'b' ? 'b6' : variant === 'a' ? params.get('edit') || (params.get('capture') === 'edit' ? 'b6' : '') : '';
 let exercises = cloneSeed();
 
 function cloneSeed() {
@@ -62,15 +63,27 @@ function setQueryParam(name, value) {
   window.history.replaceState({}, '', next);
 }
 
-function compactAction(icon, label, action, extra = '') {
-  return `<button class="compact-action ${extra}" data-action="${action}" type="button"><span aria-hidden="true">${icon}</span>${label}</button>`;
+function icon(name) {
+  const paths = {
+    check: '<path d="m5 12 4 4L19 6"/>',
+    chevronUp: '<path d="m6 15 6-6 6 6"/>',
+    edit: '<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>',
+    hourglass: '<path d="M7 3h10M7 21h10M8 3c0 4 1 6 4 9-3 3-4 5-4 9M16 3c0 4-1 6-4 9 3 3 4 5 4 9"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    restore: '<path d="M4 10a8 8 0 1 1 2 8"/><path d="M4 4v6h6"/>',
+    trash: '<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>',
+  };
+  return `<svg class="prototype-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name]}</svg>`;
+}
+
+function compactAction(iconName, label, action, extra = '') {
+  return `<button class="compact-action ${extra}" data-action="${action}" type="button">${icon(iconName)}${label}</button>`;
 }
 
 function summary(exercise) {
   const completed = exercise.sets.filter((set) => set.status === 'completed').length;
-  const planned = exercise.sets.length - completed;
   if (!exercise.sets.length) return 'Ingen sett ennå';
-  return `${completed} gjennomført · ${planned} planlagt`;
+  return `${completed} av ${exercise.sets.length} gjennomført`;
 }
 
 function expandedIds() {
@@ -82,11 +95,21 @@ function setExpansion(value) {
   openExerciseIds = value === 'zero' ? new Set() : value === 'several' ? new Set(['bench', 'squat', 'row']) : new Set(['bench']);
 }
 
+function hasValidValues(load, reps) {
+  const normalizedLoad = load.replace(',', '.');
+  return /^(?:\d{1,3})(?:[,.]\d)?$/.test(load)
+    && Number(normalizedLoad) >= 0
+    && Number(normalizedLoad) <= 999.9
+    && /^\d{1,3}$/.test(reps)
+    && Number(reps) >= 1
+    && Number(reps) <= 999;
+}
+
 function renderCompletedRow(set, index) {
   return `<div class="set-row completed" data-set-id="${set.id}">
     <span class="set-number">${index + 1}</span>
     <span class="set-copy"><b>${escapeHtml(set.load)} kg × ${escapeHtml(set.reps)}</b><small>Gjennomført</small></span>
-    <button class="compact-action" data-action="reopen" data-set-id="${set.id}" type="button"><span aria-hidden="true">↶</span>Endre</button>
+    <button class="compact-action" data-action="reopen" data-set-id="${set.id}" type="button">${icon('restore')}Endre</button>
   </div>`;
 }
 
@@ -101,33 +124,36 @@ function editor(set, index, shared = false) {
   const failed = state === 'failed';
   const busy = state === 'busy';
   const load = invalid ? '-10' : set.load;
+  const canSave = hasValidValues(load, set.reps) && !invalid;
   return `<section class="${shared ? 'shared-editor' : 'expanded-editor'}" aria-label="Rediger sett ${index + 1}">
-    <div class="editor-heading"><b>Sett ${index + 1}</b><span>${shared ? 'Valgt sett' : 'Redigerer inline'}</span></div>
     <div class="fields">
       <label class="field ${invalid ? 'invalid' : ''}"><span>Belastning (kg)</span><input data-field="load" data-set-id="${set.id}" inputmode="decimal" value="${escapeHtml(load)}" ${busy ? 'disabled' : ''}></label>
       <label class="field"><span>Repetisjoner</span><input data-field="reps" data-set-id="${set.id}" inputmode="numeric" value="${escapeHtml(set.reps)}" ${busy ? 'disabled' : ''}></label>
     </div>
     ${invalid ? '<p class="field-error" role="alert">Belastningen må være null eller mer.</p>' : ''}
     ${failed ? '<aside class="error-alert" role="alert"><b>Kunne ikke lagre settet</b>Verdiene dine er beholdt. Prøv igjen lokalt.</aside>' : ''}
-    <div class="editor-actions">
-      ${compactAction('×', 'Fjern sett', 'remove-set', 'danger')}
-      ${failed ? '<button class="button primary" data-action="retry" type="button">Prøv igjen</button>' : busy ? '<button class="button" type="button" disabled><span class="spinner"></span>Lagrer</button>' : '<button class="button primary" data-action="confirm" type="button">Bekreft</button>'}
-    </div>
+    <div class="editor-actions">${compactAction('trash', 'Fjern sett', 'remove-set', 'danger')}${failed ? '<button class="button primary" data-action="retry" type="button">Prøv igjen</button>' : busy ? '<span class="autosave-status"><span class="spinner"></span>Lagrer</span>' : shared ? `<button class="button primary" data-action="confirm" type="button" ${canSave ? '' : 'disabled'}>Lagre</button>` : ''}</div>
   </section>`;
 }
 
 function renderVariantA(exercise) {
   return exercise.sets.map((set, index) => {
-    if (set.status === 'completed') return renderCompletedRow(set, index);
-    const selected = set.id === selectedSetId;
-    const label = set.load || set.reps ? `${set.load || '–'} kg × ${set.reps || '–'}` : 'Tomt planlagt sett';
-    return `<div data-set-container="${set.id}">
-      <div class="set-row ${selected ? 'selected' : ''}">
-        <span class="set-number">${index + 1}</span>
-        <span class="set-copy"><b>${escapeHtml(label)}</b><small>${selected ? 'Redigerer' : 'Planlagt'}</small></span>
-        <button class="compact-action" data-action="select" data-set-id="${set.id}" type="button" aria-expanded="${selected}">${selected ? 'Lukk' : 'Rediger'}</button>
+    const editing = set.id === selectedSetId;
+    const completed = set.status === 'completed';
+    const valid = hasValidValues(set.load, set.reps) && stateFor(set) !== 'invalid';
+    const label = `${set.load} kg × ${set.reps}`;
+    return `<div class="set-item ${editing ? 'editing' : ''}" data-set-container="${set.id}">
+      <div class="set-row ${completed ? 'completed' : ''} ${editing ? 'editing' : ''}">
+        <span class="set-number">${index + 1}<span class="set-status-icon" aria-hidden="true">${icon(completed ? 'check' : 'hourglass')}</span></span>
+        <span class="set-copy"><b>${escapeHtml(label)}</b><small>${completed ? 'Gjennomført' : 'Planlagt'}</small></span>
+        <span class="row-actions">
+          ${editing
+            ? `<button class="row-icon-button secondary" data-action="close-edit" type="button" aria-label="Avslutt redigering av sett ${index + 1}" ${valid ? '' : 'disabled'}>${icon('chevronUp')}</button>`
+            : `<button class="row-icon-button secondary" data-action="edit" data-set-id="${set.id}" type="button" aria-label="Rediger sett ${index + 1}" aria-expanded="false">${icon('edit')}</button>`}
+          <button class="row-icon-button ${completed ? 'secondary' : 'primary'}" data-action="toggle-status" data-set-id="${set.id}" type="button" aria-label="${completed ? `Sett sett ${index + 1} tilbake til planlagt` : `Marker sett ${index + 1} som gjennomført`}" ${editing && !valid ? 'disabled' : ''}>${icon(completed ? 'hourglass' : 'check')}</button>
+        </span>
       </div>
-      ${selected ? editor(set, index) : ''}
+      ${editing ? editor(set, index) : ''}
     </div>`;
   }).join('');
 }
@@ -136,7 +162,7 @@ function renderVariantB(exercise) {
   const rows = exercise.sets.map((set, index) => {
     if (set.status === 'completed') return renderCompletedRow(set, index);
     const selected = set.id === selectedSetId;
-    const label = set.load || set.reps ? `${set.load || '–'} kg × ${set.reps || '–'}` : 'Tomt planlagt sett';
+    const label = `${set.load} kg × ${set.reps}`;
     return `<div class="set-row ${selected ? 'selected' : ''}">
       <span class="set-number">${index + 1}</span>
       <span class="set-copy"><b>${escapeHtml(label)}</b><small>${selected ? 'Valgt' : 'Planlagt'}</small></span>
@@ -160,8 +186,8 @@ function renderVariantC(exercise) {
         <span class="set-number">${index + 1}</span>
         <label><span>kg</span><input class="dense-input ${invalid ? 'invalid' : ''}" aria-label="Belastning for sett ${index + 1}" data-field="load" data-set-id="${set.id}" inputmode="decimal" value="${escapeHtml(invalid ? '-10' : set.load)}" ${busy ? 'disabled' : ''}></label>
         <label><span>reps</span><input class="dense-input" aria-label="Repetisjoner for sett ${index + 1}" data-field="reps" data-set-id="${set.id}" inputmode="numeric" value="${escapeHtml(set.reps)}" ${busy ? 'disabled' : ''}></label>
-        <button class="icon-action confirm" data-action="confirm" data-set-id="${set.id}" type="button" aria-label="Bekreft sett ${index + 1}" ${busy || invalid ? 'disabled' : ''}>✓</button>
-        <button class="icon-action" data-action="remove-set" data-set-id="${set.id}" type="button" aria-label="Fjern sett ${index + 1}" ${busy ? 'disabled' : ''}>×</button>
+        <button class="icon-action confirm" data-action="confirm" data-set-id="${set.id}" type="button" aria-label="Bekreft sett ${index + 1}" ${busy || invalid ? 'disabled' : ''}>${icon('check')}</button>
+        <button class="icon-action" data-action="remove-set" data-set-id="${set.id}" type="button" aria-label="Fjern sett ${index + 1}" ${busy ? 'disabled' : ''}>${icon('trash')}</button>
       </div>
       ${invalid ? '<p class="field-error" role="alert">Sett 6: Belastningen må være null eller mer.</p>' : ''}
       ${failed ? '<aside class="error-alert" role="alert"><b>Sett 6 ble ikke lagret</b>Verdiene er beholdt. <button class="compact-action" data-action="retry" type="button">Prøv igjen</button></aside>' : ''}
@@ -180,13 +206,12 @@ function exerciseCard(exercise) {
     <button class="exercise-header" data-action="toggle-exercise" data-exercise-id="${exercise.id}" type="button" aria-expanded="${open}">
       <span><b>${escapeHtml(exercise.name)}</b><small>${summary(exercise)}</small></span><span class="chevron" aria-hidden="true">${open ? '−' : '+'}</span>
     </button>
-    ${open ? `<div class="exercise-body"><div class="set-list">${sets}</div><div class="exercise-actions">${compactAction('×', 'Fjern øvelse', 'remove-exercise', 'danger')}${compactAction('+', 'Legg til sett', 'add-set')}</div></div>` : ''}
+    ${open ? `<div class="exercise-body"><div class="set-list">${sets}</div><div class="exercise-actions">${compactAction('trash', 'Fjern øvelse', 'remove-exercise', 'danger')}${compactAction('plus', 'Legg til sett', 'add-set')}</div></div>` : ''}
   </article>`;
 }
 
 function denseWorkout() {
-  return `<div class="workout-meta"><span>Tirsdag 25. august · 29 min</span><strong>6 sett ferdig</strong></div>
-    <div class="exercise-list variant-${variant}">${exercises.map(exerciseCard).join('')}</div>
+  return `<div class="exercise-list variant-${variant}">${exercises.map(exerciseCard).join('')}</div>
     <div class="workout-actions">
       <button class="button secondary" data-action="add-exercise" type="button">Legg til øvelse</button>
       <button class="button primary" data-action="finish" type="button">Fullfør trening</button>
@@ -219,6 +244,16 @@ function updateControls() {
 function updateSetFromInput(input) {
   const set = exercises.flatMap((exercise) => exercise.sets).find((candidate) => candidate.id === input.dataset.setId);
   if (set) set[input.dataset.field] = input.value;
+  const editorElement = input.closest('.expanded-editor');
+  const closeButton = editorElement?.querySelector('[data-action="close-edit"]');
+  const statusButton = input.closest('.set-item')?.querySelector('[data-action="toggle-status"]');
+  if (closeButton) {
+    const fields = [...editorElement.querySelectorAll('input')];
+    const disabled = !hasValidValues(fields[0].value, fields[1].value)
+      || fields.some((field) => field.closest('.invalid'));
+    closeButton.disabled = disabled;
+    if (statusButton) statusButton.disabled = disabled;
+  }
 }
 
 function findSet(setId) {
@@ -248,7 +283,14 @@ function bindScreenActions() {
   screen.querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', () => {
     const action = button.dataset.action;
     if (['finish', 'cancel', 'remove-exercise', 'add-exercise'].includes(action)) showDialog(action);
-    if (action === 'select') { selectedSetId = selectedSetId === button.dataset.setId && variant === 'a' ? '' : button.dataset.setId; render(); }
+    if (action === 'select') { selectedSetId = button.dataset.setId; render(); }
+    if (action === 'edit') { selectedSetId = selectedSetId === button.dataset.setId ? '' : button.dataset.setId; render(); }
+    if (action === 'close-edit') { selectedSetId = ''; reviewState = 'normal'; render(); }
+    if (action === 'toggle-status') {
+      const target = findSet(button.dataset.setId);
+      if (target) target.set.status = target.set.status === 'completed' ? 'planned' : 'completed';
+      render();
+    }
     if (action === 'retry') { reviewState = 'busy'; render(); }
     if (action === 'confirm') {
       const confirmedSetId = button.dataset.setId || selectedSetId;
@@ -275,8 +317,9 @@ function bindScreenActions() {
       const card = button.closest('[data-exercise-id]');
       const exercise = exercises.find((candidate) => candidate.id === card.dataset.exerciseId);
       const id = `${exercise.id}-${Date.now()}`;
-      exercise.sets.push({ id, status: 'planned', load: '', reps: '' });
-      selectedSetId = id;
+      const previous = exercise.sets.at(-1);
+      exercise.sets.push({ id, status: 'planned', load: previous?.load || '0', reps: previous?.reps || '1' });
+      if (variant !== 'a') selectedSetId = id;
       render();
     }
     if (action === 'toggle-exercise') {
@@ -293,17 +336,17 @@ function changeVariant(direction) {
   const current = variantKeys.indexOf(variant);
   variant = variantKeys[(current + direction + variantKeys.length) % variantKeys.length];
   setQueryParam('variant', variant);
-  selectedSetId = 'b6';
+  selectedSetId = variant === 'b' ? 'b6' : '';
   render();
 }
 
 document.querySelectorAll('[data-setting]').forEach((button) => button.addEventListener('click', () => {
   const { setting, value } = button.dataset;
   if (setting === 'scenario') { scenario = value; setQueryParam('scenario', value); }
-  if (setting === 'state') reviewState = value;
+  if (setting === 'state') { reviewState = value; selectedSetId = variant === 'c' ? '' : 'b6'; }
   if (setting === 'expansion') setExpansion(value);
   exercises = cloneSeed();
-  selectedSetId = 'b6';
+  if (setting !== 'state') selectedSetId = variant === 'b' ? 'b6' : '';
   render();
 }));
 
