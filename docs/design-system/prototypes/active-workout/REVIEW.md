@@ -1,6 +1,6 @@
 # Active workout density prototype review
 
-Status: direction approved on 2026-09-13. This is throwaway prototype code for #219 and does not read or write production data.
+Status: direction approved on 2026-09-13 and production planning completed in #220. This is throwaway prototype code for #219 and does not read or write production data.
 
 ## Question
 
@@ -37,9 +37,33 @@ Variant A, inline expansion, is approved as the design source for production pla
 - Do not add workout date, elapsed time, or aggregate workout-level completion metadata as part of this redesign.
 - Use the prototype-local monochrome outline SVGs only as placeholders. #226 owns refinement and production catalog adoption of the icon family.
 
+### Production decisions from #220
+
+- Keep every set at a stable position and retain its stable displayed number when its status changes. Do not regroup completed sets above planned sets.
+- Permit one inline set editor at a time. Opening another editor first validates and flushes the current draft. Invalid or incomplete input keeps the current editor open and blocks editor switching, editor collapse, and status changes, but does not add broader exercise-card or navigation blocking beyond the existing draft and flush contracts.
+- Opening an editor moves focus to its load field. Closing it returns focus to that row's edit action. Adding a set leaves it compact and moves accessibility focus to the new row without opening the keyboard.
+- Saving uses the existing serialized autosave and draft durability model. Saving and failed states remain local to the expanded row, retain entered values, and provide the existing explicit retry path. While persistence is pending, the existing global mutation and navigation lock remains in force; unaffected rows remain readable.
+- Editing a completed set does not first return it to planned. Saving changed values preserves completed status and requires an atomic persistence operation. Returning it to planned remains a separate explicit status action.
+- Removing a planned set remains immediate and secondary. Removing a completed set from its editor requires destructive confirmation. After removal, focus moves to the preceding surviving set row, then the following row if there is no preceding row, or to `Legg til sett` when no row remains.
+- Status changes preserve stable position. They announce the result and retain or restore logical focus on the same row after persistence and rerendering.
+- Exercise cards retain #215's independent zero, one, several, or all-expanded behavior and start collapsed on a fresh mount. Their summary remains the completed count over the total set count.
+- Set-level icon actions stay in two stable trailing positions. `Fjern sett` remains a labelled action inside the editor. `Fjern øvelse` remains a labelled exercise-level action. `Legg til øvelse`, `Fullfør trening`, and `Avbryt trening` remain workout-level actions after the exercise list.
+- Preserve the existing persistence, draft flushing, validation, confirmation, completion, cancellation, navigation prevention, lifecycle, recovery, accessibility announcement, focus, reduced-motion, and haptic contracts unless a decision above explicitly changes one.
+
+### Design-system assessment
+
+- #226 supplies the coherent icon family and type-safe icon primitive.
+- #227 adds an icon-only presentation to the existing `Button`, with the same semantic variants and states as labelled buttons, a minimum platform target size, and a mandatory accessible name. This is a variant of `Button`, not a separate `IconButton` component.
+- #228 adds a destructive tone to the existing `CompactAction` for labelled local actions that remove consequential data. Planned-set removal remains neutral; exercise removal uses the destructive tone.
+- The compact set row and its inline editor remain a screen-level composition. Existing typography, semantic colors, `NumericField`, `ErrorAlert`, compact `Loader`, and action components provide its reusable parts. There is not enough independent reuse to justify an `ExpandableActionRow`, status-badge, or inline-editor component.
+- No new color, typography, spacing, radius, or responsive tokens are required. The production composition must use existing semantic tokens rather than prototype-local CSS values.
+- Icon-only controls are allowed narrowly in dense repeated rows when positions remain stable, the icon comes from the approved icon set, every control has a contextual accessible name, and visible row text independently communicates status. Destructive removal remains visibly labelled.
+
+#229 implements the production redesign after #226, #227, and #228. All four are sub-issues of #218, and GitHub's native issue dependencies represent the blocking order.
+
 Variant A was preferred because it preserves the strongest spatial connection between a compact set summary and occasional editing while keeping status changes immediately reachable. Variant B was rejected because the shared editor weakens that set-to-editor connection. Variant C was rejected because always-visible fields keep too much form chrome on screen and become crowded at narrow widths and large text.
 
-Remaining production-planning questions belong to #220: identify any compact-row, icon-button, status-badge, or inline-editor design-system work beyond #226, and specify focus, autosave failure, keyboard, and transition behavior using existing production contracts as the baseline.
+The downstream issues published by #220 are the implementation source. The decisions above resolve the remaining questions about reusable components, focus, autosave failure, keyboard behavior, and transitions.
 
 ## Comparative evidence
 
