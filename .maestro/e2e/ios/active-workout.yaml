@@ -32,13 +32,13 @@ tags:
 - tapOn: "Belastning for K"
 - inputText: "8"
 - assertVisible: "^8$"
-- stopApp
-- launchApp
 - extendedWaitUntil:
-    visible: "Fortsett trening"
-    timeout: 60000
-- tapOn: "Fortsett trening"
-- tapOn: "K, 0 av 1 sett gjennomført"
+    visible: "Lukk redigering av sett 1 for K"
+    timeout: 30000
+- tapOn: "Lukk redigering av sett 1 for K"
+- extendedWaitUntil:
+    visible: "Rediger sett 1 for K"
+    timeout: 30000
 - tapOn: "Marker sett 1 som gjennomført for K"
 - runFlow:
     when:
