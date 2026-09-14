@@ -79,7 +79,11 @@ tags:
 - assertVisible: "Rediger sett 1 for K"
 
 # Completed removal is destructive, cancellable, and focuses the following row.
-- tapOn: "K, 2 av 2 sett gjennomført"
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "K, 2 av 2 sett gjennomført"
+    timeout: 30000
 - tapOn: "K, 2 av 2 sett gjennomført"
 - tapOn: "Rediger sett 1 for K"
 - tapOn: "Fjern sett 1 for K"
