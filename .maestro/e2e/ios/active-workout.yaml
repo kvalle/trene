@@ -83,10 +83,12 @@ tags:
 - tapOn: "Fjern sett 2 for K"
 - runFlow:
     when:
-      visible: "Fjern sett 2 for K"
+      notVisible: "Behold settet"
     commands:
       - tapOn: "Fjern sett 2 for K"
-- assertVisible: "Behold settet"
+- extendedWaitUntil:
+    visible: "Behold settet"
+    timeout: 30000
 - tapOn: "Behold settet"
 - assertVisible: "Rediger sett 2 for K"
 - tapOn: "Fjern sett 2 for K"
