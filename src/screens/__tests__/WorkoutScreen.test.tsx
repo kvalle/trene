@@ -282,6 +282,28 @@ test('invalid input blocks editor transitions but not exercise card collapse', a
   expect(screen.getByLabelText('Belastning for Knebøy')).toHaveProp('value', '1000');
 });
 
+test('reveals a collapsed invalid editor when another editor is requested', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    exercises: [
+      { id: 4, exerciseId: 5, name: 'Knebøy', position: 0, sets: [{ id: 6, loadKg: 80, repetitions: 5, confirmedAt: null }] },
+      { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [{ id: 11, loadKg: 100, repetitions: 3, confirmedAt: null }] },
+    ],
+  });
+  renderScreen({}, null);
+  fireEvent.press(await screen.findByRole('button', { name: 'Knebøy' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Markløft' }));
+  await openEditor(1);
+  fireEvent.changeText(screen.getByLabelText('Belastning for Knebøy'), '1000');
+  fireEvent.press(screen.getByRole('button', { name: 'Knebøy' }));
+
+  fireEvent.press(screen.getByRole('button', { name: 'Rediger sett 1 for Markløft' }));
+
+  expect(await screen.findByRole('button', { name: 'Knebøy' })).toHaveProp('accessibilityState', { expanded: true });
+  expect(screen.getByText('Skriv inn en belastning fra 0 til 999,9 med maks én desimal')).toBeOnTheScreen();
+  expect(screen.queryByLabelText('Belastning for Markløft')).not.toBeOnTheScreen();
+});
+
 test('shows mixed statuses in stable source order with explicit actions', async () => {
   mockedLoad.mockResolvedValue(workoutWithSets);
   renderScreen();
@@ -823,6 +845,27 @@ test('serializes field autosaves', async () => {
   await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(2));
 });
 
+test('keeps fields editable while an autosave is pending', async () => {
+  let finishSave: () => void = () => undefined;
+  mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
+  mockedSave.mockImplementation(() => new Promise<void>((resolve) => { finishSave = resolve; }));
+  renderScreen();
+  await openEditor(1);
+  const load = await screen.findByLabelText('Belastning for Knebøy');
+  const repetitions = screen.getByLabelText('Repetisjoner for Knebøy');
+
+  fireEvent.changeText(load, '80');
+  fireEvent(load, 'blur');
+  await waitFor(() => expect(mockedSave).toHaveBeenCalledWith(database, 3, 6, 80, null));
+
+  expect(load).not.toHaveProp('editable', false);
+  expect(repetitions).not.toHaveProp('editable', false);
+  fireEvent.changeText(repetitions, '5');
+  expect(repetitions).toHaveProp('value', '5');
+
+  await act(async () => finishSave());
+});
+
 test('persists valid drafts before backgrounding', async () => {
   let onAppStateChange: ((state: AppStateStatus) => void) | undefined;
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => {
@@ -1092,6 +1135,25 @@ test('atomically saves and confirms deletion of a completed set without changing
   fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av gjennomført sett' }));
   await waitFor(() => expect(mockedDeleteCompleted).toHaveBeenCalledWith(database, 3, 7));
   expect(focus).toHaveBeenCalled();
+});
+
+test('requires renewed confirmation when completed-set deletion fails', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedDeleteCompleted.mockRejectedValueOnce(new Error('write failed')).mockResolvedValueOnce();
+  renderScreen();
+  await openEditor(1);
+  fireEvent.press(screen.getByRole('button', { name: 'Fjern sett 1 for Knebøy' }));
+
+  fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av gjennomført sett' }));
+
+  expect(await screen.findByText('Kunne ikke fjerne det gjennomførte settet. Prøv igjen.')).toBeOnTheScreen();
+  expect(screen.queryByRole('header', { name: 'Fjern gjennomført sett?' })).not.toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: 'Prøv igjen' }));
+  expect(screen.getByRole('header', { name: 'Fjern gjennomført sett?' })).toBeOnTheScreen();
+  expect(mockedDeleteCompleted).toHaveBeenCalledTimes(1);
+
+  fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av gjennomført sett' }));
+  await waitFor(() => expect(mockedDeleteCompleted).toHaveBeenCalledTimes(2));
 });
 
 test.each([

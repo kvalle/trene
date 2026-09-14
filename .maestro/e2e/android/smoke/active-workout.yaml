@@ -44,7 +44,7 @@ tags:
 - assertVisible: "Gjennomført"
 
 # Editing a completed set is independent from status and saves it atomically.
-- tapOn: "Rediger sett 1 for Knebøy"
+- assertVisible: "Lukk redigering av sett 1 for Knebøy"
 - tapOn: "Belastning for Knebøy"
 - eraseText
 - inputText: "82"
@@ -83,7 +83,7 @@ tags:
 - tapOn: "Fjern sett 2 for Knebøy"
 - assertVisible: "Fjern gjennomført sett?"
 - tapOn: "Behold settet"
-- assertVisible: "Rediger sett 2 for Knebøy"
+- assertVisible: "Lukk redigering av sett 2 for Knebøy"
 - tapOn: "Fjern sett 2 for Knebøy"
 - tapOn: "Bekreft fjerning av gjennomført sett"
 - extendedWaitUntil:

@@ -238,6 +238,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
     if (pendingSetId !== undefined) return;
     const setId = removeCompletedSetId;
     setRemoveCompletedSetId(undefined);
+    if (setFailure?.setId === setId) setSetFailure(undefined);
     requestAnimationFrame(() => focus({ current: setId ? removeSetRefs.current.get(setId) ?? null : null }));
   }
 
@@ -375,6 +376,10 @@ export function WorkoutScreen({ navigation, route }: Props) {
     const invalidInput = validation.loadError
       ? loadInputRefs.current.get(set.id)
       : repetitionsInputRefs.current.get(set.id);
+    const exerciseId = state.status === 'ready'
+      ? state.workout.exercises.find((exercise) => exercise.sets.some((candidate) => candidate.id === set.id))?.exerciseId
+      : undefined;
+    if (exerciseId !== undefined) setExpandedIds((current) => new Set(current).add(exerciseId));
     requestAnimationFrame(() => focus({ current: invalidInput ?? null }));
     return false;
   }
@@ -503,6 +508,8 @@ export function WorkoutScreen({ navigation, route }: Props) {
     removeDraft = false,
     success?: string,
     focusAfter?: () => void,
+    failureRetry?: () => void,
+    onFailure?: () => void,
   ) {
     setPendingSetId(setId);
     setSetFailure(undefined);
@@ -518,12 +525,13 @@ export function WorkoutScreen({ navigation, route }: Props) {
       }
       focusAfter?.();
     } catch {
+      onFailure?.();
       AccessibilityInfo.announceForAccessibility(failure);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setSetFailure({
         setId,
         message: failure,
-        retry: () => void mutateSet(setId, operation, apply, failure, removeDraft, success, focusAfter),
+        retry: failureRetry ?? (() => void mutateSet(setId, operation, apply, failure, removeDraft, success, focusAfter)),
       });
       setSetRetryFocus({ setId });
     } finally {
@@ -762,7 +770,6 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         kind="decimal"
                         label="Belastning"
                         containerStyle={styles.field}
-                        editable={!busy}
                         onBlur={() => saveOnBlur(state.workout.id, set, exercise.name)}
                         onChangeText={(load) => updateDraft(set, { load, loadError: undefined })}
                         placeholder="Belastning"
@@ -779,7 +786,6 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         kind="integer"
                         label="Repetisjoner"
                         containerStyle={styles.field}
-                        editable={!busy}
                         onBlur={() => saveOnBlur(state.workout.id, set, exercise.name)}
                         onChangeText={(repetitions) => updateDraft(set, { repetitions, repetitionsError: undefined })}
                         placeholder="Repetisjoner"
@@ -961,6 +967,11 @@ export function WorkoutScreen({ navigation, route }: Props) {
                   setEditingSetId(undefined);
                   focusAfterSetRemoval(exercise.sets, index, exercise.id);
                 },
+                () => {
+                  setSetFailure(undefined);
+                  setRemoveCompletedSetId(setId);
+                },
+                () => setRemoveCompletedSetId(undefined),
               );
             }}
           />

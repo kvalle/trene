@@ -26,16 +26,12 @@ tags:
     timeout: 30000
 - assertVisible: "Sett 1, belastning ikke angitt, repetisjoner ikke angitt, Planlagt"
 - tapOn: "Rediger sett 1 for K"
-- assertVisible:
-    id: "workout-set-1-load"
+- tapOn: "Belastning for K"
 - inputText: "8"
-- assertVisible:
-    id: "workout-set-1-load"
-- tapOn:
-    id: "workout-set-1-repetitions"
+- assertVisible: "^8$"
+- tapOn: "Repetisjoner for K"
 - inputText: "5"
-- assertVisible:
-    id: "workout-set-1-repetitions"
+- assertVisible: "^5$"
 - extendedWaitUntil:
     visible: "Lukk redigering av sett 1 for K"
     timeout: 30000
@@ -55,25 +51,32 @@ tags:
 - assertVisible: "Sett 1, 8 kilogram, 5 repetisjoner, Gjennomført"
 
 # A completed value edit keeps the row completed and in position.
-- tapOn:
-    id: "workout-set-1-repetitions"
+- tapOn: "Rediger sett 1 for K"
+- tapOn: "Repetisjoner for K"
 - inputText: "6"
-- assertVisible:
-    id: "workout-set-1-repetitions"
+- assertVisible: "^56$"
+- tapOn: "Lukk redigering av sett 1 for K"
+- extendedWaitUntil:
+    visible: "Sett 1, 8 kilogram, 56 repetisjoner, Gjennomført"
+    timeout: 30000
 - stopApp
 - launchApp
+- extendedWaitUntil:
+    visible: "Fortsett trening"
+    timeout: 60000
+- tapOn: "Fortsett trening"
 - extendedWaitUntil:
     visible: "K, 1 av 1 sett gjennomført"
     timeout: 60000
 - tapOn: "K, 1 av 1 sett gjennomført"
-- assertVisible: "Sett 1, 8 kilogram, 6 repetisjoner, Gjennomført"
+- assertVisible: "Sett 1, 8 kilogram, 56 repetisjoner, Gjennomført"
 
 # A second compact row can change status without opening its editor.
 - tapOn: "Legg til sett"
 - extendedWaitUntil:
     visible: "Rediger sett 2 for K"
     timeout: 30000
-- assertVisible: "Sett 2, 8 kilogram, 6 repetisjoner, Planlagt"
+- assertVisible: "Sett 2, 8 kilogram, 56 repetisjoner, Planlagt"
 - tapOn: "Marker sett 2 som gjennomført for K"
 - runFlow:
     when:
@@ -83,7 +86,7 @@ tags:
 - extendedWaitUntil:
     visible: "Endre sett 2 til planlagt for K"
     timeout: 30000
-- assertVisible: "Sett 2, 8 kilogram, 6 repetisjoner, Gjennomført"
+- assertVisible: "Sett 2, 8 kilogram, 56 repetisjoner, Gjennomført"
 - assertVisible: "Rediger sett 1 for K"
 
 # Completed removal is destructive, cancellable, and focuses the following row.
@@ -98,9 +101,9 @@ tags:
     visible: "Behold settet"
     timeout: 30000
 - tapOn: "Behold settet"
-- assertVisible: "Rediger sett 1 for K"
+- assertVisible: "Lukk redigering av sett 1 for K"
 - tapOn: "Fjern sett 1 for K"
 - tapOn: "Bekreft fjerning av gjennomført sett"
 - assertNotVisible: "Rediger sett 2 for K"
 - assertVisible: "Rediger sett 1 for K"
-- assertVisible: "Sett 1, 8 kilogram, 6 repetisjoner, Gjennomført"
+- assertVisible: "Sett 1, 8 kilogram, 56 repetisjoner, Gjennomført"
