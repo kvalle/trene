@@ -77,17 +77,24 @@ describe('CompactAction', () => {
   it('supports Pressable style objects and callbacks', () => {
     const callbackStyle = jest.fn(() => ({ marginTop: 9 }));
     const { rerender } = renderWithTheme(
-      <CompactAction icon="+" label="Legg til" style={{ marginBottom: 7 }} testID="compact" />,
+      <CompactAction icon="plus" label="Legg til" style={{ marginBottom: 7 }} testID="compact" />,
     );
     expect(screen.getByTestId('compact')).toHaveStyle({ marginBottom: 7 });
 
     rerender(
       <AppThemeProvider>
-        <CompactAction icon="+" label="Legg til" style={callbackStyle} testID="compact" />
+        <CompactAction icon="plus" label="Legg til" style={callbackStyle} testID="compact" />
       </AppThemeProvider>,
     );
     expect(callbackStyle).toHaveBeenCalledWith(expect.objectContaining({ pressed: false }));
     expect(screen.getByTestId('compact')).toHaveStyle({ marginTop: 9 });
+  });
+
+  it('renders a decorative typed icon while the control owns the accessible name', () => {
+    renderWithTheme(<CompactAction icon="trash" label="Fjern" testID="compact" />);
+
+    expect(screen.getByRole('button', { name: 'Fjern' })).toBeOnTheScreen();
+    expect(screen.getByTestId('compact-icon', { includeHiddenElements: true })).toHaveProp('accessible', false);
   });
 });
 

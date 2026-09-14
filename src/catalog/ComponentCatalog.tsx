@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { PixelRatio, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
-import { radii, typography } from '../theme';
+import { darkColors, lightColors, radii, typography } from '../theme';
 import { AppThemeProvider, useAppTheme } from '../ui/AppThemeProvider';
 import { getAppStackScreenOptions } from '../ui/appShell';
 import { Button } from '../ui/Button';
@@ -17,6 +17,7 @@ import { ErrorAlert } from '../ui/ErrorAlert';
 import { FieldError } from '../ui/FieldError';
 import { FormSection } from '../ui/FormSection';
 import { Hero } from '../ui/Hero';
+import { Icon, iconNames, type IconName, type IconSize } from '../ui/Icon';
 import { Loader } from '../ui/Loader';
 import { ListContainer } from '../ui/ListContainer';
 import { NavigationRow } from '../ui/NavigationRow';
@@ -43,6 +44,7 @@ type CatalogStackParamList = {
   NumericFieldDetail: undefined;
   AppShellDetail: undefined;
   HeroDetail: undefined;
+  IconDetail: undefined;
   LoaderDetail: undefined;
   NoticeDetail: undefined;
   ErrorAlertDetail: undefined;
@@ -77,6 +79,19 @@ type CatalogItem = {
 // Only implemented components in src/ui/ per ticket scope.
 // Theme/app-shell is represented as Navigasjon og struktur entry.
 const CATALOG_GROUPS: CatalogGroup[] = [
+  {
+    title: 'Visuelle grunnelementer',
+    items: [
+      {
+        id: 'icon',
+        name: 'Icon',
+        description: 'Sju sammenhengende symboler som arver farge fra konteksten.',
+        usage: 'Bruk som støtte for tekst og tilstand, eller alene i en kjent kontroll med eksplisitt tilgjengelig navn.',
+        route: 'IconDetail',
+        testID: 'catalog-item-icon',
+      },
+    ],
+  },
   {
     title: 'Handlinger',
     items: [
@@ -329,6 +344,7 @@ function CatalogNavigator({
         <Stack.Screen name="NumericFieldDetail" component={NumericFieldDetailScreen} options={{ title: 'NumericField' }} />
         <Stack.Screen name="AppShellDetail" component={AppShellDetailScreen} options={{ title: 'App-shell' }} />
         <Stack.Screen name="HeroDetail" component={HeroDetailScreen} options={{ title: 'Hero' }} />
+        <Stack.Screen name="IconDetail" component={IconDetailScreen} options={{ title: 'Icon' }} />
         <Stack.Screen name="LoaderDetail" component={LoaderDetailScreen} options={{ title: 'Loader' }} />
         <Stack.Screen name="NoticeDetail" component={NoticeDetailScreen} options={{ title: 'Notice' }} />
         <Stack.Screen name="ErrorAlertDetail" component={ErrorAlertDetailScreen} options={{ title: 'ErrorAlert' }} />
@@ -483,13 +499,83 @@ export function CompactActionDetailScreen() {
     <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-compactaction">
       <DetailHeader name="CompactAction" description="Kompakt lokal handling med ikon og synlig etikett." usage="Bruk når handlingen gjelder ett lite innholdselement og ikke skal konkurrere med primære handlinger." />
       <View style={styles.controlGroup}>
-        <CompactAction icon="✎" label="Rediger" onPress={() => {}} testID="catalog-compactaction-normal" />
-        <CompactAction icon="+" label="Legg til" onPress={() => {}} testID="catalog-compactaction-add" />
-        <CompactAction icon="×" label="Fjern" tone="neutral" onPress={() => {}} testID="catalog-compactaction-remove" />
-        <CompactAction disabled icon="✎" label="Rediger" onPress={() => {}} testID="catalog-compactaction-disabled" />
-        <CompactAction busy icon="+" label="Legger til" onPress={() => {}} testID="catalog-compactaction-busy" />
+        <CompactAction icon="edit" label="Rediger" onPress={() => {}} testID="catalog-compactaction-normal" />
+        <CompactAction icon="plus" label="Legg til" onPress={() => {}} testID="catalog-compactaction-add" />
+        <CompactAction icon="trash" label="Fjern" tone="neutral" onPress={() => {}} testID="catalog-compactaction-remove" />
+        <CompactAction disabled icon="edit" label="Rediger" onPress={() => {}} testID="catalog-compactaction-disabled" />
+        <CompactAction busy icon="plus" label="Legger til" onPress={() => {}} testID="catalog-compactaction-busy" />
       </View>
     </ScrollView>
+  );
+}
+
+const iconLabels: Record<IconName, string> = {
+  check: 'Bekreft',
+  edit: 'Rediger',
+  hourglass: 'Planlagt',
+  'chevron-up': 'Skjul',
+  trash: 'Slett',
+  plus: 'Legg til',
+  restore: 'Gjenopprett',
+};
+
+export function IconDetailScreen() {
+  const { colors } = useAppTheme();
+  const sizes: IconSize[] = [16, 20, 24];
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-icon">
+      <DetailHeader
+        name="Icon"
+        description="Avrundet ikonfamilie på et optisk 24-punkts rutenett. Ikonene arver farge og er dekorative for hjelpemidler."
+        usage="Bruk som støtte for synlig tekst og tilstand, eller alene i en kjent kontroll der eierkontrollen har et eksplisitt tilgjengelig navn."
+      />
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Alle ikoner · 20</Text>
+        <View style={styles.iconCatalogGrid}>
+          {iconNames.map((name) => (
+            <View key={name} style={[styles.iconCatalogCell, { backgroundColor: colors.background }]}>
+              <Icon color={colors.text} name={name} size={20} testID={`catalog-icon-${name}`} />
+              <Text style={[typography.metadata, { color: colors.text }]}>{iconLabels[name]}</Text>
+              <Text style={[styles.iconName, { color: colors.muted }]}>{name}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Størrelser</Text>
+        <View style={styles.iconSizeRow}>
+          {sizes.map((size) => (
+            <View key={size} style={styles.iconSizeCell}>
+              <Icon color={colors.text} name="edit" size={size} testID={`catalog-icon-size-${size}`} />
+              <Text style={[typography.metadata, { color: colors.muted }]}>{size}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Tema og kontrolltilstander</Text>
+        <View style={styles.iconThemeRow}>
+          <IconThemeExample background={lightColors.surface} color={lightColors.text} label="Lys" />
+          <IconThemeExample background={darkColors.surface} color={darkColors.text} label="Mørk" />
+        </View>
+        <View style={styles.iconStateRow}>
+          <View style={[styles.iconState, { backgroundColor: colors.primary }]}><Icon color={colors.onPrimary} name="check" size={24} /><Text style={[typography.metadata, { color: colors.onPrimary }]}>Primær</Text></View>
+          <View style={[styles.iconState, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}><Icon color={colors.text} name="edit" size={24} /><Text style={[typography.metadata, { color: colors.text }]}>Sekundær</Text></View>
+          <View style={[styles.iconState, { backgroundColor: colors.surface, borderColor: colors.danger, borderWidth: 1 }]}><Icon color={colors.danger} name="trash" size={24} /><Text style={[typography.metadata, { color: colors.danger }]}>Destruktiv</Text></View>
+          <View style={[styles.iconState, { backgroundColor: colors.surfaceAlt }]}><Icon color={colors.muted} name="plus" size={24} /><Text style={[typography.metadata, { color: colors.muted }]}>Deaktivert</Text></View>
+          <View style={[styles.statusBadge, { backgroundColor: colors.surfaceAlt }]}><Icon color={colors.primary} name="hourglass" size={16} /><Text style={[typography.metadata, { color: colors.text }]}>Planlagt</Text></View>
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+function IconThemeExample({ background, color, label }: { background: string; color: string; label: string }) {
+  return (
+    <View style={[styles.iconThemeExample, { backgroundColor: background }]}>
+      <Icon color={color} name="restore" size={20} />
+      <Text style={[typography.metadata, { color }]}>{label}</Text>
+    </View>
   );
 }
 
@@ -1252,6 +1338,16 @@ const styles = StyleSheet.create({
   largeText: { borderRadius: radii.container, gap: 10, padding: 20 },
   section: { borderRadius: radii.container, borderWidth: 1, gap: 16, padding: 16 },
   controlGroup: { gap: 8 },
+  iconCatalogGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  iconCatalogCell: { alignItems: 'center', borderRadius: radii.control, gap: 5, minWidth: 96, padding: 12 },
+  iconName: { fontSize: 12 },
+  iconSizeRow: { alignItems: 'flex-end', flexDirection: 'row', gap: 24 },
+  iconSizeCell: { alignItems: 'center', gap: 8 },
+  iconThemeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  iconThemeExample: { alignItems: 'center', borderRadius: radii.control, flexDirection: 'row', gap: 8, minWidth: 112, padding: 12 },
+  iconStateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  iconState: { alignItems: 'center', borderRadius: radii.control, gap: 6, minWidth: 96, padding: 12 },
+  statusBadge: { alignItems: 'center', alignSelf: 'flex-start', borderRadius: 999, flexDirection: 'row', gap: 6, paddingHorizontal: 10, paddingVertical: 6 },
   example: { gap: 12, padding: 24 },
   pressed: { opacity: 0.72 },
   group: { gap: 8 },

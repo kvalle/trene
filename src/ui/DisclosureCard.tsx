@@ -3,6 +3,7 @@ import { AccessibilityInfo, LayoutAnimation, Pressable, StyleSheet, Text, View, 
 
 import { radii, typography } from '../theme';
 import { useAppTheme } from './AppThemeProvider';
+import { Icon } from './Icon';
 
 type DisclosureCardProps = ViewProps & {
   title: string;
@@ -43,7 +44,7 @@ export function DisclosureCard({ title, summary, expanded, onPress, headerRef, c
           <Text style={[typography.sectionTitle, { color: colors.text }]}>{title}</Text>
           {summary ? <Text style={[typography.metadata, { color: colors.muted }]}>{summary}</Text> : null}
         </View>
-        <Text accessibilityElementsHidden style={[styles.indicator, { color: colors.muted }]}>{expanded ? '−' : '+'}</Text>
+        <Icon color={colors.muted} name={expanded ? 'chevron-up' : 'plus'} size={24} />
       </Pressable>
       {expanded ? <View style={[styles.content, { borderTopColor: colors.border }]}>{children}</View> : null}
     </View>
@@ -54,7 +55,6 @@ const styles = StyleSheet.create({
   card: { borderRadius: radii.container, borderWidth: 1, overflow: 'hidden' },
   header: { alignItems: 'center', flexDirection: 'row', gap: 12, minHeight: 56, padding: 16 },
   copy: { flex: 1, gap: 4 },
-  indicator: { fontSize: 24, lineHeight: 28 },
   content: { borderTopWidth: 1, gap: 16, padding: 16 },
   pressed: { opacity: 0.72 },
 });

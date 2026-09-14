@@ -530,7 +530,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
               <CompactAction
                 accessibilityLabel={`Fjern ${exercise.name} fra treningen`}
                 disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
-                icon="×"
+                icon="trash"
                 label="Fjern øvelse"
                 onPress={() => {
                   if (completed > 0) setRemoveExerciseId(exercise.id);
@@ -552,7 +552,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                 <CompactAction
                   accessibilityLabel={`Rediger sett ${index + 1}`}
                   disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
-                  icon="✎"
+                  icon="restore"
                   label="Endre"
                   onPress={() => void mutateSet(
                     set.id,
@@ -625,7 +625,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                     <CompactAction
                       accessibilityLabel={`Slett planlagt sett for ${exercise.name}`}
                       disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
-                      icon="×"
+                      icon="trash"
                       label="Fjern sett"
                       tone="neutral"
                       onPress={() => void mutateSet(
@@ -659,7 +659,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                 <CompactAction
                   disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || hasUnsavedDraft}
                   busy={pendingExerciseOperation === 'add-set'}
-                  icon="+"
+                  icon="plus"
                   label={pendingExerciseOperation === 'add-set' ? 'Legger til sett' : 'Legg til sett'}
                   onPress={() => void flushDrafts().then((saved) => {
                     if (saved) void addSet(state.workout.id, exercise.id, exercise.name);
@@ -704,7 +704,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
         </View>
       )}
       {state.workout.exercises.length === 0 ? (
-        <CompactAction ref={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} icon="×" label="Avbryt" testID="cancel-active-workout" onPress={() => {
+        <Button ref={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} title="Avbryt" variant="text" testID="cancel-active-workout" onPress={() => {
           setCancelFailed(false);
           setCancelDialogOpen(true);
         }} />
