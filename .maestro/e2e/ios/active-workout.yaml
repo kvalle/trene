@@ -79,6 +79,8 @@ tags:
 - assertVisible: "Rediger sett 1 for K"
 
 # Completed removal is destructive, cancellable, and focuses the following row.
+- tapOn: "K"
+- tapOn: "K"
 - tapOn: "Rediger sett 1 for K"
 - tapOn: "Fjern sett 1 for K"
 - runFlow:
