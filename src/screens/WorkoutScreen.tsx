@@ -1010,7 +1010,7 @@ const styles = StyleSheet.create({
   rowActions: { flexDirection: 'row', gap: 8 },
   editor: { gap: 12, marginLeft: 50, paddingTop: 12 },
   fields: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  field: { flexBasis: 140, flexGrow: 1 },
+  field: { flexBasis: 120, flexGrow: 1 },
   setActions: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
   exerciseActions: { gap: 10 },
   failure: { gap: 10 },
