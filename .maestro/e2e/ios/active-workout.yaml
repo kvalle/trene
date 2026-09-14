@@ -30,13 +30,9 @@ tags:
 - inputText: "5"
 - assertVisible: "^5$"
 - tapOn: "Belastning for K"
-- inputText: "80"
-- runFlow:
-    when:
-      notVisible: "^80$"
-    commands:
-      - tapOn: "Belastning for K"
-      - inputText: "80"
+- inputText: "8"
+- assertVisible: "^8$"
+- inputText: "0"
 - assertVisible: "^80$"
 - tapOn: "Lukk redigering av sett 1 for K"
 - runFlow:
