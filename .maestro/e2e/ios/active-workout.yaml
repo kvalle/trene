@@ -32,15 +32,6 @@ tags:
 - tapOn: "Belastning for K"
 - inputText: "8"
 - assertVisible: "^8$"
-- tapOn: "Lukk redigering av sett 1 for K"
-- runFlow:
-    when:
-      visible: "Lukk redigering av sett 1 for K"
-    commands:
-      - tapOn: "Lukk redigering av sett 1 for K"
-- extendedWaitUntil:
-    visible: "Rediger sett 1 for K"
-    timeout: 30000
 - tapOn: "Marker sett 1 som gjennomført for K"
 - runFlow:
     when:
@@ -53,22 +44,16 @@ tags:
 - assertVisible: "Sett 1, 8 kilogram, 5 repetisjoner, Gjennomført"
 
 # A completed value edit keeps the row completed and in position.
-- tapOn: "Rediger sett 1 for K"
 - tapOn: "Repetisjoner for K"
 - inputText: "6"
 - assertVisible: "^56$"
-- tapOn: "Lukk redigering av sett 1 for K"
-- runFlow:
-    when:
-      visible: "Lukk redigering av sett 1 for K"
-    commands:
-      - tapOn: "Lukk redigering av sett 1 for K"
+- stopApp
+- launchApp
 - extendedWaitUntil:
-    visible: "Rediger sett 1 for K"
-    timeout: 30000
-- extendedWaitUntil:
-    visible: "Sett 1, 8 kilogram, 56 repetisjoner, Gjennomført"
-    timeout: 30000
+    visible: "K, 1 av 1 sett gjennomført"
+    timeout: 60000
+- tapOn: "K, 1 av 1 sett gjennomført"
+- assertVisible: "Sett 1, 8 kilogram, 56 repetisjoner, Gjennomført"
 
 # A second compact row can change status without opening its editor.
 - tapOn: "Legg til sett"
