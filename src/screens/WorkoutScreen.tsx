@@ -100,6 +100,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const lifecycleFlush = useRef(Promise.resolve(true));
   const saveQueueFailed = useRef(false);
   const pendingSaves = useRef(0);
+  const pendingBlurSaves = useRef(new Map<number, ReturnType<typeof setTimeout>>());
   const cardRefs = useRef(new Map<number, View>());
   const loadInputRefs = useRef(new Map<number, TextInput>());
   const repetitionsInputRefs = useRef(new Map<number, TextInput>());
@@ -182,6 +183,11 @@ export function WorkoutScreen({ navigation, route }: Props) {
     }
     else lifecycleFlush.current = flushDrafts();
   }).remove, [state, drafts]);
+
+  useEffect(() => () => {
+    pendingBlurSaves.current.forEach(clearTimeout);
+    pendingBlurSaves.current.clear();
+  }, []);
 
   useEffect(() => {
     if (!setRetryFocus) return;
@@ -348,6 +354,8 @@ export function WorkoutScreen({ navigation, route }: Props) {
 
   async function flushDrafts(): Promise<boolean> {
     if (state.status !== 'ready') return true;
+    pendingBlurSaves.current.forEach(clearTimeout);
+    pendingBlurSaves.current.clear();
     for (const exercise of state.workout.exercises) {
       for (const set of exercise.sets) {
         const draft = drafts[set.id]?.workoutId === state.workout.id ? drafts[set.id] : undefined;
@@ -392,6 +400,25 @@ export function WorkoutScreen({ navigation, route }: Props) {
     if (editingSetId !== undefined && !await leaveEditor(setId)) return;
     if (editingSetId === undefined) setEditingSetId(setId);
     requestAnimationFrame(() => loadInputRefs.current.get(setId)?.focus());
+  }
+
+  function saveOnBlur(workoutId: number, set: WorkoutSet, exerciseName: string) {
+    const existing = pendingBlurSaves.current.get(set.id);
+    if (existing) clearTimeout(existing);
+    const timeout = setTimeout(() => {
+      pendingBlurSaves.current.delete(set.id);
+      void saveDraft(workoutId, set, exerciseName);
+    }, 100);
+    pendingBlurSaves.current.set(set.id, timeout);
+  }
+
+  function runEditorAction(action: () => void) {
+    if (editingSetId !== undefined) {
+      const pending = pendingBlurSaves.current.get(editingSetId);
+      if (pending) clearTimeout(pending);
+      pendingBlurSaves.current.delete(editingSetId);
+    }
+    action();
   }
 
   async function confirmSet(workoutId: number, set: WorkoutSet, exerciseName: string) {
@@ -687,14 +714,14 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         icon={editing ? 'chevron-up' : 'edit'}
                         ref={(node) => { if (node) editRefs.current.set(set.id, node); }}
                         variant="secondary"
-                        onPress={() => editing ? void leaveEditor(undefined, true) : void openEditor(set.id)}
+                        onPress={() => runEditorAction(() => editing ? void leaveEditor(undefined, true) : void openEditor(set.id))}
                       />
                       <Button
                         accessibilityLabel={completedSet ? `Endre sett ${index + 1} til planlagt for ${exercise.name}` : `Marker sett ${index + 1} som gjennomført for ${exercise.name}`}
                         disabled={workoutBusy}
                         icon={completedSet ? 'hourglass' : 'check'}
                         variant={completedSet ? 'secondary' : 'primary'}
-                        onPress={() => void changeSetStatus(set, exercise.name)}
+                        onPress={() => runEditorAction(() => void changeSetStatus(set, exercise.name))}
                       />
                     </View>
                   </View>
@@ -707,7 +734,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                       label="Fjern sett"
                       ref={(node) => { if (node) removeSetRefs.current.set(set.id, node); }}
                       tone={completedSet ? 'destructive' : 'neutral'}
-                      onPress={() => {
+                      onPress={() => runEditorAction(() => {
                         if (completedSet) {
                           setSetFailure(undefined);
                           Keyboard.dismiss();
@@ -722,7 +749,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                           undefined,
                           () => { setEditingSetId(undefined); focusAfterSetRemoval(exercise.sets, index, exercise.id); },
                         );
-                      }}
+                      })}
                     />
                   </View>
                     <View style={styles.fields}>
@@ -736,7 +763,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         label="Belastning"
                         containerStyle={styles.field}
                         editable={!busy}
-                        onBlur={() => void saveDraft(state.workout.id, set, exercise.name)}
+                        onBlur={() => saveOnBlur(state.workout.id, set, exercise.name)}
                         onChangeText={(load) => updateDraft(set, { load, loadError: undefined })}
                         placeholder="Belastning"
                         ref={(node) => { if (node) loadInputRefs.current.set(set.id, node); }}
@@ -752,7 +779,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         label="Repetisjoner"
                         containerStyle={styles.field}
                         editable={!busy}
-                        onBlur={() => void saveDraft(state.workout.id, set, exercise.name)}
+                        onBlur={() => saveOnBlur(state.workout.id, set, exercise.name)}
                         onChangeText={(repetitions) => updateDraft(set, { repetitions, repetitionsError: undefined })}
                         placeholder="Repetisjoner"
                         ref={(node) => { if (node) repetitionsInputRefs.current.set(set.id, node); }}

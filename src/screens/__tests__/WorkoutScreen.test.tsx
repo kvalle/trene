@@ -704,6 +704,23 @@ test('validates input and atomically confirms comma decimals', async () => {
   expect(screen.getByRole('button', { name: 'Lukk redigering av sett 1 for Knebøy' })).toBeOnTheScreen();
 });
 
+test('does not let input blur consume a status action', async () => {
+  mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
+  mockedSave.mockResolvedValue();
+  mockedConfirm.mockResolvedValue();
+  renderScreen();
+  await openEditor(1);
+  fireEvent.changeText(screen.getByLabelText('Belastning for Knebøy'), '80');
+  fireEvent.changeText(screen.getByLabelText('Repetisjoner for Knebøy'), '5');
+  const status = screen.getByRole('button', { name: 'Marker sett 1 som gjennomført for Knebøy' });
+
+  fireEvent(screen.getByLabelText('Belastning for Knebøy'), 'blur');
+  fireEvent.press(status);
+
+  await waitFor(() => expect(mockedConfirm).toHaveBeenCalled());
+  expect(mockedSave).toHaveBeenCalledTimes(1);
+});
+
 test('preserves an open completed-set editor when returning it to planned', async () => {
   mockedLoad.mockResolvedValue(workoutWithSets);
   mockedUnconfirm.mockResolvedValue();
