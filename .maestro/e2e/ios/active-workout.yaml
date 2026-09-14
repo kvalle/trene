@@ -39,6 +39,11 @@ tags:
     commands:
       - tapOn: "Lukk redigering av sett 1 for K"
 - tapOn: "Marker sett 1 som gjennomført for K"
+- runFlow:
+    when:
+      visible: "Marker sett 1 som gjennomført for K"
+    commands:
+      - tapOn: "Marker sett 1 som gjennomført for K"
 - extendedWaitUntil:
     visible: "Endre sett 1 til planlagt for K"
     timeout: 30000
@@ -66,6 +71,11 @@ tags:
     timeout: 30000
 - assertVisible: "Sett 2, 8 kilogram, 56 repetisjoner, Planlagt"
 - tapOn: "Marker sett 2 som gjennomført for K"
+- runFlow:
+    when:
+      visible: "Marker sett 2 som gjennomført for K"
+    commands:
+      - tapOn: "Marker sett 2 som gjennomført for K"
 - extendedWaitUntil:
     visible: "Endre sett 2 til planlagt for K"
     timeout: 30000
