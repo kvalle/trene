@@ -1,6 +1,6 @@
 import { AccessibilityInfo } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import ComponentCatalog, { AppShellDetailScreen, CompactActionDetailScreen, IconDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen } from '../ComponentCatalog';
+import ComponentCatalog, { AppShellDetailScreen, ButtonDetailScreen, CompactActionDetailScreen, IconDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen } from '../ComponentCatalog';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 
 jest.mock('@react-navigation/native', () => ({
@@ -141,6 +141,24 @@ it('shows every icon, supported size and representative states', () => {
   expect(screen.getByText('Primær')).toBeOnTheScreen();
   expect(screen.getByText('Destruktiv')).toBeOnTheScreen();
   expect(screen.getByText('Deaktivert')).toBeOnTheScreen();
+});
+
+it.each(['light', 'dark'] as const)('shows every icon-only Button state in the %s theme', (scheme) => {
+  render(<AppThemeProvider scheme={scheme}><ButtonDetailScreen /></AppThemeProvider>);
+
+  for (const variant of ['primary', 'secondary']) {
+    expect(screen.getByTestId(`catalog-button-icon-${variant}-normal`)).toBeEnabled();
+    expect(screen.getByTestId(`catalog-button-icon-${variant}-pressed`)).toHaveStyle({ opacity: 0.72 });
+    expect(screen.getByTestId(`catalog-button-icon-${variant}-focused`)).toHaveProp(
+      'accessibilityState',
+      { busy: false, disabled: false, expanded: true },
+    );
+    expect(screen.getByTestId(`catalog-button-icon-${variant}-disabled`)).toBeDisabled();
+    expect(screen.getByTestId(`catalog-button-icon-${variant}-busy`)).toHaveProp(
+      'accessibilityState',
+      { busy: true, disabled: true },
+    );
+  }
 });
 
 it('shows every NumericField state and keyboard kind', () => {

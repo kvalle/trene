@@ -1,5 +1,5 @@
 import { createRef } from 'react';
-import { TextInput, View } from 'react-native';
+import { PixelRatio, TextInput, View } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { Button } from '../Button';
@@ -12,6 +12,13 @@ import { CompactAction } from '../CompactAction';
 import { DataRow } from '../DataRow';
 import { AppThemeProvider } from '../AppThemeProvider';
 import { darkColors, lightColors } from '../../theme';
+
+if (false) {
+  // @ts-expect-error Icon-only text buttons are not part of the approved presentation.
+  <Button accessibilityLabel="Avbryt" icon="edit" variant="text" />;
+  // @ts-expect-error Icon-only destructive buttons must retain a visible label.
+  <Button accessibilityLabel="Slett" icon="trash" variant="destructive" />;
+}
 
 function renderWithTheme(ui: React.ReactElement) {
   return render(<AppThemeProvider>{ui}</AppThemeProvider>);
@@ -71,6 +78,66 @@ describe('Button', () => {
       </AppThemeProvider>,
     );
     expect(screen.getByTestId('t')).toBeOnTheScreen();
+  });
+
+  it.each([
+    ['light', 'primary', lightColors.onPrimary],
+    ['light', 'secondary', lightColors.text],
+    ['dark', 'primary', darkColors.onPrimary],
+    ['dark', 'secondary', darkColors.text],
+  ] as const)('renders a typed icon with semantic color for %s %s', (scheme, variant, color) => {
+    render(
+      <AppThemeProvider scheme={scheme}>
+        <Button accessibilityLabel="Rediger element" icon="edit" testID="icon-button" variant={variant} />
+      </AppThemeProvider>,
+    );
+
+    expect(screen.queryByText('Rediger element')).not.toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Rediger element' })).toHaveStyle({ height: 48, minHeight: 48, minWidth: 48, width: 48 });
+    expect(screen.getByTestId('icon-button-icon', { includeHiddenElements: true })).toHaveProp('color', color);
+    expect(screen.getByTestId('icon-button-icon', { includeHiddenElements: true })).toHaveProp('accessible', false);
+  });
+
+  it('requires a non-empty accessible name for icon-only presentation', () => {
+    expect(() => renderWithTheme(<Button accessibilityLabel=" " icon="edit" />)).toThrow(
+      'Icon-only Button requires a non-empty accessibilityLabel.',
+    );
+  });
+
+  it('preserves expanded, focus, disabled and busy behavior for icon-only presentation', () => {
+    const onFocus = jest.fn();
+    const onPress = jest.fn();
+    const { rerender } = renderWithTheme(
+      <Button accessibilityLabel="Skjul detaljer" accessibilityState={{ expanded: true }} icon="chevron-up" onFocus={onFocus} onPress={onPress} testID="icon-button" variant="secondary" />,
+    );
+    const button = screen.getByTestId('icon-button');
+    expect(button).toHaveProp('accessibilityState', { busy: false, disabled: false, expanded: true });
+    fireEvent(button, 'focus');
+    expect(onFocus).toHaveBeenCalledTimes(1);
+    expect(button).toHaveStyle({ outlineColor: lightColors.focus, outlineWidth: 3 });
+    fireEvent.press(button);
+    expect(onPress).toHaveBeenCalledTimes(1);
+
+    rerender(<AppThemeProvider><Button accessibilityLabel="Bekrefter element" busy icon="check" onPress={onPress} testID="icon-button" /></AppThemeProvider>);
+    expect(screen.getByTestId('icon-button')).toBeDisabled();
+    expect(screen.getByTestId('icon-button-busy')).toBeOnTheScreen();
+    expect(screen.queryByTestId('icon-button-icon', { includeHiddenElements: true })).not.toBeOnTheScreen();
+  });
+
+  it('keeps adjacent icon-only targets distinct at narrow width', () => {
+    jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(2);
+    renderWithTheme(
+      <View style={{ flexDirection: 'row', gap: 8, width: 104 }}>
+        <Button accessibilityLabel="Rediger første" icon="edit" testID="first" />
+        <Button accessibilityLabel="Rediger andre" icon="edit" testID="second" variant="secondary" />
+      </View>,
+    );
+
+    expect(screen.getByTestId('first')).toHaveStyle({ width: 48 });
+    expect(screen.getByTestId('second')).toHaveStyle({ width: 48 });
+    expect(screen.getByRole('button', { name: 'Rediger første' })).not.toBe(screen.getByRole('button', { name: 'Rediger andre' }));
+    expect(PixelRatio.getFontScale()).toBe(2);
+    jest.restoreAllMocks();
   });
 });
 

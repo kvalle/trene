@@ -133,6 +133,15 @@ nøytral `muted`-farge i stedet for tonefargen, slik at kontrollen ikke fremstå
 som aktiv eller destruktiv. Tonen avgjør ikke om handlingen krever bekreftelse;
 den policyen eies av arbeidsflyten rundt kontrollen.
 
+`Button` kan vises med bare ikon i tette, gjentatte rader når plasseringen er
+stabil, ikonet er kjent og godkjent, hver kontroll har et kontekstuelt
+tilgjengelig navn, og synlig innhold kommuniserer tilstanden uavhengig av
+kontrollen. Presentasjonen finnes bare for primær og sekundær variant. Tekstlige,
+destruktive, sjeldne og tvetydige handlinger beholder synlig etikett;
+destruktiv fjerning skal alltid være synlig merket. Ikonknappen beholder minst
+`44 x 44` punkter på iOS og `48 x 48` dp på Android, mens ikonflaten forblir
+`24 x 24`.
+
 Gjensidig utelukkende valg vises som en `SingleSelectionGroup` med én kontrollert
 valgt verdi. Hvert valg bruker en ledende radiokontroll og hele raden som
 trykkflate. Gruppen og valgene eksponerer henholdsvis `radiogroup`- og
