@@ -16,6 +16,7 @@ import {
   countExercises,
   confirmWorkoutSet,
   deleteCompletedWorkout,
+  deleteCompletedWorkoutSet,
   deletePlannedWorkoutSet,
   getActiveWorkoutId,
   listAvailableExercises,
@@ -23,6 +24,7 @@ import {
   loadCompletedWorkout,
   loadActiveWorkout,
   removeExerciseFromWorkout,
+  saveCompletedWorkoutSet,
   savePlannedWorkoutSet,
   startWorkout,
   unconfirmWorkoutSet,
@@ -112,8 +114,8 @@ describe('active workout persistence', () => {
         {
           id: expect.any(Number), exerciseId: pressId, name: 'Benkpress', position: 0,
           sets: [
-            { id: expect.any(Number), loadKg: 80, repetitions: 6, confirmedAt: null },
             { id: expect.any(Number), loadKg: 82.5, repetitions: 5, confirmedAt: null },
+            { id: expect.any(Number), loadKg: 80, repetitions: 6, confirmedAt: null },
           ],
         },
         {
@@ -228,7 +230,7 @@ describe('active workout persistence', () => {
     await expect(addExerciseToWorkout(database, workoutId, aloftId)).rejects.toThrow();
   });
 
-  test('copies completed sets from the newest completed workout in displayed order', async () => {
+  test('copies completed sets from the newest completed workout in insertion order', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
@@ -263,8 +265,8 @@ describe('active workout persistence', () => {
     await addExerciseToWorkout(database, activeId, exerciseId);
 
     expect((await loadActiveWorkout(database))?.exercises[0].sets).toEqual([
-      { id: expect.any(Number), loadKg: 90, repetitions: 4, confirmedAt: null },
       { id: expect.any(Number), loadKg: 100, repetitions: 3, confirmedAt: null },
+      { id: expect.any(Number), loadKg: 90, repetitions: 4, confirmedAt: null },
     ]);
     const [firstId, secondId] = (await loadActiveWorkout(database))!.exercises[0].sets.map(({ id }) => id);
     expect(firstId).toBeLessThan(secondId);
@@ -538,8 +540,8 @@ describe('active workout persistence', () => {
     const firstSet = active.exercises[0].sets[0].id;
     const secondSet = active.exercises[1].sets[0].id;
     const laterFirstSet = (await addWorkoutSet(database, workoutId, active.exercises[0].id)).id;
-    await confirmWorkoutSet(database, workoutId, laterFirstSet, 90, 3, '2026-08-05T10:02:00Z');
-    await confirmWorkoutSet(database, workoutId, firstSet, 80, 5, '2026-08-05T10:01:00Z');
+    await confirmWorkoutSet(database, workoutId, laterFirstSet, 90, 3, '2026-08-05T10:01:00Z');
+    await confirmWorkoutSet(database, workoutId, firstSet, 80, 5, '2026-08-05T10:02:00Z');
     await confirmWorkoutSet(database, workoutId, secondSet, 60, 8, '2026-08-05T10:03:00Z');
     await addWorkoutSet(database, workoutId, active.exercises[1].id);
 
@@ -551,8 +553,8 @@ describe('active workout persistence', () => {
       completedAt: '2026-08-05T10:30:00Z',
       exercises: [
         { ...active.exercises[0], sets: [
-          { id: firstSet, loadKg: 80, repetitions: 5, confirmedAt: '2026-08-05T10:01:00Z' },
-          { id: laterFirstSet, loadKg: 90, repetitions: 3, confirmedAt: '2026-08-05T10:02:00Z' },
+          { id: firstSet, loadKg: 80, repetitions: 5, confirmedAt: '2026-08-05T10:02:00Z' },
+          { id: laterFirstSet, loadKg: 90, repetitions: 3, confirmedAt: '2026-08-05T10:01:00Z' },
         ] },
         { ...active.exercises[1], sets: [
           { id: secondSet, loadKg: 60, repetitions: 8, confirmedAt: '2026-08-05T10:03:00Z' },
@@ -678,7 +680,7 @@ describe('active workout persistence', () => {
     expect(await countExercises(database)).toBe(0);
   });
 
-  test('persists, confirms, orders, unconfirms, and reconfirms stable sets', async () => {
+  test('keeps set insertion order stable across status changes', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const workoutId = await startWorkout(database);
@@ -700,13 +702,91 @@ describe('active workout persistence', () => {
 
     await unconfirmWorkoutSet(database, workoutId, firstId);
     expect((await loadActiveWorkout(database))!.exercises[0].sets).toEqual([
-      { id: secondId, loadKg: 90, repetitions: 3, confirmedAt: '2026-01-01T10:00:00Z' },
       { id: firstId, loadKg: 80.5, repetitions: 5, confirmedAt: null },
+      { id: secondId, loadKg: 90, repetitions: 3, confirmedAt: '2026-01-01T10:00:00Z' },
     ]);
 
     await confirmWorkoutSet(database, workoutId, firstId, 81, 6, '2026-01-01T10:02:00Z');
     expect((await loadActiveWorkout(database))!.exercises[0].sets.map(({ id }) => id))
-      .toEqual([secondId, firstId]);
+      .toEqual([firstId, secondId]);
+  });
+
+  test('updates only a completed set in the specified active workout without changing its status', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    await addExerciseToWorkout(database, workoutId, exerciseId);
+    const exercise = (await loadActiveWorkout(database))!.exercises[0];
+    const completedSetId = exercise.sets[0].id;
+    const plannedSetId = (await addWorkoutSet(database, workoutId, exercise.id)).id;
+    await confirmWorkoutSet(database, workoutId, completedSetId, 80, 5, 'confirmed');
+
+    await saveCompletedWorkoutSet(database, workoutId, completedSetId, 82.5, 6);
+
+    expect((await loadActiveWorkout(database))!.exercises[0].sets[0]).toEqual({
+      id: completedSetId, loadKg: 82.5, repetitions: 6, confirmedAt: 'confirmed',
+    });
+    await expect(saveCompletedWorkoutSet(database, workoutId, plannedSetId, 90, 3))
+      .rejects.toThrow('Workout set not found');
+    await expect(saveCompletedWorkoutSet(database, workoutId + 1, completedSetId, 90, 3))
+      .rejects.toThrow('Workout set not found');
+    await expect(saveCompletedWorkoutSet(database, workoutId, completedSetId, Number.NaN, 3))
+      .rejects.toThrow('Invalid workout set values');
+    expect((await loadActiveWorkout(database))!.exercises[0].sets[0]).toEqual({
+      id: completedSetId, loadKg: 82.5, repetitions: 6, confirmedAt: 'confirmed',
+    });
+  });
+
+  test('rolls back a failed completed-set update', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    await addExerciseToWorkout(database, workoutId, exerciseId);
+    const setId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
+    await confirmWorkoutSet(database, workoutId, setId, 80, 5, 'confirmed');
+    await database.execAsync(`
+      CREATE TRIGGER reject_completed_set_save BEFORE UPDATE ON workout_sets
+      WHEN OLD.confirmed_at IS NOT NULL
+      BEGIN SELECT RAISE(ABORT, 'write failed'); END;
+    `);
+
+    await expect(saveCompletedWorkoutSet(database, workoutId, setId, 90, 3)).rejects.toThrow('write failed');
+    expect((await loadActiveWorkout(database))!.exercises[0].sets[0]).toEqual({
+      id: setId, loadKg: 80, repetitions: 5, confirmedAt: 'confirmed',
+    });
+  });
+
+  test('deletes only a completed set from the specified active workout and rolls back failures', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const workoutId = await startWorkout(database);
+    const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    await addExerciseToWorkout(database, workoutId, exerciseId);
+    const exercise = (await loadActiveWorkout(database))!.exercises[0];
+    const completedSetId = exercise.sets[0].id;
+    const plannedSetId = (await addWorkoutSet(database, workoutId, exercise.id)).id;
+    const failedSetId = (await addWorkoutSet(database, workoutId, exercise.id)).id;
+    await confirmWorkoutSet(database, workoutId, completedSetId, 80, 5, 'first');
+    await confirmWorkoutSet(database, workoutId, failedSetId, 90, 3, 'second');
+
+    await expect(deleteCompletedWorkoutSet(database, workoutId, plannedSetId))
+      .rejects.toThrow('Completed set not found');
+    await expect(deleteCompletedWorkoutSet(database, workoutId + 1, completedSetId))
+      .rejects.toThrow('Completed set not found');
+    await deleteCompletedWorkoutSet(database, workoutId, completedSetId);
+    expect((await loadActiveWorkout(database))!.exercises[0].sets.map(({ id }) => id))
+      .toEqual([plannedSetId, failedSetId]);
+
+    await database.execAsync(`
+      CREATE TRIGGER reject_completed_set_delete BEFORE DELETE ON workout_sets
+      WHEN OLD.id = ${failedSetId}
+      BEGIN SELECT RAISE(ABORT, 'write failed'); END;
+    `);
+    await expect(deleteCompletedWorkoutSet(database, workoutId, failedSetId)).rejects.toThrow('write failed');
+    expect((await loadActiveWorkout(database))!.exercises[0].sets.map(({ id }) => id))
+      .toEqual([plannedSetId, failedSetId]);
   });
 
   test('deletes only planned sets from an active workout', async () => {

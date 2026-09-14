@@ -11,10 +11,12 @@ import {
   cancelActiveWorkout,
   completeWorkout,
   confirmWorkoutSet,
+  deleteCompletedWorkoutSet,
   deletePlannedWorkoutSet,
   getActiveWorkoutId,
   loadActiveWorkout,
   removeExerciseFromWorkout,
+  saveCompletedWorkoutSet,
   savePlannedWorkoutSet,
   unconfirmWorkoutSet,
 } from '../../database/workouts';
@@ -41,10 +43,12 @@ jest.mock('../../database/workouts', () => ({
   cancelActiveWorkout: jest.fn(),
   completeWorkout: jest.fn(),
   confirmWorkoutSet: jest.fn(),
+  deleteCompletedWorkoutSet: jest.fn(),
   deletePlannedWorkoutSet: jest.fn(),
   getActiveWorkoutId: jest.fn(),
   loadActiveWorkout: jest.fn(),
   removeExerciseFromWorkout: jest.fn(),
+  saveCompletedWorkoutSet: jest.fn(),
   savePlannedWorkoutSet: jest.fn(),
   unconfirmWorkoutSet: jest.fn(),
 }));
@@ -54,9 +58,11 @@ const mockedLoad = jest.mocked(loadActiveWorkout);
 const mockedCancel = jest.mocked(cancelActiveWorkout);
 const mockedComplete = jest.mocked(completeWorkout);
 const mockedConfirm = jest.mocked(confirmWorkoutSet);
+const mockedDeleteCompleted = jest.mocked(deleteCompletedWorkoutSet);
 const mockedDelete = jest.mocked(deletePlannedWorkoutSet);
 const mockedGetActiveWorkoutIdForSharedDraft = jest.mocked(getActiveWorkoutId);
 const mockedSave = jest.mocked(savePlannedWorkoutSet);
+const mockedSaveCompleted = jest.mocked(saveCompletedWorkoutSet);
 const mockedRemoveExercise = jest.mocked(removeExerciseFromWorkout);
 const mockedUnconfirm = jest.mocked(unconfirmWorkoutSet);
 
@@ -164,7 +170,7 @@ test('focuses the add-exercise action requested by route params, then consumes t
   expect(setParams).toHaveBeenCalledWith({ focusExerciseId: undefined, focusAddExercise: undefined });
 });
 
-test('opens the selected exercise with an editable planned set', async () => {
+test('shows a compact planned set and opens its editor on request', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
     exercises: [{
@@ -175,7 +181,9 @@ test('opens the selected exercise with an editable planned set', async () => {
   renderScreen();
 
   expect(await screen.findByText('Knebøy')).toBeOnTheScreen();
-  expect(screen.getByText('Planlagt sett')).toBeOnTheScreen();
+  expect(screen.getByText('Planlagt')).toBeOnTheScreen();
+  expect(screen.queryByLabelText('Belastning for Knebøy')).not.toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: 'Rediger sett 1 for Knebøy' }));
   expect(screen.getByLabelText('Belastning for Knebøy')).not.toHaveProp('editable', false);
   expect(screen.getByLabelText('Repetisjoner for Knebøy')).not.toHaveProp('editable', false);
   expect(screen.getByRole('button', { name: 'Legg til sett' })).toBeOnTheScreen();
@@ -183,7 +191,7 @@ test('opens the selected exercise with an editable planned set', async () => {
   expect(screen.getByLabelText('Repetisjoner for Knebøy')).toHaveProp('keyboardType', 'number-pad');
 });
 
-test('exposes every suggested set as editable labeled fields in suggestion order', async () => {
+test('keeps suggested sets compact in source order and permits one editor', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
     exercises: [{
@@ -196,23 +204,81 @@ test('exposes every suggested set as editable labeled fields in suggestion order
   });
   renderScreen();
 
-  const loads = await screen.findAllByLabelText('Belastning for Knebøy');
-  const repetitions = screen.getAllByLabelText('Repetisjoner for Knebøy');
-  expect(loads.map((input) => input.props.value)).toEqual(['80', '90']);
-  expect(repetitions.map((input) => input.props.value)).toEqual(['5', '3']);
-  expect(screen.getAllByText('Planlagt sett')).toHaveLength(2);
-  expect(screen.getByText('Sett 1')).toBeOnTheScreen();
-  expect(screen.getByText('Sett 2')).toBeOnTheScreen();
+  expect(await screen.findByLabelText('Sett 1, 80 kilogram, 5 repetisjoner, Planlagt')).toBeOnTheScreen();
+  expect(screen.getByLabelText('Sett 2, 90 kilogram, 3 repetisjoner, Planlagt')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: 'Rediger sett 1 for Knebøy' }));
+  expect(screen.getByLabelText('Belastning for Knebøy')).toHaveProp('value', '80');
+  fireEvent.press(screen.getByRole('button', { name: 'Rediger sett 2 for Knebøy' }));
+  await waitFor(() => expect(screen.getByLabelText('Belastning for Knebøy')).toHaveProp('value', '90'));
+  expect(screen.getAllByLabelText('Belastning for Knebøy')).toHaveLength(1);
 });
 
-test('shows completed receipts above planned sets with derived numbering', async () => {
+test('saves a valid dirty draft before switching editors', async () => {
+  let finishSave: () => void = () => undefined;
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    exercises: [{
+      id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
+      sets: [
+        { id: 6, loadKg: 80, repetitions: 5, confirmedAt: null },
+        { id: 8, loadKg: 90, repetitions: 3, confirmedAt: null },
+      ],
+    }],
+  });
+  mockedSave.mockImplementation(() => new Promise<void>((resolve) => { finishSave = resolve; }));
+  renderScreen({}, null);
+  fireEvent.press(await screen.findByRole('button', { name: 'Knebøy' }));
+  await openEditor(1);
+  fireEvent.changeText(screen.getByLabelText('Belastning for Knebøy'), '82,5');
+
+  fireEvent.press(screen.getByRole('button', { name: 'Rediger sett 2 for Knebøy' }));
+
+  await waitFor(() => expect(mockedSave).toHaveBeenCalledWith(database, 3, 6, 82.5, 5));
+  expect(screen.getByLabelText('Belastning for Knebøy')).toHaveProp('value', '82,5');
+  await act(async () => finishSave());
+  await waitFor(() => expect(screen.getByLabelText('Belastning for Knebøy')).toHaveProp('value', '90'));
+});
+
+test('invalid input blocks editor transitions but not exercise card collapse', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    exercises: [{
+      id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
+      sets: [
+        { id: 6, loadKg: 80, repetitions: 5, confirmedAt: null },
+        { id: 8, loadKg: 90, repetitions: 3, confirmedAt: null },
+      ],
+    }],
+  });
+  renderScreen({}, null);
+  fireEvent.press(await screen.findByRole('button', { name: 'Knebøy' }));
+  await openEditor(1);
+  fireEvent.changeText(screen.getByLabelText('Belastning for Knebøy'), '1000');
+
+  fireEvent.press(screen.getByRole('button', { name: 'Rediger sett 2 for Knebøy' }));
+  expect(await screen.findByText('Skriv inn en belastning fra 0 til 999,9 med maks én desimal')).toBeOnTheScreen();
+  expect(screen.getByLabelText('Belastning for Knebøy')).toHaveProp('value', '1000');
+  fireEvent.press(screen.getByRole('button', { name: 'Marker sett 2 som gjennomført for Knebøy' }));
+  expect(mockedConfirm).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: 'Lukk redigering av sett 1 for Knebøy' }));
+  expect(screen.getByLabelText('Belastning for Knebøy')).toBeOnTheScreen();
+
+  const card = screen.getByRole('button', { name: 'Knebøy' });
+  fireEvent.press(card);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Knebøy' })).toHaveProp('accessibilityState', { expanded: false }));
+  expect(screen.queryByLabelText('Belastning for Knebøy')).not.toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: 'Knebøy' }));
+  expect(screen.getByLabelText('Belastning for Knebøy')).toHaveProp('value', '1000');
+});
+
+test('shows mixed statuses in stable source order with explicit actions', async () => {
   mockedLoad.mockResolvedValue(workoutWithSets);
   renderScreen();
 
-  expect(await screen.findByText('Sett 1')).toBeOnTheScreen();
+  expect(await screen.findByLabelText('Sett 1, 80 kilogram, 5 repetisjoner, Gjennomført')).toBeOnTheScreen();
   expect(screen.getByText('80 kg · 5 repetisjoner')).toBeOnTheScreen();
-  expect(screen.getByRole('button', { name: 'Rediger sett 1' })).toBeOnTheScreen();
-  expect(screen.getByText('Planlagt sett')).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Rediger sett 1 for Knebøy' })).toBeOnTheScreen();
+  expect(screen.getByLabelText('Sett 2, belastning ikke angitt, repetisjoner ikke angitt, Planlagt')).toBeOnTheScreen();
 });
 
 test('enables completion only for durable completed sets and warns about planned sets', async () => {
@@ -283,6 +349,7 @@ test('blocks completion while relevant data is not durable', async () => {
   mockedLoad.mockResolvedValue(workoutWithSets);
   mockedSave.mockRejectedValue(new Error('write failed'));
   renderScreen();
+  await openEditor(2);
   const load = await screen.findByLabelText('Belastning for Knebøy');
   fireEvent.changeText(load, '90');
   fireEvent(load, 'blur');
@@ -342,17 +409,20 @@ test('preserves the active workout, announces retry, focuses it, and stays put o
 });
 
 test('adds a separately confirmable set returned by durable storage', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   mockedLoad.mockResolvedValue(workoutWithSets);
   mockedAddSet.mockResolvedValue({ id: 8, loadKg: 80, repetitions: 5, confirmedAt: null });
   renderScreen();
 
+  focus.mockClear();
   fireEvent.press(await screen.findByRole('button', { name: 'Legg til sett' }));
 
   await waitFor(() => expect(mockedAddSet).toHaveBeenCalledWith(database, 3, 4));
-  expect(screen.getAllByText('Planlagt sett')).toHaveLength(2);
-  expect(screen.getAllByLabelText('Belastning for Knebøy')).toHaveLength(2);
+  expect(screen.getByLabelText('Sett 3, 80 kilogram, 5 repetisjoner, Planlagt')).toBeOnTheScreen();
+  expect(screen.queryByLabelText('Belastning for Knebøy')).not.toBeOnTheScreen();
   expect(mockedConfirm).not.toHaveBeenCalled();
   expect(Haptics.selectionAsync).toHaveBeenCalled();
+  expect(focus).toHaveBeenCalled();
 });
 
 test.each([
@@ -365,6 +435,7 @@ test.each([
   mockedSave.mockImplementation(() => new Promise<void>((resolve) => { finishSave = resolve; }));
   mockedAddSet.mockResolvedValue({ id: 8, loadKg: null, repetitions: null, confirmedAt: null });
   renderScreen({ navigate });
+  await openEditor(2);
   fireEvent.changeText(await screen.findByLabelText('Belastning for Knebøy'), '90');
 
   fireEvent.press(screen.getByRole('button', { name: actionName }));
@@ -382,6 +453,7 @@ test('does not continue navigation when flushing a dirty draft fails', async () 
   mockedLoad.mockResolvedValue(workoutWithSets);
   mockedSave.mockRejectedValue(new Error('write failed'));
   renderScreen({ navigate });
+  await openEditor(2);
   fireEvent.changeText(await screen.findByLabelText('Belastning for Knebøy'), '90');
 
   fireEvent.press(screen.getByRole('button', { name: 'Legg til øvelse' }));
@@ -404,14 +476,14 @@ test('starts collapsed and lets every exercise expand and collapse independently
   const deadlift = screen.getByRole('button', { name: 'Markløft' });
   expect(squat).toHaveProp('accessibilityState', { expanded: false });
   expect(deadlift).toHaveProp('accessibilityState', { expanded: false });
-  expect(screen.queryByText('Planlagt sett')).not.toBeOnTheScreen();
+  expect(screen.queryByText('Planlagt')).not.toBeOnTheScreen();
 
   fireEvent.press(squat);
   expect(squat).toHaveProp('accessibilityState', { expanded: true });
   fireEvent.press(screen.getByRole('button', { name: 'Markløft' }));
   expect(squat).toHaveProp('accessibilityState', { expanded: true });
   expect(deadlift).toHaveProp('accessibilityState', { expanded: true });
-  expect(screen.getByText('Planlagt sett')).toBeOnTheScreen();
+  expect(screen.getByText('Planlagt')).toBeOnTheScreen();
 
   fireEvent.press(squat);
   expect(squat).toHaveProp('accessibilityState', { expanded: false });
@@ -555,7 +627,7 @@ test('keeps the card and offers retry when adding a set fails', async () => {
   fireEvent.press(screen.getByRole('button', { name: 'Prøv igjen' }));
 
   await waitFor(() => expect(mockedAddSet).toHaveBeenCalledTimes(2));
-  expect(screen.getAllByText('Planlagt sett')).toHaveLength(2);
+  expect(screen.getAllByText('Planlagt')).toHaveLength(2);
 });
 
 test('keeps the exercise and offers retry when removal fails', async () => {
@@ -585,7 +657,8 @@ test('keeps core controls at accessible target sizes and vertically stackable at
   const addSet = screen.getByRole('button', { name: 'Legg til sett' });
   expect(card).toHaveStyle({ minHeight: 56 });
   expect(addSet).toHaveStyle({ minHeight: 48 });
-  expect(screen.getByLabelText('Handlinger for planlagt sett for Knebøy')).toHaveStyle({ flexDirection: 'row', flexWrap: 'wrap' });
+  await openEditor(2);
+  expect(screen.getByLabelText('Handlinger for sett 2 for Knebøy')).toHaveStyle({ flexDirection: 'row', flexWrap: 'wrap' });
 });
 
 test('validates input and atomically confirms comma decimals', async () => {
@@ -593,12 +666,13 @@ test('validates input and atomically confirms comma decimals', async () => {
   mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
   mockedConfirm.mockResolvedValue();
   renderScreen();
+  await openEditor(1);
   const load = await screen.findByLabelText('Belastning for Knebøy');
   const repetitions = screen.getByLabelText('Repetisjoner for Knebøy');
 
   fireEvent.changeText(load, '1000');
   fireEvent.changeText(repetitions, '0');
-  fireEvent.press(screen.getByRole('button', { name: 'Bekreft planlagt sett for Knebøy' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Marker sett 1 som gjennomført for Knebøy' }));
   expect(await screen.findAllByRole('alert')).toHaveLength(2);
   expect(load).toHaveProp('aria-invalid', true);
   expect(repetitions).toHaveProp('aria-invalid', true);
@@ -611,8 +685,25 @@ test('validates input and atomically confirms comma decimals', async () => {
 
   fireEvent.changeText(load, '80,5');
   fireEvent.changeText(repetitions, '5');
-  fireEvent.press(screen.getByRole('button', { name: 'Bekreft planlagt sett for Knebøy' }));
+  mockedSave.mockResolvedValue();
+  fireEvent.press(screen.getByRole('button', { name: 'Marker sett 1 som gjennomført for Knebøy' }));
+  await waitFor(() => expect(mockedSave).toHaveBeenCalledWith(database, 3, 6, 80.5, 5));
   await waitFor(() => expect(mockedConfirm).toHaveBeenCalledWith(database, 3, 6, 80.5, 5, expect.any(String)));
+  expect(screen.getByLabelText('Belastning for Knebøy')).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Lukk redigering av sett 1 for Knebøy' })).toBeOnTheScreen();
+});
+
+test('preserves an open completed-set editor when returning it to planned', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedUnconfirm.mockResolvedValue();
+  renderScreen();
+  await openEditor(1);
+
+  fireEvent.press(screen.getByRole('button', { name: 'Endre sett 1 til planlagt for Knebøy' }));
+
+  await waitFor(() => expect(mockedUnconfirm).toHaveBeenCalledWith(database, 3, 7));
+  expect(screen.getByLabelText('Belastning for Knebøy')).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Lukk redigering av sett 1 for Knebøy' })).toBeOnTheScreen();
 });
 
 test('flushes a dirty draft before allowing stack navigation', async () => {
@@ -623,6 +714,7 @@ test('flushes a dirty draft before allowing stack navigation', async () => {
   mockedLoad.mockResolvedValue(workoutWithSets);
   mockedSave.mockImplementation(() => new Promise<void>((resolve) => { finishSave = resolve; }));
   renderScreen({ dispatch });
+  await openEditor(2);
   fireEvent.changeText(await screen.findByLabelText('Belastning for Knebøy'), '90');
   await waitFor(() => expect(usePreventRemove).toHaveBeenLastCalledWith(true, expect.any(Function)));
   const action = { type: 'GO_BACK' };
@@ -641,6 +733,7 @@ test('keeps stack navigation blocked when its draft flush fails', async () => {
   mockedLoad.mockResolvedValue(workoutWithSets);
   mockedSave.mockRejectedValue(new Error('write failed'));
   renderScreen({ dispatch });
+  await openEditor(2);
   fireEvent.changeText(await screen.findByLabelText('Belastning for Knebøy'), '90');
 
   act(() => preventRemove?.({ data: { action: { type: 'GO_BACK' } } }));
@@ -653,12 +746,13 @@ test('keeps a failed valid autosave visible until manual retry succeeds', async 
   mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
   mockedSave.mockRejectedValueOnce(new Error('write failed')).mockResolvedValueOnce();
   renderScreen();
+  await openEditor(1);
   const load = await screen.findByLabelText('Belastning for Knebøy');
 
   fireEvent.changeText(load, '80');
   fireEvent(load, 'blur');
   expect(await screen.findByText('Endringene er ikke lagret')).toBeOnTheScreen();
-  expect(screen.getByRole('button', { name: 'Bekreft planlagt sett for Knebøy' })).toBeDisabled();
+  expect(screen.getByText('Endringene er ikke lagret')).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Prøv å lagre igjen' }));
 
   await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(2));
@@ -670,9 +764,11 @@ test('focuses manual retry after autosave fails', async () => {
   mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
   mockedSave.mockRejectedValue(new Error('write failed'));
   renderScreen();
+  await openEditor(1);
   const load = await screen.findByLabelText('Belastning for Knebøy');
 
   fireEvent.changeText(load, '80');
+  fireEvent.changeText(screen.getByLabelText('Repetisjoner for Knebøy'), '5');
   fireEvent(load, 'blur');
 
   expect(await screen.findByRole('button', { name: 'Prøv å lagre igjen' })).toBeOnTheScreen();
@@ -684,15 +780,17 @@ test('serializes field autosaves', async () => {
   mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
   mockedSave.mockImplementationOnce(() => new Promise<void>((resolve) => { finishFirst = resolve; })).mockResolvedValueOnce();
   renderScreen();
+  await openEditor(1);
   const load = await screen.findByLabelText('Belastning for Knebøy');
   const repetitions = screen.getByLabelText('Repetisjoner for Knebøy');
   fireEvent.changeText(load, '80');
   fireEvent.changeText(repetitions, '5');
 
   fireEvent(load, 'blur');
-  fireEvent(repetitions, 'blur');
   await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
-  finishFirst();
+  await act(async () => finishFirst());
+  fireEvent.changeText(repetitions, '6');
+  fireEvent(repetitions, 'blur');
 
   await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(2));
 });
@@ -706,6 +804,7 @@ test('persists valid drafts before backgrounding', async () => {
   mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
   mockedSave.mockResolvedValue();
   renderScreen();
+  await openEditor(1);
   fireEvent.changeText(await screen.findByLabelText('Belastning for Knebøy'), '80');
   fireEvent.changeText(screen.getByLabelText('Repetisjoner for Knebøy'), '5');
 
@@ -757,10 +856,9 @@ test('preserves expanded exercises when the mounted screen reloads', async () =>
   expect(deadlift).toHaveProp('accessibilityState', { expanded: true });
 });
 
-test('waits for every background save before foreground reload', async () => {
+test('waits for the background editor save before foreground reload', async () => {
   let onAppStateChange: ((state: AppStateStatus) => void) | undefined;
   let finishFirst: () => void = () => undefined;
-  let finishSecond: () => void = () => undefined;
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => {
     onAppStateChange = listener;
     return { remove: jest.fn() };
@@ -776,22 +874,15 @@ test('waits for every background save before foreground reload', async () => {
     }],
   };
   mockedLoad.mockResolvedValue(twoPlannedSets);
-  mockedSave
-    .mockImplementationOnce(() => new Promise<void>((resolve) => { finishFirst = resolve; }))
-    .mockImplementationOnce(() => new Promise<void>((resolve) => { finishSecond = resolve; }));
+  mockedSave.mockImplementationOnce(() => new Promise<void>((resolve) => { finishFirst = resolve; }));
   renderScreen();
-  const loads = await screen.findAllByLabelText('Belastning for Knebøy');
-  fireEvent.changeText(loads[0], '80');
-  fireEvent.changeText(loads[1], '90');
+  await openEditor(1);
+  fireEvent.changeText(screen.getByLabelText('Belastning for Knebøy'), '80');
 
   act(() => onAppStateChange?.('background'));
   await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
   act(() => onAppStateChange?.('active'));
   await act(async () => finishFirst());
-  await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(2));
-  expect(mockedLoad).toHaveBeenCalledTimes(1);
-
-  await act(async () => finishSecond());
   await waitFor(() => expect(mockedLoad).toHaveBeenCalledTimes(2));
 });
 
@@ -804,6 +895,7 @@ test('does not retry a failed background save on foreground', async () => {
   mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
   mockedSave.mockRejectedValue(new Error('write failed'));
   renderScreen();
+  await openEditor(1);
   fireEvent.changeText(await screen.findByLabelText('Belastning for Knebøy'), '80');
 
   act(() => onAppStateChange?.('background'));
@@ -819,6 +911,7 @@ test('stops queued autosaves after failure until manual retry', async () => {
   mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
   mockedSave.mockRejectedValueOnce(new Error('write failed')).mockResolvedValue();
   renderScreen();
+  await openEditor(1);
   const load = await screen.findByLabelText('Belastning for Knebøy');
   const repetitions = screen.getByLabelText('Repetisjoner for Knebøy');
   fireEvent.changeText(load, '80');
@@ -838,6 +931,7 @@ test('retains a failed draft across Home and reopening the workout', async () =>
   mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
   mockedSave.mockRejectedValue(new Error('write failed'));
   const view = renderSharedScreen('workout');
+  await openEditor(1);
   const load = await screen.findByLabelText('Belastning for Knebøy');
   fireEvent.changeText(load, '80');
   fireEvent(load, 'blur');
@@ -847,6 +941,7 @@ test('retains a failed draft across Home and reopening the workout', async () =>
   expect(await screen.findByText('Treningen har endringer som ikke er lagret')).toBeOnTheScreen();
   expect(screen.getByTestId('home-unsaved-warning').props.accessibilityRole).toBe('alert');
   view.rerender(sharedScreen('workout'));
+  await openEditor(1);
   const reopenedLoad = await screen.findByLabelText('Belastning for Knebøy');
   expect(reopenedLoad).toHaveProp('value', '80');
   expect(screen.getByRole('button', { name: 'Prøv å lagre igjen' })).toBeOnTheScreen();
@@ -854,22 +949,69 @@ test('retains a failed draft across Home and reopening the workout', async () =>
   await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
 });
 
-test('focuses retry after a set mutation fails', async () => {
+test('focuses retry after a status mutation fails', async () => {
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   mockedLoad.mockResolvedValue(workoutWithSets);
   mockedUnconfirm.mockRejectedValue(new Error('write failed'));
   renderScreen();
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Rediger sett 1' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Endre sett 1 til planlagt for Knebøy' }));
 
   expect(await screen.findByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
   expect(focus).toHaveBeenCalled();
+});
+
+test('focuses the next set after removing the first planned set', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    exercises: [{
+      id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
+      sets: [
+        { id: 6, loadKg: 80, repetitions: 5, confirmedAt: null },
+        { id: 8, loadKg: 90, repetitions: 3, confirmedAt: null },
+      ],
+    }],
+  });
+  mockedDelete.mockResolvedValue();
+  renderScreen();
+  await openEditor(1);
+  focus.mockClear();
+
+  fireEvent.press(screen.getByRole('button', { name: 'Fjern sett 1 for Knebøy' }));
+
+  await waitFor(() => expect(mockedDelete).toHaveBeenCalledWith(database, 3, 6));
+  expect(screen.getByLabelText('Sett 1, 90 kilogram, 3 repetisjoner, Planlagt')).toBeOnTheScreen();
+  expect(focus).toHaveBeenCalled();
+});
+
+test.each([
+  ['success', undefined, Haptics.NotificationFeedbackType.Success],
+  ['error', new Error('write failed'), Haptics.NotificationFeedbackType.Error],
+] as const)('uses %s haptics for completed-set autosave', async (_, failure, feedback) => {
+  mockedLoad.mockResolvedValue({
+    ...workoutWithSets,
+    exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[0]] }],
+  });
+  if (failure) mockedSaveCompleted.mockRejectedValue(failure);
+  else mockedSaveCompleted.mockResolvedValue();
+  renderScreen();
+  await openEditor(1);
+  jest.mocked(Haptics.notificationAsync).mockClear();
+
+  const load = screen.getByLabelText('Belastning for Knebøy');
+  fireEvent.changeText(load, '82,5');
+  fireEvent(load, 'blur');
+
+  await waitFor(() => expect(mockedSaveCompleted).toHaveBeenCalledWith(database, 3, 7, 82.5, 5));
+  await waitFor(() => expect(Haptics.notificationAsync).toHaveBeenCalledWith(feedback));
 });
 
 test('persists a valid field without overwriting invalid input in the other field', async () => {
   mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
   mockedSave.mockResolvedValue();
   renderScreen();
+  await openEditor(1);
   const load = await screen.findByLabelText('Belastning for Knebøy');
   const repetitions = screen.getByLabelText('Repetisjoner for Knebøy');
 
@@ -885,34 +1027,41 @@ test('retains values with visible retry after confirmation fails', async () => {
   mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
   mockedConfirm.mockRejectedValue(new Error('write failed'));
   renderScreen();
+  await openEditor(1);
   const load = await screen.findByLabelText('Belastning for Knebøy');
   const repetitions = screen.getByLabelText('Repetisjoner for Knebøy');
   fireEvent.changeText(load, '80');
   fireEvent.changeText(repetitions, '5');
+  mockedSave.mockResolvedValue();
 
-  fireEvent.press(screen.getByRole('button', { name: 'Bekreft planlagt sett for Knebøy' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Marker sett 1 som gjennomført for Knebøy' }));
 
   expect(await screen.findByText('Kunne ikke bekrefte settet')).toBeOnTheScreen();
   expect(load).toHaveProp('value', '80');
   expect(repetitions).toHaveProp('value', '5');
-  expect(screen.getByText('Sett 1')).toBeOnTheScreen();
-  expect(screen.queryByText('80 kg · 5 repetisjoner')).not.toBeOnTheScreen();
+  expect(screen.getByLabelText('Sett 1, 80 kilogram, 5 repetisjoner, Planlagt')).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Prøv å bekrefte igjen' })).toBeOnTheScreen();
 });
 
-test('unconfirms before editing and deletes the preserved planned set', async () => {
-  mockedLoad.mockResolvedValueOnce(workoutWithSets).mockResolvedValueOnce({
-    ...workoutWithSets,
-    exercises: [{ ...workoutWithSets.exercises[0], sets: [{ ...workoutWithSets.exercises[0].sets[0], confirmedAt: null }] }],
-  }).mockResolvedValueOnce({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [] }] });
-  mockedUnconfirm.mockResolvedValue();
-  mockedDelete.mockResolvedValue();
+test('atomically saves and confirms deletion of a completed set without changing status', async () => {
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  mockedSaveCompleted.mockResolvedValue();
+  mockedDeleteCompleted.mockResolvedValue();
   renderScreen();
 
-  fireEvent.press(await screen.findByRole('button', { name: 'Rediger sett 1' }));
-  await waitFor(() => expect(mockedUnconfirm).toHaveBeenCalledWith(database, 3, 7));
-  fireEvent.press((await screen.findAllByRole('button', { name: 'Slett planlagt sett for Knebøy' }))[1]);
-  await waitFor(() => expect(mockedDelete).toHaveBeenCalledWith(database, 3, 7));
+  await openEditor(1);
+  fireEvent.changeText(screen.getByLabelText('Belastning for Knebøy'), '82,5');
+  fireEvent(screen.getByLabelText('Belastning for Knebøy'), 'blur');
+  await waitFor(() => expect(mockedSaveCompleted).toHaveBeenCalledWith(database, 3, 7, 82.5, 5));
+  expect(mockedUnconfirm).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: 'Fjern sett 1 for Knebøy' }));
+  expect(screen.getByRole('header', { name: 'Fjern gjennomført sett?' })).toBeOnTheScreen();
+  expect(mockedDeleteCompleted).not.toHaveBeenCalled();
+  focus.mockClear();
+  fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av gjennomført sett' }));
+  await waitFor(() => expect(mockedDeleteCompleted).toHaveBeenCalledWith(database, 3, 7));
+  expect(focus).toHaveBeenCalled();
 });
 
 test.each([
@@ -996,6 +1145,10 @@ function renderScreen(
   params: { focusExerciseId?: number; focusAddExercise?: boolean } | null = { focusExerciseId: 5 },
 ) {
   return render(workoutScreen(navigation, params));
+}
+
+async function openEditor(setNumber: number) {
+  fireEvent.press(await screen.findByRole('button', { name: `Rediger sett ${setNumber} for Knebøy` }));
 }
 
 function workoutScreen(

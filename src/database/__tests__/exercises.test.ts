@@ -162,8 +162,8 @@ describe('exercise persistence', () => {
     const second = await addWorkout(database, exerciseId, 'completed', '2026-02-02T10:00:00Z');
     const older = await addWorkout(database, exerciseId, 'completed', '2026-01-01T10:00:00Z');
     const active = await addWorkout(database, exerciseId, 'active', null);
-    const firstSet = await addSet(database, first.workoutExerciseId, 80, 5, 'same');
-    const secondSet = await addSet(database, first.workoutExerciseId, 90, 3, 'same');
+    const firstSet = await addSet(database, first.workoutExerciseId, 80, 5, 'later');
+    const secondSet = await addSet(database, first.workoutExerciseId, 90, 3, 'earlier');
     await addSet(database, first.workoutExerciseId, null, null, null);
     const tiedWorkoutSet = await addSet(database, second.workoutExerciseId, 100, 1, 'later');
     const olderSet = await addSet(database, older.workoutExerciseId, 70, 8, 'old');
@@ -178,8 +178,8 @@ describe('exercise persistence', () => {
           id: first.workoutId,
           completedAt: '2026-02-02T10:00:00Z',
           sets: [
-            { id: firstSet, loadKg: 80, repetitions: 5, confirmedAt: 'same' },
-            { id: secondSet, loadKg: 90, repetitions: 3, confirmedAt: 'same' },
+            { id: firstSet, loadKg: 80, repetitions: 5, confirmedAt: 'later' },
+            { id: secondSet, loadKg: 90, repetitions: 3, confirmedAt: 'earlier' },
           ],
         },
         {
