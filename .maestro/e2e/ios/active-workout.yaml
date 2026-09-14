@@ -78,22 +78,20 @@ tags:
 - assertVisible: "Sett 2, 80 kilogram, 56 repetisjoner, Gjennomført"
 - assertVisible: "Rediger sett 1 for K"
 
-# Completed removal is destructive, cancellable, and leaves the prior row.
-- tapOn: "Rediger sett 2 for K"
-- swipe:
-    direction: UP
-- tapOn: "Fjern sett 2 for K"
+# Completed removal is destructive, cancellable, and focuses the following row.
+- tapOn: "Rediger sett 1 for K"
+- tapOn: "Fjern sett 1 for K"
 - runFlow:
     when:
       notVisible: "Behold settet"
     commands:
-      - tapOn: "Fjern sett 2 for K"
+      - tapOn: "Fjern sett 1 for K"
 - extendedWaitUntil:
     visible: "Behold settet"
     timeout: 30000
 - tapOn: "Behold settet"
-- assertVisible: "Rediger sett 2 for K"
-- tapOn: "Fjern sett 2 for K"
+- assertVisible: "Rediger sett 1 for K"
+- tapOn: "Fjern sett 1 for K"
 - tapOn: "Bekreft fjerning av gjennomført sett"
 - assertNotVisible: "Rediger sett 2 for K"
 - assertVisible: "Rediger sett 1 for K"
