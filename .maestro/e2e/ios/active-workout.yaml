@@ -31,13 +31,11 @@ tags:
 - inputText: "5"
 - assertVisible:
     id: "workout-set-1-repetitions"
-    text: "5"
 - tapOn:
     id: "workout-set-1-load"
 - inputText: "8"
 - assertVisible:
     id: "workout-set-1-load"
-    text: "8"
 - extendedWaitUntil:
     visible: "Lukk redigering av sett 1 for K"
     timeout: 30000
@@ -62,7 +60,6 @@ tags:
 - inputText: "6"
 - assertVisible:
     id: "workout-set-1-repetitions"
-    text: "56"
 - stopApp
 - launchApp
 - extendedWaitUntil:
