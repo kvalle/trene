@@ -26,18 +26,16 @@ tags:
     timeout: 30000
 - assertVisible: "Sett 1, belastning ikke angitt, repetisjoner ikke angitt, Planlagt"
 - tapOn: "Rediger sett 1 for K"
-- tapOn:
-    id: "workout-set-1-repetitions"
-- eraseText
-- inputText: "5"
 - assertVisible:
-    id: "workout-set-1-repetitions"
-- tapOn:
     id: "workout-set-1-load"
-- eraseText
 - inputText: "8"
 - assertVisible:
     id: "workout-set-1-load"
+- tapOn:
+    id: "workout-set-1-repetitions"
+- inputText: "5"
+- assertVisible:
+    id: "workout-set-1-repetitions"
 - extendedWaitUntil:
     visible: "Lukk redigering av sett 1 for K"
     timeout: 30000
@@ -59,7 +57,6 @@ tags:
 # A completed value edit keeps the row completed and in position.
 - tapOn:
     id: "workout-set-1-repetitions"
-- eraseText
 - inputText: "6"
 - assertVisible:
     id: "workout-set-1-repetitions"
