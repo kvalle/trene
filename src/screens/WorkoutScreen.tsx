@@ -6,6 +6,7 @@ import {
   AccessibilityInfo,
   AppState,
   findNodeHandle,
+  Keyboard,
   LayoutAnimation,
   Platform,
   ScrollView,
@@ -378,6 +379,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
     const exercise = state.workout.exercises.find((candidate) => candidate.sets.some((set) => set.id === current.id));
     if (!exercise || !await saveDraft(state.workout.id, current, exercise.name)) return false;
     setEditingSetId(nextSetId);
+    if (nextSetId === undefined) Keyboard.dismiss();
     requestAnimationFrame(() => {
       if (nextSetId !== undefined) loadInputRefs.current.get(nextSetId)?.focus();
       else if (returnFocus) focus({ current: editRefs.current.get(current.id) ?? null });

@@ -1,6 +1,6 @@
 import { NavigationContainer, usePreventRemove } from '@react-navigation/native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { AccessibilityInfo, AppState, type AppStateStatus, Modal } from 'react-native';
+import { AccessibilityInfo, AppState, type AppStateStatus, Keyboard, Modal } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
@@ -189,6 +189,17 @@ test('shows a compact planned set and opens its editor on request', async () => 
   expect(screen.getByRole('button', { name: 'Legg til sett' })).toBeOnTheScreen();
   expect(screen.getByLabelText('Belastning for Knebøy')).toHaveProp('keyboardType', 'decimal-pad');
   expect(screen.getByLabelText('Repetisjoner for Knebøy')).toHaveProp('keyboardType', 'number-pad');
+});
+
+test('dismisses the keyboard when the inline editor closes', async () => {
+  const dismiss = jest.spyOn(Keyboard, 'dismiss');
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  renderScreen();
+  await openEditor(1);
+
+  fireEvent.press(screen.getByRole('button', { name: 'Lukk redigering av sett 1 for Knebøy' }));
+
+  await waitFor(() => expect(dismiss).toHaveBeenCalled());
 });
 
 test('keeps suggested sets compact in source order and permits one editor', async () => {
