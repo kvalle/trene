@@ -38,9 +38,7 @@ tags:
       visible: "Lukk redigering av sett 1 for K"
     commands:
       - tapOn: "Lukk redigering av sett 1 for K"
-- extendedWaitUntil:
-    notVisible: "Lukk redigering av sett 1 for K"
-    timeout: 30000
+- assertNotVisible: "Lukk redigering av sett 1 for K"
 - tapOn: "Marker sett 1 som gjennomført for K"
 - runFlow:
     when:
@@ -63,9 +61,7 @@ tags:
       visible: "Lukk redigering av sett 1 for K"
     commands:
       - tapOn: "Lukk redigering av sett 1 for K"
-- extendedWaitUntil:
-    notVisible: "Lukk redigering av sett 1 for K"
-    timeout: 30000
+- assertNotVisible: "Lukk redigering av sett 1 for K"
 - extendedWaitUntil:
     visible: "Sett 1, 8 kilogram, 56 repetisjoner, Gjennomført"
     timeout: 30000
