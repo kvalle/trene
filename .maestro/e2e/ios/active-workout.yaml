@@ -32,11 +32,9 @@ tags:
 - tapOn: "Belastning for K"
 - inputText: "8"
 - assertVisible: "^8$"
-- extendedWaitUntil:
-    visible:
-      text: "Marker sett 1 som gjennomført for K"
-      enabled: true
-    timeout: 30000
+- assertVisible:
+    text: "Marker sett 1 som gjennomført for K"
+    enabled: true
 - tapOn: "Marker sett 1 som gjennomført for K"
 - runFlow:
     when:
@@ -66,11 +64,9 @@ tags:
     visible: "Rediger sett 2 for K"
     timeout: 30000
 - assertVisible: "Sett 2, 8 kilogram, 56 repetisjoner, Planlagt"
-- extendedWaitUntil:
-    visible:
-      text: "Marker sett 2 som gjennomført for K"
-      enabled: true
-    timeout: 30000
+- assertVisible:
+    text: "Marker sett 2 som gjennomført for K"
+    enabled: true
 - tapOn: "Marker sett 2 som gjennomført for K"
 - runFlow:
     when:
