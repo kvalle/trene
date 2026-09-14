@@ -107,7 +107,7 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         id: 'button',
         name: 'Button',
         description: 'Primær, sekundær, tekst og destruktiv handling med tydelig hierarki.',
-        usage: 'Bruk én primær handling per kontekst. Sekundær og tekst brukes for støttehandlinger, destruktiv for irreversible valg.',
+        usage: 'Bruk én primær handling per kontekst. Kun ikon brukes bare for kjente handlinger i tette, stabile rader med eksplisitt tilgjengelig navn.',
         route: 'ButtonDetail',
         testID: 'catalog-item-button',
       },
@@ -449,14 +449,14 @@ function DetailHeader({ name, description, usage }: { name: string; description:
   );
 }
 
-function ButtonDetailScreen() {
+export function ButtonDetailScreen() {
   const { colors } = useAppTheme();
   return (
     <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-button">
       <DetailHeader
         name="Button"
         description="Primær, sekundær, tekst og destruktiv handling med tydelig hierarki. Deaktivert og opptatt er tilstander, ikke egne varianter."
-        usage="Bruk én primær handling per kontekst. Sekundær og tekst brukes for støttehandlinger, destruktiv for irreversible valg."
+        usage="Bruk én primær handling per kontekst. Kun ikon brukes bare for kjente handlinger i tette, stabile rader med eksplisitt tilgjengelig navn; destruktive handlinger beholder synlig etikett."
       />
 
       <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -489,6 +489,12 @@ function ButtonDetailScreen() {
           variant="destructive"
           labels={{ normal: 'Slett', disabled: 'Slett', busy: 'Sletter…' }}
         />
+      </View>
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Kun ikon</Text>
+        <Text style={[typography.metadata, { color: colors.muted }]}>For kjente handlinger i tette, gjentatte rader. Hver kontroll har et kontekstuelt tilgjengelig navn, mens synlig innhold kommuniserer tilstanden uavhengig.</Text>
+        <IconButtonVariantGroup title="Primær" variant="primary" />
+        <IconButtonVariantGroup title="Sekundær" variant="secondary" />
       </View>
     </ScrollView>
   );
@@ -705,6 +711,23 @@ function ButtonVariantGroup({
             testID={`catalog-button-${variant}-busy`}
           />
         </View>
+      </View>
+    </View>
+  );
+}
+
+function IconButtonVariantGroup({ title, variant }: { title: string; variant: 'primary' | 'secondary' }) {
+  const { colors } = useAppTheme();
+  const id = `catalog-button-icon-${variant}`;
+  return (
+    <View style={styles.variantGroup}>
+      <Text style={[typography.control, { color: colors.text }]}>{title}</Text>
+      <View style={styles.iconButtonRow}>
+        <Button accessibilityLabel={`${title}: rediger`} icon="edit" onPress={() => {}} testID={`${id}-normal`} variant={variant} />
+        <Button accessibilityLabel={`${title}: trykket`} icon="check" onPress={() => {}} style={{ opacity: 0.72 }} testID={`${id}-pressed`} variant={variant} />
+        <Button accessibilityLabel={`${title}: fokusert`} icon="chevron-up" onPress={() => {}} style={{ outlineColor: colors.focus, outlineStyle: 'solid', outlineWidth: 3 }} testID={`${id}-focused`} variant={variant} accessibilityState={{ expanded: true }} />
+        <Button accessibilityLabel={`${title}: deaktivert`} disabled icon="check" onPress={() => {}} testID={`${id}-disabled`} variant={variant} />
+        <Button accessibilityLabel={`${title}: opptatt`} busy icon="edit" onPress={() => {}} testID={`${id}-busy`} variant={variant} />
       </View>
     </View>
   );
@@ -1372,6 +1395,7 @@ const styles = StyleSheet.create({
   variantGroup: { gap: 8, paddingTop: 8 },
   variantRow: { gap: 12 },
   variantCell: { gap: 6 },
+  iconButtonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   variantLabel: { fontWeight: '600' },
   errorPreview: { borderRadius: radii.control, borderWidth: 1, padding: 12 },
   dialogExample: { gap: 12 },

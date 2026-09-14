@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -10,19 +10,35 @@ import {
 
 import { radii, typography } from '../theme';
 import { useAppTheme } from './AppThemeProvider';
+import { Icon, type IconName } from './Icon';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'text' | 'destructive';
 
-type ButtonProps = Omit<PressableProps, 'children'> & {
-  title: string;
-  variant?: ButtonVariant;
+type SharedButtonProps = Omit<PressableProps, 'accessibilityLabel' | 'children'> & {
+  accessibilityLabel?: string;
   busy?: boolean;
   testID?: string;
 };
 
+type LabelledButtonProps = SharedButtonProps & {
+  title: string;
+  variant?: ButtonVariant;
+  icon?: never;
+};
+
+type IconOnlyButtonProps = SharedButtonProps & {
+  accessibilityLabel: string;
+  icon: IconName;
+  title?: never;
+  variant?: Extract<ButtonVariant, 'primary' | 'secondary'>;
+};
+
+export type ButtonProps = LabelledButtonProps | IconOnlyButtonProps;
+
 export const Button = forwardRef<View, ButtonProps>(function Button(
   {
     title,
+    icon,
     variant = 'primary',
     disabled,
     busy,
@@ -31,14 +47,22 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
     accessibilityHint,
     accessibilityState,
     onPress,
+    onBlur,
+    onFocus,
     style,
     ...rest
   },
   ref,
 ) {
   const { colors, scheme } = useAppTheme();
+  const [focused, setFocused] = useState(false);
   const isDisabled = Boolean(disabled || busy);
+  const isIconOnly = icon !== undefined;
   const pressedOpacity = 0.72;
+
+  if (isIconOnly && !accessibilityLabel.trim()) {
+    throw new Error('Icon-only Button requires a non-empty accessibilityLabel.');
+  }
 
   const backgroundColor = (() => {
     if (isDisabled) {
@@ -63,7 +87,7 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
     }
   })();
 
-  const textColor = (() => {
+  const contentColor = (() => {
     if (isDisabled) {
       // de-emphasized muted text so disabled does not read as hierarchy
       return colors.muted;
@@ -100,6 +124,14 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: isDisabled, busy: Boolean(busy), ...accessibilityState }}
       disabled={isDisabled}
+      onBlur={(event) => {
+        setFocused(false);
+        onBlur?.(event);
+      }}
+      onFocus={(event) => {
+        setFocused(true);
+        onFocus?.(event);
+      }}
       onPress={isDisabled ? undefined : onPress}
       testID={testID}
       style={({ pressed }) => [
@@ -110,29 +142,36 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
           borderWidth: variant === 'secondary' ? 1 : borderWidth,
         },
         isDisabled && variant === 'secondary' && { opacity: 1 },
+        focused && !isDisabled && [styles.focused, { outlineColor: colors.focus }],
         pressed && !isDisabled && { opacity: pressedOpacity },
         style as object,
+        isIconOnly && styles.iconOnly,
       ]}
     >
       {busy ? (
         <ActivityIndicator
-          color={textColor}
+          color={contentColor}
           size="small"
           style={styles.spinner}
           testID={testID ? `${testID}-busy` : undefined}
         />
       ) : null}
-      <Text
-        style={[
-          typography.control,
-          { color: textColor, textAlign: 'center' },
-          busy && { opacity: 0.95 },
-        ]}
-        allowFontScaling
-        maxFontSizeMultiplier={2}
-      >
-        {title}
-      </Text>
+      {!busy && icon ? (
+        <Icon color={contentColor} name={icon} size={24} testID={testID ? `${testID}-icon` : undefined} />
+      ) : null}
+      {title ? (
+        <Text
+          style={[
+            typography.control,
+            { color: contentColor, textAlign: 'center' },
+            busy && { opacity: 0.95 },
+          ]}
+          allowFontScaling
+          maxFontSizeMultiplier={2}
+        >
+          {title}
+        </Text>
+      ) : null}
     </Pressable>
   );
 });
@@ -150,5 +189,16 @@ const styles = StyleSheet.create({
   },
   spinner: {
     marginRight: 2,
+  },
+  focused: {
+    outlineStyle: 'solid',
+    outlineWidth: 3,
+  },
+  iconOnly: {
+    height: 48,
+    minWidth: 48,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    width: 48,
   },
 });
