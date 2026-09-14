@@ -699,6 +699,32 @@ export function WorkoutScreen({ navigation, route }: Props) {
                     </View>
                   </View>
                   {editing && <View style={styles.editor}>
+                  <View accessibilityLabel={`Handlinger for sett ${index + 1} for ${exercise.name}`} style={styles.setActions}>
+                    <CompactAction
+                      accessibilityLabel={`Fjern sett ${index + 1} for ${exercise.name}`}
+                      disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
+                      icon="trash"
+                      label="Fjern sett"
+                      ref={(node) => { if (node) removeSetRefs.current.set(set.id, node); }}
+                      tone={completedSet ? 'destructive' : 'neutral'}
+                      onPress={() => {
+                        if (completedSet) {
+                          setSetFailure(undefined);
+                          Keyboard.dismiss();
+                          setRemoveCompletedSetId(set.id);
+                        }
+                        else void mutateSet(
+                          set.id,
+                          () => deletePlannedWorkoutSet(database, state.workout.id, set.id),
+                          () => null,
+                          'Kunne ikke slette settet. Prøv igjen.',
+                          true,
+                          undefined,
+                          () => { setEditingSetId(undefined); focusAfterSetRemoval(exercise.sets, index, exercise.id); },
+                        );
+                      }}
+                    />
+                  </View>
                     <View style={styles.fields}>
                     <NumericField
                         aria-describedby={draft.loadError ? `load-error-${set.id}` : undefined}
@@ -752,31 +778,6 @@ export function WorkoutScreen({ navigation, route }: Props) {
                       />
                     </View>
                   )}
-                  <View accessibilityLabel={`Handlinger for sett ${index + 1} for ${exercise.name}`} style={styles.setActions}>
-                    <CompactAction
-                      accessibilityLabel={`Fjern sett ${index + 1} for ${exercise.name}`}
-                      disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
-                      icon="trash"
-                      label="Fjern sett"
-                      ref={(node) => { if (node) removeSetRefs.current.set(set.id, node); }}
-                      tone={completedSet ? 'destructive' : 'neutral'}
-                      onPress={() => {
-                        if (completedSet) {
-                          setSetFailure(undefined);
-                          setRemoveCompletedSetId(set.id);
-                        }
-                        else void mutateSet(
-                          set.id,
-                          () => deletePlannedWorkoutSet(database, state.workout.id, set.id),
-                          () => null,
-                          'Kunne ikke slette settet. Prøv igjen.',
-                          true,
-                          undefined,
-                          () => { setEditingSetId(undefined); focusAfterSetRemoval(exercise.sets, index, exercise.id); },
-                        );
-                      }}
-                    />
-                  </View>
                   {setFailure?.setId === set.id && (
                     <View style={styles.failure}>
                       <ErrorAlert message={setFailure.message} />

@@ -1055,6 +1055,7 @@ test('retains values with visible retry after confirmation fails', async () => {
 });
 
 test('atomically saves and confirms deletion of a completed set without changing status', async () => {
+  const dismiss = jest.spyOn(Keyboard, 'dismiss');
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   mockedLoad.mockResolvedValue(workoutWithSets);
   mockedSaveCompleted.mockResolvedValue();
@@ -1067,6 +1068,7 @@ test('atomically saves and confirms deletion of a completed set without changing
   await waitFor(() => expect(mockedSaveCompleted).toHaveBeenCalledWith(database, 3, 7, 82.5, 5));
   expect(mockedUnconfirm).not.toHaveBeenCalled();
   fireEvent.press(screen.getByRole('button', { name: 'Fjern sett 1 for Knebøy' }));
+  expect(dismiss).toHaveBeenCalled();
   expect(screen.getByRole('header', { name: 'Fjern gjennomført sett?' })).toBeOnTheScreen();
   expect(mockedDeleteCompleted).not.toHaveBeenCalled();
   focus.mockClear();
