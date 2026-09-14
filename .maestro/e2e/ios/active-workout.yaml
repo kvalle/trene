@@ -80,6 +80,8 @@ tags:
 
 # Completed removal is destructive, cancellable, and leaves the prior row.
 - tapOn: "Rediger sett 2 for K"
+- swipe:
+    direction: UP
 - tapOn: "Fjern sett 2 for K"
 - runFlow:
     when:
