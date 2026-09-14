@@ -767,6 +767,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         onChangeText={(load) => updateDraft(set, { load, loadError: undefined })}
                         placeholder="Belastning"
                         ref={(node) => { if (node) loadInputRefs.current.set(set.id, node); }}
+                        testID={`workout-set-${set.id}-load`}
                         value={draft.load}
                     />
                     <NumericField
@@ -783,6 +784,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         onChangeText={(repetitions) => updateDraft(set, { repetitions, repetitionsError: undefined })}
                         placeholder="Repetisjoner"
                         ref={(node) => { if (node) repetitionsInputRefs.current.set(set.id, node); }}
+                        testID={`workout-set-${set.id}-repetitions`}
                         value={draft.repetitions}
                     />
                     </View>
