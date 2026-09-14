@@ -11,6 +11,7 @@ import { Card } from '../Card';
 import { CompactAction } from '../CompactAction';
 import { DataRow } from '../DataRow';
 import { AppThemeProvider } from '../AppThemeProvider';
+import { darkColors, lightColors } from '../../theme';
 
 function renderWithTheme(ui: React.ReactElement) {
   return render(<AppThemeProvider>{ui}</AppThemeProvider>);
@@ -74,6 +75,24 @@ describe('Button', () => {
 });
 
 describe('CompactAction', () => {
+  it.each([
+    ['light', 'accent', lightColors.primary],
+    ['light', 'neutral', lightColors.text],
+    ['light', 'destructive', lightColors.danger],
+    ['dark', 'accent', darkColors.primary],
+    ['dark', 'neutral', darkColors.text],
+    ['dark', 'destructive', darkColors.danger],
+  ] as const)('uses the %s theme color for the %s tone', (scheme, tone, color) => {
+    render(
+      <AppThemeProvider scheme={scheme}>
+        <CompactAction icon="trash" label="Handling" tone={tone} testID="compact" />
+      </AppThemeProvider>,
+    );
+
+    expect(screen.getByText('Handling')).toHaveStyle({ color });
+    expect(screen.getByTestId('compact-icon', { includeHiddenElements: true })).toHaveProp('color', color);
+  });
+
   it('supports Pressable style objects and callbacks', () => {
     const callbackStyle = jest.fn(() => ({ marginTop: 9 }));
     const { rerender } = renderWithTheme(
@@ -95,6 +114,61 @@ describe('CompactAction', () => {
 
     expect(screen.getByRole('button', { name: 'Fjern' })).toBeOnTheScreen();
     expect(screen.getByTestId('compact-icon', { includeHiddenElements: true })).toHaveProp('accessible', false);
+  });
+
+  it('preserves button semantics, visible text, focus and minimum target sizing', () => {
+    const onFocus = jest.fn();
+    renderWithTheme(<CompactAction accessibilityLabel="Tilpasset navn" icon="edit" label="Synlig etikett" onFocus={onFocus} testID="compact" />);
+
+    const action = screen.getByRole('button', { name: 'Tilpasset navn' });
+    expect(screen.getByText('Synlig etikett')).toBeOnTheScreen();
+    expect(action).toHaveStyle({ minHeight: 48, minWidth: 48 });
+    fireEvent(action, 'focus');
+    expect(onFocus).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['accent', 'neutral', 'destructive'] as const)('preserves press behavior for the %s tone', (tone) => {
+    const onPress = jest.fn();
+    renderWithTheme(<CompactAction icon="edit" label="Handling" onPress={onPress} tone={tone} testID="compact" />);
+
+    fireEvent.press(screen.getByTestId('compact'));
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(
+    (['light', 'dark'] as const).flatMap((scheme) =>
+      (['accent', 'neutral', 'destructive'] as const).flatMap((tone) =>
+        (['disabled', 'busy'] as const).map((state) => [scheme, tone, state] as const),
+      ),
+    ),
+  )('uses neutral disabled treatment in the %s theme for the %s tone when %s', (scheme, tone, state) => {
+    const onPress = jest.fn();
+    const muted = scheme === 'dark' ? darkColors.muted : lightColors.muted;
+    render(
+      <AppThemeProvider scheme={scheme}>
+        <CompactAction
+          {...{ [state]: true }}
+          icon="trash"
+          label="Fjern"
+          onPress={onPress}
+          tone={tone}
+          testID="compact"
+        />
+      </AppThemeProvider>,
+    );
+
+    const action = screen.getByRole('button', { name: 'Fjern' });
+    expect(action).toBeDisabled();
+    expect(action).toHaveProp('accessibilityState', { busy: state === 'busy', disabled: true });
+    expect(screen.getByText('Fjern')).toHaveStyle({ color: muted });
+    if (state === 'busy') {
+      expect(screen.getByTestId('compact-busy')).toHaveProp('color', muted);
+      expect(screen.queryByTestId('compact-icon', { includeHiddenElements: true })).not.toBeOnTheScreen();
+    } else {
+      expect(screen.getByTestId('compact-icon', { includeHiddenElements: true })).toHaveProp('color', muted);
+    }
+    fireEvent.press(action);
+    expect(onPress).not.toHaveBeenCalled();
   });
 });
 

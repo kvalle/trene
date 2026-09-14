@@ -495,15 +495,18 @@ function ButtonDetailScreen() {
 }
 
 export function CompactActionDetailScreen() {
+  const { colors } = useAppTheme();
   return (
     <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-compactaction">
-      <DetailHeader name="CompactAction" description="Kompakt lokal handling med ikon og synlig etikett." usage="Bruk når handlingen gjelder ett lite innholdselement og ikke skal konkurrere med primære handlinger." />
+      <DetailHeader name="CompactAction" description="Kompakt lokal handling med ikon, synlig etikett og tre semantiske toner." usage="Bruk aksent for positive handlinger, nøytral for lavrisikoendringer i lokale utkast og destruktiv for fjerning av fullført eller historisk innhold." />
       <View style={styles.controlGroup}>
-        <CompactAction icon="edit" label="Rediger" onPress={() => {}} testID="catalog-compactaction-normal" />
-        <CompactAction icon="plus" label="Legg til" onPress={() => {}} testID="catalog-compactaction-add" />
-        <CompactAction icon="trash" label="Fjern" tone="neutral" onPress={() => {}} testID="catalog-compactaction-remove" />
-        <CompactAction disabled icon="edit" label="Rediger" onPress={() => {}} testID="catalog-compactaction-disabled" />
-        <CompactAction busy icon="plus" label="Legger til" onPress={() => {}} testID="catalog-compactaction-busy" />
+        <Text style={[typography.metadata, { color: colors.muted }]}>Toner</Text>
+        <CompactAction icon="plus" label="Legg til" onPress={() => {}} testID="catalog-compactaction-accent" />
+        <CompactAction icon="trash" label="Fjern utkast" tone="neutral" onPress={() => {}} testID="catalog-compactaction-neutral" />
+        <CompactAction icon="trash" label="Fjern historikk" tone="destructive" onPress={() => {}} testID="catalog-compactaction-destructive" />
+        <Text style={[typography.metadata, { color: colors.muted }]}>Tilstander</Text>
+        <CompactAction disabled icon="trash" label="Fjern historikk" tone="destructive" onPress={() => {}} testID="catalog-compactaction-disabled" />
+        <CompactAction busy icon="trash" label="Fjerner historikk" tone="destructive" onPress={() => {}} testID="catalog-compactaction-busy" />
       </View>
     </ScrollView>
   );

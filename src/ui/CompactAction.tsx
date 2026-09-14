@@ -9,13 +9,19 @@ type CompactActionProps = Omit<PressableProps, 'children'> & {
   icon: IconName;
   label: string;
   busy?: boolean;
-  tone?: 'accent' | 'neutral';
+  tone?: 'accent' | 'neutral' | 'destructive';
 };
 
 export const CompactAction = forwardRef<ViewType, CompactActionProps>(function CompactAction({ icon, label, accessibilityLabel, busy, disabled, style, tone = 'accent', ...rest }, ref) {
   const { colors } = useAppTheme();
   const isDisabled = Boolean(disabled || busy);
-  const color = isDisabled ? colors.muted : tone === 'accent' ? colors.primary : colors.text;
+  const color = isDisabled
+    ? colors.muted
+    : tone === 'accent'
+      ? colors.primary
+      : tone === 'destructive'
+        ? colors.danger
+        : colors.text;
   return (
     <Pressable
       {...rest}
@@ -32,7 +38,7 @@ export const CompactAction = forwardRef<ViewType, CompactActionProps>(function C
       ]}
     >
       <View accessible={false} style={styles.content}>
-        {busy ? <ActivityIndicator color={color} size="small" /> : <Icon color={color} name={icon} size={20} testID={rest.testID ? `${rest.testID}-icon` : undefined} />}
+        {busy ? <ActivityIndicator color={color} size="small" testID={rest.testID ? `${rest.testID}-busy` : undefined} /> : <Icon color={color} name={icon} size={20} testID={rest.testID ? `${rest.testID}-icon` : undefined} />}
         <Text style={[typography.metadata, styles.label, { color }]}>{label}</Text>
       </View>
     </Pressable>
@@ -40,7 +46,7 @@ export const CompactAction = forwardRef<ViewType, CompactActionProps>(function C
 });
 
 const styles = StyleSheet.create({
-  action: { alignSelf: 'flex-start', justifyContent: 'center', minHeight: 48, paddingHorizontal: 4, paddingVertical: 8 },
+  action: { alignSelf: 'flex-start', justifyContent: 'center', minHeight: 48, minWidth: 48, paddingHorizontal: 4, paddingVertical: 8 },
   content: { alignItems: 'center', flexDirection: 'row', gap: 5 },
   label: { fontWeight: '700' },
   pressed: { opacity: 0.72 },

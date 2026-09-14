@@ -124,6 +124,14 @@ leses som et ekstra nivå i handlingshierarkiet.
 Små handlinger i rader er kompakte tekstknapper, ikke et eget hierarkinivå. De
 bruker et relevant ikon sammen med en synlig tekstetikett; ikonet skal
 tydeliggjøre handlingen, men teksten skal fortsatt bære betydningen.
+`CompactAction` har tonene `accent`, `neutral` og `destructive`. Bruk `accent`
+for positive lokale handlinger og `neutral` for lavrisikoendringer, inkludert
+umiddelbar sletting av en ubekreftet lokal plan. Bruk `destructive`, med den
+semantiske `danger`-fargen, når handlingen fjerner fullført, historisk eller
+ellers konsekvensbærende innhold. Deaktivert og opptatt tilstand bruker alltid
+nøytral `muted`-farge i stedet for tonefargen, slik at kontrollen ikke fremstår
+som aktiv eller destruktiv. Tonen avgjør ikke om handlingen krever bekreftelse;
+den policyen eies av arbeidsflyten rundt kontrollen.
 
 Gjensidig utelukkende valg vises som en `SingleSelectionGroup` med én kontrollert
 valgt verdi. Hvert valg bruker en ledende radiokontroll og hele raden som

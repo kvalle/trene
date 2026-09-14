@@ -118,13 +118,16 @@ it('shows the interactive and long-text PositiveStatus states', () => {
   jest.restoreAllMocks();
 });
 
-it('shows every CompactAction state', () => {
-  render(<AppThemeProvider><CompactActionDetailScreen /></AppThemeProvider>);
-  expect(screen.getByTestId('catalog-compactaction-normal')).toBeEnabled();
-  expect(screen.getByTestId('catalog-compactaction-add')).toBeEnabled();
-  expect(screen.getByTestId('catalog-compactaction-remove')).toBeEnabled();
+it.each(['light', 'dark'] as const)('shows every CompactAction state in the %s theme with scalable labels', (scheme) => {
+  render(<AppThemeProvider scheme={scheme}><CompactActionDetailScreen /></AppThemeProvider>);
+  expect(screen.getByTestId('catalog-compactaction-accent')).toBeEnabled();
+  expect(screen.getByTestId('catalog-compactaction-neutral')).toBeEnabled();
+  expect(screen.getByTestId('catalog-compactaction-destructive')).toBeEnabled();
   expect(screen.getByTestId('catalog-compactaction-disabled')).toBeDisabled();
   expect(screen.getByTestId('catalog-compactaction-busy')).toHaveProp('accessibilityState', { busy: true, disabled: true });
+  for (const label of screen.getAllByText('Fjern historikk')) {
+    expect(label).not.toHaveProp('allowFontScaling', false);
+  }
 });
 
 it('shows every icon, supported size and representative states', () => {
