@@ -987,7 +987,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
           title="Fullfør treningen?"
         >
           <Text style={[typography.body, { color: colors.text }]}>Treningen lagres i historikken.</Text>
-          {hasPlannedSet && <Text style={[typography.body, { color: colors.text }]}>Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.</Text>}
+          {hasPlannedSet && <Text style={[typography.body, { color: colors.danger }]}>Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.</Text>}
           <Button disabled={completing} title="Fortsett treningen" variant="secondary" onPress={() => {
             setCompleteDialogOpen(false);
             requestAnimationFrame(() => focus(completeRef));
