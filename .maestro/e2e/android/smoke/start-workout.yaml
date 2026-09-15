@@ -108,8 +108,14 @@ tags:
     timeout: 30000
 - assertVisible: "Planlagt"
 - tapOn: "Rediger sett 1 for Knebøy"
-- assertVisible: "80,5"
-- assertVisible: "5"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
+- assertVisible: "^80[,.]5$"
+- assertVisible: "^5$"
 - tapOn: "Lukk redigering av sett 1 for Knebøy"
 - tapOn: "Marker sett 1 som gjennomført for Knebøy"
 - extendedWaitUntil:
