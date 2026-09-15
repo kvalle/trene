@@ -24,6 +24,7 @@ import { WorkoutScreen } from '../WorkoutScreen';
 import { TrainingDataDeletionProvider } from '../../trainingDataDeletion';
 import { WorkoutSetDraftProvider } from '../../workoutSetDrafts';
 import { HomeScreen } from '../HomeScreen';
+import { typography } from '../../theme';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual('react-native/Libraries/ReactNative/RendererProxy'),
@@ -323,9 +324,10 @@ test('enables completion only for durable completed sets and warns about planned
   fireEvent.press(complete);
 
   expect(screen.getByRole('header', { name: 'Fullfør treningen?' })).toBeOnTheScreen();
+  expect(screen.getByText('Treningen lagres i historikken.')).toHaveStyle(typography.body);
   expect(screen.getByText(
     'Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.',
-  )).toBeOnTheScreen();
+  )).toHaveStyle(typography.body);
   expect(mockedComplete).not.toHaveBeenCalled();
 });
 
@@ -581,7 +583,7 @@ test('removes a planned-only exercise immediately', async () => {
 
   await waitFor(() => expect(mockedRemoveExercise).toHaveBeenCalledWith(database, 3, 4));
   expect(screen.queryByRole('header', { name: 'Fjern øvelsen?' })).not.toBeOnTheScreen();
-  expect(screen.getByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
+  expect(screen.getByText('Ingen øvelser lagt til ennå')).toHaveStyle(typography.body);
   expect(focus).toHaveBeenCalled();
 });
 

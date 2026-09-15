@@ -240,6 +240,7 @@ const styles = StyleSheet.create({
     width: 48,
   },
   dismissText: {
+    // The multiplication sign is an icon glyph with a separate accessible name.
     fontSize: 28,
     lineHeight: 32,
   },

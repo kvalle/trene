@@ -653,7 +653,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
       keyboardShouldPersistTaps="handled"
     >
       {state.workout.exercises.length === 0 && (
-        <Text style={[styles.empty, { color: colors.text }]}>Ingen øvelser lagt til ennå</Text>
+        <Text style={[typography.body, styles.empty, { color: colors.text }]}>Ingen øvelser lagt til ennå</Text>
       )}
       {state.workout.exercises.map((exercise) => {
         const expanded = expandedIds.has(exercise.exerciseId);
@@ -903,7 +903,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
           initialFocusRef={confirmRemoveRef}
           title="Fjern øvelsen?"
         >
-          <Text style={{ color: colors.text }}>Gjennomførte og planlagte sett for øvelsen fjernes fra denne treningen.</Text>
+          <Text style={[typography.body, { color: colors.text }]}>Gjennomførte og planlagte sett for øvelsen fjernes fra denne treningen.</Text>
           <Button disabled={pendingExerciseOperation === 'remove-exercise'} title="Behold øvelsen" variant="secondary" onPress={closeRemoveDialog} />
           <Button
             accessibilityLabel="Bekreft fjerning av øvelsen"
@@ -926,7 +926,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
           initialFocusRef={confirmRemoveSetRef}
           title="Fjern gjennomført sett?"
         >
-          <Text style={{ color: colors.text }}>Det gjennomførte settet fjernes permanent fra treningen.</Text>
+          <Text style={[typography.body, { color: colors.text }]}>Det gjennomførte settet fjernes permanent fra treningen.</Text>
           {setFailure?.setId === removeCompletedSetId && (
             <View style={styles.failure}>
               <ErrorAlert message={setFailure.message} />
@@ -986,8 +986,8 @@ export function WorkoutScreen({ navigation, route }: Props) {
           initialFocusRef={confirmCompleteRef}
           title="Fullfør treningen?"
         >
-          <Text style={{ color: colors.text }}>Treningen lagres i historikken.</Text>
-          {hasPlannedSet && <Text style={{ color: colors.text }}>Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.</Text>}
+          <Text style={[typography.body, { color: colors.text }]}>Treningen lagres i historikken.</Text>
+          {hasPlannedSet && <Text style={[typography.body, { color: colors.text }]}>Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.</Text>}
           <Button disabled={completing} title="Fortsett treningen" variant="secondary" onPress={() => {
             setCompleteDialogOpen(false);
             requestAnimationFrame(() => focus(completeRef));
@@ -1001,7 +1001,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
         initialFocusRef={confirmCancelRef}
         title="Avbryt treningen?"
       >
-        <Text style={{ color: colors.text }}>Treningen slettes permanent og vises ikke i historikken.</Text>
+        <Text style={[typography.body, { color: colors.text }]}>Treningen slettes permanent og vises ikke i historikken.</Text>
         <Button disabled={cancelling} title="Behold treningen" variant="secondary" onPress={closeCancelDialog} />
         <Button ref={confirmCancelRef} busy={cancelling} disabled={cancelling} title={cancelling ? 'Avbryter' : 'Avbryt treningen'} variant="destructive" onPress={() => void confirmCancellation(state.workout.id)} />
       </Dialog>
@@ -1011,7 +1011,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, gap: 16, padding: 20 },
-  empty: { fontSize: 18, paddingVertical: 36, textAlign: 'center' },
+  empty: { paddingVertical: 36, textAlign: 'center' },
   setContainer: { borderBottomWidth: 1, paddingBottom: 12 },
   setRow: { alignItems: 'center', flexDirection: 'row', gap: 10, minHeight: 48 },
   setCopy: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: 10, minWidth: 100 },

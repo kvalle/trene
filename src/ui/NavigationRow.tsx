@@ -49,6 +49,7 @@ const styles = StyleSheet.create({
   },
   copy: { flex: 1, gap: 4, paddingRight: 12 },
   metadata: { paddingRight: 8 },
+  // The chevron is a decorative glyph, not readable content typography.
   chevron: { fontSize: 22, fontWeight: '400' },
   pressed: { opacity: 0.72 },
 });

@@ -11,7 +11,7 @@ import { Card } from '../Card';
 import { CompactAction } from '../CompactAction';
 import { DataRow } from '../DataRow';
 import { AppThemeProvider } from '../AppThemeProvider';
-import { darkColors, lightColors } from '../../theme';
+import { darkColors, lightColors, typography } from '../../theme';
 
 if (false) {
   // @ts-expect-error Icon-only text buttons are not part of the approved presentation.
@@ -188,7 +188,7 @@ describe('CompactAction', () => {
     renderWithTheme(<CompactAction accessibilityLabel="Tilpasset navn" icon="edit" label="Synlig etikett" onFocus={onFocus} testID="compact" />);
 
     const action = screen.getByRole('button', { name: 'Tilpasset navn' });
-    expect(screen.getByText('Synlig etikett')).toBeOnTheScreen();
+    expect(screen.getByText('Synlig etikett')).toHaveStyle(typography.control);
     expect(action).toHaveStyle({ minHeight: 48, minWidth: 48 });
     fireEvent(action, 'focus');
     expect(onFocus).toHaveBeenCalledTimes(1);
@@ -248,7 +248,8 @@ describe('TextField', () => {
     );
     const input = screen.getByTestId('exercise-name-input');
     expect(input).toBeOnTheScreen();
-    expect(screen.getByText('Navn')).toBeOnTheScreen();
+    expect(screen.getByText('Navn')).toHaveStyle(typography.metadata);
+    expect(input).toHaveStyle(typography.body);
     expect(input.props.value).toBe('Benk');
     expect(ref.current).not.toBeNull();
     fireEvent.changeText(input, 'Knebøy');
