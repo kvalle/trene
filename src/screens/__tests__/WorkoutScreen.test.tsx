@@ -66,6 +66,7 @@ const mockedSave = jest.mocked(savePlannedWorkoutSet);
 const mockedSaveCompleted = jest.mocked(saveCompletedWorkoutSet);
 const mockedRemoveExercise = jest.mocked(removeExerciseFromWorkout);
 const mockedUnconfirm = jest.mocked(unconfirmWorkoutSet);
+const STARTED_AT = new Date(2026, 7, 5, 10, 0).toISOString();
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -77,6 +78,7 @@ beforeEach(() => {
 
 const workoutWithSets = {
   id: 3,
+  startedAt: STARTED_AT,
   exercises: [{
     id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
     sets: [
@@ -89,10 +91,12 @@ const workoutWithSets = {
 test('shows an active workout and opens its cancellable exercise picker', async () => {
   const navigate = jest.fn();
   const setParams = jest.fn();
-  mockedLoad.mockResolvedValue({ id: 3, exercises: [] });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises: [] });
   renderScreen({ navigate, setParams });
 
-  expect(await screen.findByText('Ingen øvelser lagt til ennå', {}, { timeout: 3000 })).toBeOnTheScreen();
+  const metadata = await screen.findByText('Startet 5. august 2026 kl. 10:00', {}, { timeout: 3000 });
+  expect(metadata).toHaveStyle({ ...typography.metadata, color: lightColors.muted });
+  expect(screen.getByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
   expect(screen.queryByRole('button', { name: 'Ferdig' })).not.toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Avbryt' })).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Legg til øvelse' }));
@@ -101,16 +105,16 @@ test('shows an active workout and opens its cancellable exercise picker', async 
 });
 
 test('keeps loading and total failure distinct from an empty workout and retries loading', async () => {
-  let finishLoad: (workout: { id: number; exercises: never[] }) => void = () => undefined;
+  let finishLoad: (workout: { id: number; startedAt: string; exercises: never[] }) => void = () => undefined;
   mockedLoad
     .mockImplementationOnce(() => new Promise((resolve) => { finishLoad = resolve; }))
     .mockRejectedValueOnce(new Error('read failed'))
-    .mockResolvedValueOnce({ id: 3, exercises: [] });
+    .mockResolvedValueOnce({ id: 3, startedAt: STARTED_AT, exercises: [] });
   const initialView = renderScreen();
 
   expect(screen.getByLabelText('Laster treningsøkt')).toBeOnTheScreen();
   expect(screen.queryByText('Ingen øvelser lagt til ennå')).not.toBeOnTheScreen();
-  await act(async () => finishLoad({ id: 3, exercises: [] }));
+  await act(async () => finishLoad({ id: 3, startedAt: STARTED_AT, exercises: [] }));
   expect(await screen.findByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
   initialView.unmount();
 
@@ -126,6 +130,7 @@ test('opens and focuses the exercise requested by route params, then consumes th
   const setParams = jest.fn();
   mockedLoad.mockResolvedValue({
     id: 3,
+    startedAt: STARTED_AT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -143,6 +148,7 @@ test('opens a newly added exercise without closing an exercise already open', as
   const navigation = { setParams: jest.fn() };
   const workout = {
     id: 3,
+    startedAt: STARTED_AT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -163,7 +169,7 @@ test('opens a newly added exercise without closing an exercise already open', as
 test('focuses the add-exercise action requested by route params, then consumes them', async () => {
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   const setParams = jest.fn();
-  mockedLoad.mockResolvedValue({ id: 3, exercises: [] });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises: [] });
   renderScreen({ setParams }, { focusAddExercise: true });
 
   expect(await screen.findByRole('button', { name: 'Legg til øvelse' })).toBeOnTheScreen();
@@ -174,6 +180,7 @@ test('focuses the add-exercise action requested by route params, then consumes t
 test('shows a compact planned set and opens its editor on request', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
+    startedAt: STARTED_AT,
     exercises: [{
       id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
       sets: [{ id: 6, loadKg: null, repetitions: null, confirmedAt: null }],
@@ -206,6 +213,7 @@ test('dismisses the keyboard when the inline editor closes', async () => {
 test('keeps suggested sets compact in source order and permits one editor', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
+    startedAt: STARTED_AT,
     exercises: [{
       id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
       sets: [
@@ -229,6 +237,7 @@ test('saves a valid dirty draft before switching editors', async () => {
   let finishSave: () => void = () => undefined;
   mockedLoad.mockResolvedValue({
     id: 3,
+    startedAt: STARTED_AT,
     exercises: [{
       id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
       sets: [
@@ -254,6 +263,7 @@ test('saves a valid dirty draft before switching editors', async () => {
 test('invalid input blocks editor transitions but not exercise card collapse', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
+    startedAt: STARTED_AT,
     exercises: [{
       id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
       sets: [
@@ -286,6 +296,7 @@ test('invalid input blocks editor transitions but not exercise card collapse', a
 test('reveals a collapsed invalid editor when another editor is requested', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
+    startedAt: STARTED_AT,
     exercises: [
       { id: 4, exerciseId: 5, name: 'Knebøy', position: 0, sets: [{ id: 6, loadKg: 80, repetitions: 5, confirmedAt: null }] },
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [{ id: 11, loadKg: 100, repetitions: 3, confirmedAt: null }] },
@@ -500,6 +511,7 @@ test('does not continue navigation when flushing a dirty draft fails', async () 
 test('starts collapsed and lets every exercise expand and collapse independently', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
+    startedAt: STARTED_AT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -554,6 +566,7 @@ test('starts collapsed again after the workout screen is remounted', async () =>
 test('removes only the deleted exercise from the expansion set', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
+    startedAt: STARTED_AT,
     exercises: [
       { ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] },
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -892,7 +905,7 @@ test('reloads the active workout from SQLite on foreground', async () => {
     onAppStateChange = listener;
     return { remove: jest.fn() };
   });
-  mockedLoad.mockResolvedValueOnce({ id: 3, exercises: [] }).mockResolvedValueOnce(workoutWithSets);
+  mockedLoad.mockResolvedValueOnce({ id: 3, startedAt: STARTED_AT, exercises: [] }).mockResolvedValueOnce(workoutWithSets);
   renderScreen();
   expect(await screen.findByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
 
@@ -910,6 +923,7 @@ test('preserves expanded exercises when the mounted screen reloads', async () =>
   });
   const workout = {
     id: 3,
+    startedAt: STARTED_AT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -1038,6 +1052,7 @@ test('focuses the next set after removing the first planned set', async () => {
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   mockedLoad.mockResolvedValue({
     id: 3,
+    startedAt: STARTED_AT,
     exercises: [{
       id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
       sets: [
@@ -1163,7 +1178,7 @@ test.each([
   ['populated', [{ id: 4, exerciseId: 5, name: 'Knebøy', position: 0, sets: [] }]],
 ])('confirms cancellation of an %s workout before returning Home', async (_, exercises) => {
   const popTo = jest.fn();
-  mockedLoad.mockResolvedValue({ id: 3, exercises });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises });
   mockedCancel.mockResolvedValue();
   renderScreen({ popTo });
 
@@ -1178,7 +1193,7 @@ test.each([
 
 test('closes the dialog without deleting and restores focus to Avbryt', async () => {
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
-  mockedLoad.mockResolvedValue({ id: 3, exercises: [] });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises: [] });
   const { UNSAFE_getByType } = renderScreen();
 
   fireEvent.press(await screen.findByRole('button', { name: 'Avbryt' }));
@@ -1192,7 +1207,7 @@ test('closes the dialog without deleting and restores focus to Avbryt', async ()
 });
 
 test('platform Back closes the confirmation dialog first', async () => {
-  mockedLoad.mockResolvedValue({ id: 3, exercises: [] });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises: [] });
   const { UNSAFE_getByType } = renderScreen();
 
   fireEvent.press(await screen.findByRole('button', { name: 'Avbryt' }));
@@ -1203,7 +1218,7 @@ test('platform Back closes the confirmation dialog first', async () => {
 });
 
 test('exposes cancellation busy state and ignores dismissal while cancellation is pending', async () => {
-  mockedLoad.mockResolvedValue({ id: 3, exercises: [] });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises: [] });
   mockedCancel.mockImplementation(() => new Promise(() => {}));
   const { UNSAFE_getByType } = renderScreen();
 
@@ -1219,7 +1234,7 @@ test('preserves the workout, announces retry, and does not navigate when cancell
   const popTo = jest.fn();
   const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
-  mockedLoad.mockResolvedValue({ id: 3, exercises: [] });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises: [] });
   mockedCancel.mockRejectedValue(new Error('write failed'));
   renderScreen({ popTo });
 

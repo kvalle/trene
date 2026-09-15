@@ -34,7 +34,7 @@ import {
   type WorkoutSet,
 } from '../database/workouts';
 import { parseLoad, parseRepetitions, validateWorkoutSet } from '../domain/workoutSet';
-import { formatLoad } from '../locale';
+import { formatDateTime, formatLoad } from '../locale';
 import { typography } from '../theme';
 import { Button } from '../ui/Button';
 import { useAppTheme } from '../ui/AppThemeProvider';
@@ -652,6 +652,9 @@ export function WorkoutScreen({ navigation, route }: Props) {
       contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled"
     >
+      <Text style={[typography.metadata, { color: colors.muted }]}>
+        Startet {formatDateTime(new Date(state.workout.startedAt))}
+      </Text>
       {state.workout.exercises.length === 0 && (
         <Text style={[typography.body, styles.empty, { color: colors.text }]}>Ingen øvelser lagt til ennå</Text>
       )}
