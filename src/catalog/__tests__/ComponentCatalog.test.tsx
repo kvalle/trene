@@ -1,6 +1,6 @@
 import { AccessibilityInfo } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import ComponentCatalog, { AppShellDetailScreen, ButtonDetailScreen, CompactActionDetailScreen, IconDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen } from '../ComponentCatalog';
+import ComponentCatalog, { AppShellDetailScreen, ButtonDetailScreen, CompactActionDetailScreen, IconDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen, TypographyDetailScreen } from '../ComponentCatalog';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 
 jest.mock('@react-navigation/native', () => ({
@@ -32,6 +32,7 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('HANDLINGER')).toBeOnTheScreen();
   expect(screen.getByText('VISUELLE GRUNNELEMENTER')).toBeOnTheScreen();
   expect(screen.getByText('Icon')).toBeOnTheScreen();
+  expect(screen.getByText('Typografi')).toBeOnTheScreen();
   expect(screen.getByText('Button')).toBeOnTheScreen();
   expect(screen.getByText('CompactAction')).toBeOnTheScreen();
   expect(screen.getByText('Dialog')).toBeOnTheScreen();
@@ -61,6 +62,7 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('ButtonDetail')).toBeOnTheScreen();
   expect(screen.getByText('CompactActionDetail')).toBeOnTheScreen();
   expect(screen.getByText('IconDetail')).toBeOnTheScreen();
+  expect(screen.getByText('TypographyDetail')).toBeOnTheScreen();
   expect(screen.getByText('CardDetail')).toBeOnTheScreen();
   expect(screen.getByText('DataRowDetail')).toBeOnTheScreen();
   expect(screen.getByText('DisclosureCardDetail')).toBeOnTheScreen();
@@ -83,6 +85,21 @@ it('renders production theme contexts and switches theme', () => {
 
   fireEvent(screen.getByLabelText('Mørk modus'), 'valueChange', true);
   expect(screen.getByLabelText('Mørk modus')).toBeOnTheScreen();
+});
+
+it.each(['light', 'dark'] as const)('documents every typography level and text tone in the %s theme', (scheme) => {
+  render(<AppThemeProvider scheme={scheme}><TypographyDetailScreen /></AppThemeProvider>);
+
+  for (const level of ['Skjermtittel', 'Seksjonstittel', 'Vanlig tekst', 'Metadata og hjelpetekst', 'Kontrolltekst']) {
+    expect(screen.getByText(level)).toBeOnTheScreen();
+  }
+  for (const tone of ['Normal tone', 'Dempet tone', 'Fare-tone']) {
+    const example = screen.getByTestId(`catalog-typography-tone-${tone.split(' ')[0].toLowerCase()}`);
+    expect(example).toBeOnTheScreen();
+    expect(example).not.toHaveProp('allowFontScaling', false);
+  }
+  expect(screen.getByText(/Typografisk nivå og semantisk teksttone er uavhengige/)).toBeOnTheScreen();
+  expect(screen.getByTestId('catalog-typography-long-text')).not.toHaveProp('numberOfLines');
 });
 
 it('documents that native screen titles are not repeated in content', () => {
