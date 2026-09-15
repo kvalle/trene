@@ -195,10 +195,6 @@ export function WorkoutScreen({ navigation, route }: Props) {
   }, [setRetryFocus]);
 
   useEffect(() => {
-    if (editingSetId !== undefined) loadInputRefs.current.get(editingSetId)?.focus();
-  }, [editingSetId]);
-
-  useEffect(() => {
     if (focusSetId === undefined) return;
     focus({ current: rowRefs.current.get(focusSetId) ?? null });
     setFocusSetId(undefined);
@@ -398,7 +394,8 @@ export function WorkoutScreen({ navigation, route }: Props) {
     setEditingSetId(nextSetId);
     if (nextSetId === undefined) Keyboard.dismiss();
     requestAnimationFrame(() => {
-      if (nextSetId === undefined && returnFocus) focus({ current: editRefs.current.get(current.id) ?? null });
+      if (nextSetId !== undefined) loadInputRefs.current.get(nextSetId)?.focus();
+      else if (returnFocus) focus({ current: editRefs.current.get(current.id) ?? null });
     });
     return true;
   }
@@ -407,6 +404,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
     if (editingSetId === setId) return;
     if (editingSetId !== undefined && !await leaveEditor(setId)) return;
     if (editingSetId === undefined) setEditingSetId(setId);
+    requestAnimationFrame(() => loadInputRefs.current.get(setId)?.focus());
   }
 
   function saveOnBlur(workoutId: number, set: WorkoutSet, exerciseName: string) {

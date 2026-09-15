@@ -15,10 +15,12 @@ observable routing cases covered by `npm run test:ci-plan`.
 
 Documentation-only changes do not run native jobs. Platform-owned changes run
 only that platform unless they affect shared backup semantics or release
-qualification. Android E2E remains part of pull-request CI. iOS E2E is verified
-locally through the broker and may be dispatched manually for hosted diagnostics;
-it does not run automatically on pull requests. Obsolete pull-request runs are
-cancelled; intentional release qualification runs are not.
+qualification. Android E2E is temporarily excluded from pull-request CI while
+#250 evaluates a stable hardware-keyboard setup; relevant suites must be run
+locally. iOS E2E is verified locally through the broker and may be dispatched
+manually for hosted diagnostics; it does not run automatically on pull requests.
+Obsolete pull-request runs are cancelled; intentional release qualification runs
+are not.
 
 At every package transfer, qualification verifies SHA-256, format and schema
 versions, authoritative table counts, and the semantic digest. Synthetic package

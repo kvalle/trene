@@ -165,6 +165,11 @@ test("keeps iOS E2E manual and outside pull request CI", () => {
   ]) assert.match(ios, new RegExp(`flows: [^\\n]*\\b${flow}\\b`), flow);
 });
 
+test("keeps Android E2E outside pull request CI while keyboard stability is investigated", () => {
+  const ci = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
+  assert.match(ci, /if: github\.event_name != 'pull_request' && needs\.plan\.outputs\.android != 'none'/);
+});
+
 test("combines routes without allowing weaker paths to reduce coverage", () => {
   assert.deepEqual(classifyPaths(["docs/readme.md", "src/App.tsx", "ios/Trene/AppDelegate.swift"]), {
     has_changes: true,

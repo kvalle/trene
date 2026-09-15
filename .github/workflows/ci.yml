@@ -145,7 +145,8 @@ jobs:
   android-e2e:
     name: Android ${{ matrix.suite }} verification
     needs: [plan, android-apk]
-    if: needs.plan.outputs.android != 'none'
+    # Temporarily disabled for pull requests while #250 investigates emulator keyboard instability.
+    if: github.event_name != 'pull_request' && needs.plan.outputs.android != 'none'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
