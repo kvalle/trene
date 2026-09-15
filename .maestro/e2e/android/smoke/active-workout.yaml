@@ -22,19 +22,13 @@ tags:
     timeout: 30000
 - assertVisible: "Planlagt"
 - tapOn: "Rediger sett 1 for Knebøy"
+- pressKey: back
 - scrollUntilVisible:
     element:
       text: "Belastning for Knebøy"
     direction: DOWN
     centerElement: true
-- tapOn: "Belastning for Knebøy"
 - inputText: "80"
-- runFlow:
-    when:
-      notVisible: "^80$"
-    commands:
-      - eraseText
-      - inputText: "80"
 - assertVisible: "^80$"
 - scrollUntilVisible:
     element:
@@ -43,14 +37,12 @@ tags:
     centerElement: true
 - tapOn: "Repetisjoner for Knebøy"
 - inputText: "5"
-- runFlow:
-    when:
-      notVisible: "^5$"
-    commands:
-      - eraseText
-      - inputText: "5"
 - assertVisible: "^5$"
 - pressKey: back
+- tapOn: "Lukk redigering av sett 1 for Knebøy"
+- extendedWaitUntil:
+    visible: "80 kg · 5 repetisjoner"
+    timeout: 30000
 - scrollUntilVisible:
     element:
       text: "Marker sett 1 som gjennomført for Knebøy"
@@ -63,25 +55,13 @@ tags:
 - assertVisible: "Gjennomført"
 
 # Editing a completed set is independent from status and saves it atomically.
-- assertVisible: "Lukk redigering av sett 1 for Knebøy"
-- scrollUntilVisible:
-    element:
-      text: "Belastning for Knebøy"
-    direction: DOWN
-    centerElement: true
-- tapOn: "Belastning for Knebøy"
-- eraseText
-- inputText: "82"
-- runFlow:
-    when:
-      notVisible: "^82$"
-    commands:
-      - eraseText
-      - inputText: "82"
-- assertVisible: "^82$"
+- tapOn: "Rediger sett 1 for Knebøy"
+- inputText: "2"
+- assertVisible: "^802$"
+- pressKey: back
 - tapOn: "Lukk redigering av sett 1 for Knebøy"
 - extendedWaitUntil:
-    visible: "82 kg · 5 repetisjoner"
+    visible: "802 kg · 5 repetisjoner"
     timeout: 30000
 - assertVisible: "Gjennomført"
 
@@ -111,14 +91,25 @@ tags:
 
 # Completed removal requires confirmation; cancellation retains the row.
 - tapOn: "Rediger sett 2 for Knebøy"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Fjern sett 2 for Knebøy"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Fjern sett 2 for Knebøy"
 - assertVisible: "Fjern gjennomført sett?"
 - tapOn: "Behold settet"
 - assertVisible: "Lukk redigering av sett 2 for Knebøy"
+- scrollUntilVisible:
+    element:
+      text: "Fjern sett 2 for Knebøy"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Fjern sett 2 for Knebøy"
 - tapOn: "Bekreft fjerning av gjennomført sett"
 - extendedWaitUntil:
     notVisible: "Rediger sett 2 for Knebøy"
     timeout: 30000
 - assertVisible: "Rediger sett 1 for Knebøy"
-- assertVisible: "82 kg · 5 repetisjoner"
+- assertVisible: "802 kg · 5 repetisjoner"

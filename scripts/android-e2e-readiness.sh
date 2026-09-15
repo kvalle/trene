@@ -4,6 +4,9 @@ android_readiness_artifacts="${ANDROID_READINESS_ARTIFACTS:-$PWD/.artifacts/andr
 android_readiness_attempts="${ANDROID_READINESS_ATTEMPTS:-30}"
 android_readiness_interval="${ANDROID_READINESS_INTERVAL_SECONDS:-2}"
 android_readiness_command_timeout="${ANDROID_READINESS_COMMAND_TIMEOUT_SECONDS:-10}"
+android_original_display_size=""
+android_original_display_density=""
+android_original_font_scale=""
 
 run_bounded_android_command() {
   python3 -c '
@@ -44,10 +47,39 @@ capture_android_readiness_diagnostics() {
     echo "api=$(run_bounded_android_command adb shell getprop ro.build.version.sdk 2>/dev/null || true)"
     echo "fingerprint=$(run_bounded_android_command adb shell getprop ro.build.fingerprint 2>/dev/null || true)"
     echo "abi=$(run_bounded_android_command adb shell getprop ro.product.cpu.abi 2>/dev/null || true)"
+    echo "display_size=$(run_bounded_android_command adb shell wm size 2>/dev/null | tr '\n' ';' || true)"
+    echo "display_density=$(run_bounded_android_command adb shell wm density 2>/dev/null | tr '\n' ';' || true)"
+    echo "font_scale=$(run_bounded_android_command adb shell settings get system font_scale 2>/dev/null || true)"
   } > "$android_readiness_artifacts/runtime-identity.txt"
   run_bounded_android_command adb shell pm path android > "$android_readiness_artifacts/package-manager.txt" 2>&1 || true
   df -h > "$android_readiness_artifacts/runner-disk.txt" 2>&1 || true
   free -h > "$android_readiness_artifacts/runner-memory.txt" 2>&1 || true
+}
+
+configure_android_test_display() {
+  android_original_display_size="$(run_bounded_android_command adb shell wm size 2>/dev/null || true)"
+  android_original_display_density="$(run_bounded_android_command adb shell wm density 2>/dev/null || true)"
+  android_original_font_scale="$(run_bounded_android_command adb shell settings get system font_scale 2>/dev/null || true)"
+  run_bounded_android_command adb shell wm size 1080x1920
+  run_bounded_android_command adb shell wm density 420
+  run_bounded_android_command adb shell settings put system font_scale 1.0
+}
+
+restore_android_test_display() {
+  if [[ -z "$android_original_display_size" ]]; then return; fi
+  if [[ "$android_original_display_size" == *"Override size:"* ]]; then
+    run_bounded_android_command adb shell wm size "${android_original_display_size##*Override size: }" || true
+  else
+    run_bounded_android_command adb shell wm size reset || true
+  fi
+  if [[ "$android_original_display_density" == *"Override density:"* ]]; then
+    run_bounded_android_command adb shell wm density "${android_original_display_density##*Override density: }" || true
+  else
+    run_bounded_android_command adb shell wm density reset || true
+  fi
+  if [[ -n "$android_original_font_scale" && "$android_original_font_scale" != "null" ]]; then
+    run_bounded_android_command adb shell settings put system font_scale "$android_original_font_scale" || true
+  fi
 }
 
 capture_android_e2e_diagnostics() {

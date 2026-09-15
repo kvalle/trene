@@ -37,6 +37,7 @@ cleanup() {
     echo "maestro_version=$(maestro --version 2>/dev/null | sed -n '1p' || true)"
   } > "$diagnostics/runtime-metadata.txt"
   if [[ "$status" -ne 0 ]]; then capture_android_e2e_diagnostics "$diagnostics/$current_journey"; fi
+  restore_android_test_display
 }
 trap cleanup EXIT
 
@@ -59,6 +60,8 @@ if [[ "$group" == "smoke" ]]; then
     exit 1
   fi
 fi
+
+configure_android_test_display
 
 for flow in ".maestro/e2e/android/$group"/*.yaml; do
   current_journey="$(basename "$flow" .yaml)"

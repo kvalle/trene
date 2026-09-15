@@ -24,19 +24,13 @@ tags:
     id: "create-exercise-submit"
 
 - tapOn: "Rediger sett 1 for Knebøy"
+- pressKey: back
 - scrollUntilVisible:
     element:
       text: "Belastning for Knebøy"
     direction: DOWN
     centerElement: true
-- tapOn: "Belastning for Knebøy"
 - inputText: "80"
-- runFlow:
-    when:
-      notVisible: "^80$"
-    commands:
-      - eraseText
-      - inputText: "80"
 - assertVisible: "^80$"
 - scrollUntilVisible:
     element:
@@ -45,14 +39,12 @@ tags:
     centerElement: true
 - tapOn: "Repetisjoner for Knebøy"
 - inputText: "5"
-- runFlow:
-    when:
-      notVisible: "^5$"
-    commands:
-      - eraseText
-      - inputText: "5"
 - assertVisible: "^5$"
 - pressKey: back
+- tapOn: "Lukk redigering av sett 1 for Knebøy"
+- extendedWaitUntil:
+    visible: "80 kg · 5 repetisjoner"
+    timeout: 30000
 - scrollUntilVisible:
     element:
       text: "Marker sett 1 som gjennomført for Knebøy"

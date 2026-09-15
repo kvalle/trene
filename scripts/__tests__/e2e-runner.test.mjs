@@ -75,6 +75,28 @@ for (const group of ["smoke", "standalone"]) {
   });
 }
 
+test("Android smoke uses the CI viewport contract", () => {
+  const { result, log } = run("smoke", {
+    adb: `case "$*" in
+      "devices") printf "emulator-5554\\tdevice\\n" ;;
+      "reverse --list") printf "emulator-5554 tcp:8081 tcp:8081\\n" ;;
+      "shell wm size") printf "Physical size: 1080x2340\\n" ;;
+      "shell wm density") printf "Physical density: 440\\n" ;;
+      "shell settings get system font_scale") printf "1.15\\n" ;;
+      *) printf "%s\\n" "$*" >> "$E2E_TEST_LOG" ;;
+    esac`,
+    maestro: ":",
+    sleep: ":",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(log, /shell wm size 1080x1920/);
+  assert.match(log, /shell wm density 420/);
+  assert.match(log, /shell settings put system font_scale 1.0/);
+  assert.match(log, /shell wm size reset/);
+  assert.match(log, /shell wm density reset/);
+  assert.match(log, /shell settings put system font_scale 1.15/);
+});
+
 test("unknown Android E2E groups are rejected before commands run", () => {
   const result = spawnSync("bash", [runner, "qualification"], { cwd: root, encoding: "utf8" });
   assert.equal(result.status, 2);
