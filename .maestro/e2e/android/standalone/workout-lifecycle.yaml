@@ -26,6 +26,14 @@ tags:
     centerElement: true
 - tapOn: "Belastning for Knebøy"
 - inputText: "80.5"
+- runFlow:
+    when:
+      notVisible: "^80\\.5$"
+    commands:
+      - tapOn: "Belastning for Knebøy"
+      - eraseText
+      - inputText: "80.5"
+- assertVisible: "^80\\.5$"
 - scrollUntilVisible:
     element:
       text: "Repetisjoner for Knebøy"
@@ -33,6 +41,14 @@ tags:
     centerElement: true
 - tapOn: "Repetisjoner for Knebøy"
 - inputText: "5"
+- runFlow:
+    when:
+      notVisible: "^5$"
+    commands:
+      - tapOn: "Repetisjoner for Knebøy"
+      - eraseText
+      - inputText: "5"
+- assertVisible: "^5$"
 - pressKey: back
 - scrollUntilVisible:
     element:
