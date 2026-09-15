@@ -28,17 +28,25 @@ tags:
 - tapOn: "Repetisjoner for Knebøy"
 - inputText: "5"
 - assertVisible: "^5$"
+- pressKey: back
 - scrollUntilVisible:
     element:
       text: "Belastning for Knebøy"
-    direction: UP
+    direction: DOWN
     centerElement: true
-- extendedWaitUntil:
-    visible: "– kg · 5 repetisjoner"
-    timeout: 30000
 - tapOn: "Belastning for Knebøy"
 - inputText: "80"
 - assertVisible: "^80$"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Repetisjoner for Knebøy"
+- extendedWaitUntil:
+    visible: "80 kg · 5 repetisjoner"
+    timeout: 30000
 - pressKey: back
 - tapOn: "Lukk redigering av sett 1 for Knebøy"
 - extendedWaitUntil:
