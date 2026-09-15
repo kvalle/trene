@@ -30,19 +30,23 @@ tags:
 - pressKey: back
 - scrollUntilVisible:
     element:
-      text: "Belastning for Knebøy"
-    direction: DOWN
-    centerElement: true
-- inputText: "80.5"
-- assertVisible: "^80\\.5$"
-- scrollUntilVisible:
-    element:
       text: "Repetisjoner for Knebøy"
     direction: DOWN
     centerElement: true
 - tapOn: "Repetisjoner for Knebøy"
 - inputText: "5"
 - assertVisible: "^5$"
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: UP
+    centerElement: true
+- extendedWaitUntil:
+    visible: "– kg · 5 repetisjoner"
+    timeout: 30000
+- tapOn: "Belastning for Knebøy"
+- inputText: "80.5"
+- assertVisible: "^80\\.5$"
 - pressKey: back
 
 # Background and resume before confirmation to verify planned values are durable.
