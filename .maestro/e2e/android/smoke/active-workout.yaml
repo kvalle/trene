@@ -22,6 +22,11 @@ tags:
     timeout: 30000
 - assertVisible: "Planlagt"
 - tapOn: "Rediger sett 1 for Knebøy"
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Belastning for Knebøy"
 - inputText: "80"
 - scrollUntilVisible:
@@ -45,6 +50,11 @@ tags:
 
 # Editing a completed set is independent from status and saves it atomically.
 - assertVisible: "Lukk redigering av sett 1 for Knebøy"
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Belastning for Knebøy"
 - eraseText
 - inputText: "82"

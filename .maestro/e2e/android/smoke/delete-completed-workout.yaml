@@ -19,6 +19,11 @@ tags:
 - tapOn:
     id: "create-exercise-submit"
 - tapOn: "Rediger sett 1 for Knebøy"
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Belastning for Knebøy"
 - inputText: "80"
 - scrollUntilVisible:

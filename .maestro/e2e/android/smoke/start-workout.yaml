@@ -27,6 +27,11 @@ tags:
 - assertVisible: "Rediger sett 1 for Knebøy"
 
 - tapOn: "Rediger sett 1 for Knebøy"
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Belastning for Knebøy"
 - inputText: "80.5"
 - scrollUntilVisible:
