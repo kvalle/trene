@@ -1,0 +1,109 @@
+appId: com.kjetilvalle.trene
+name: Active workout compact editing on iOS
+tags:
+  - ios
+  - active-workout
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en trening?"
+    timeout: 120000
+- tapOn: "Start trening"
+- tapOn: "Legg til øvelse"
+- tapOn: "Opprett første øvelse"
+- extendedWaitUntil:
+    visible:
+      id: "exercise-name-input"
+    timeout: 30000
+- tapOn:
+    id: "exercise-name-input"
+- inputText: "K"
+- assertVisible: "^K$"
+- tapOn:
+    id: "create-exercise-submit"
+- extendedWaitUntil:
+    visible: "Rediger sett 1 for K"
+    timeout: 30000
+- assertVisible: "Sett 1, belastning ikke angitt, repetisjoner ikke angitt, Planlagt"
+- tapOn: "Rediger sett 1 for K"
+- tapOn: "Belastning for K"
+- inputText: "8"
+- assertVisible: "^8$"
+- tapOn: "Repetisjoner for K"
+- inputText: "5"
+- assertVisible: "^5$"
+- extendedWaitUntil:
+    visible: "Lukk redigering av sett 1 for K"
+    timeout: 30000
+- tapOn: "Lukk redigering av sett 1 for K"
+- extendedWaitUntil:
+    visible: "Rediger sett 1 for K"
+    timeout: 30000
+- tapOn: "Marker sett 1 som gjennomført for K"
+- runFlow:
+    when:
+      visible: "Marker sett 1 som gjennomført for K"
+    commands:
+      - tapOn: "Marker sett 1 som gjennomført for K"
+- extendedWaitUntil:
+    visible: "Endre sett 1 til planlagt for K"
+    timeout: 30000
+- assertVisible: "Sett 1, 8 kilogram, 5 repetisjoner, Gjennomført"
+
+# A completed value edit keeps the row completed and in position.
+- tapOn: "Rediger sett 1 for K"
+- tapOn: "Repetisjoner for K"
+- inputText: "6"
+- assertVisible: "^56$"
+- tapOn: "Lukk redigering av sett 1 for K"
+- extendedWaitUntil:
+    visible: "Sett 1, 8 kilogram, 56 repetisjoner, Gjennomført"
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Fortsett trening"
+    timeout: 60000
+- tapOn: "Fortsett trening"
+- extendedWaitUntil:
+    visible: "K, 1 av 1 sett gjennomført"
+    timeout: 60000
+- tapOn: "K, 1 av 1 sett gjennomført"
+- assertVisible: "Sett 1, 8 kilogram, 56 repetisjoner, Gjennomført"
+
+# A second compact row can change status without opening its editor.
+- tapOn: "Legg til sett"
+- extendedWaitUntil:
+    visible: "Rediger sett 2 for K"
+    timeout: 30000
+- assertVisible: "Sett 2, 8 kilogram, 56 repetisjoner, Planlagt"
+- tapOn: "Marker sett 2 som gjennomført for K"
+- runFlow:
+    when:
+      visible: "Marker sett 2 som gjennomført for K"
+    commands:
+      - tapOn: "Marker sett 2 som gjennomført for K"
+- extendedWaitUntil:
+    visible: "Endre sett 2 til planlagt for K"
+    timeout: 30000
+- assertVisible: "Sett 2, 8 kilogram, 56 repetisjoner, Gjennomført"
+- assertVisible: "Rediger sett 1 for K"
+
+# Completed removal is destructive, cancellable, and focuses the following row.
+- tapOn: "Rediger sett 1 for K"
+- tapOn: "Fjern sett 1 for K"
+- runFlow:
+    when:
+      notVisible: "Behold settet"
+    commands:
+      - tapOn: "Fjern sett 1 for K"
+- extendedWaitUntil:
+    visible: "Behold settet"
+    timeout: 30000
+- tapOn: "Behold settet"
+- assertVisible: "Lukk redigering av sett 1 for K"
+- tapOn: "Fjern sett 1 for K"
+- tapOn: "Bekreft fjerning av gjennomført sett"
+- assertNotVisible: "Rediger sett 2 for K"
+- assertVisible: "Rediger sett 1 for K"
+- assertVisible: "Sett 1, 8 kilogram, 56 repetisjoner, Gjennomført"

@@ -1,5 +1,5 @@
 appId: com.kjetilvalle.trene
-name: Active workout editing and cancellation states
+name: Active workout compact editing and destructive removal
 tags:
   - smoke
   - android
@@ -18,37 +18,101 @@ tags:
 - tapOn:
     id: "create-exercise-submit"
 - extendedWaitUntil:
-    visible: "Planlagt sett"
+    visible: "Rediger sett 1 for Knebøy"
     timeout: 30000
-- tapOn: "Belastning"
-- inputText: "80"
+- assertVisible: "Planlagt"
+- tapOn: "Rediger sett 1 for Knebøy"
+- pressKey: back
 - scrollUntilVisible:
     element:
-      text: "Repetisjoner"
+      text: "Repetisjoner for Knebøy"
     direction: DOWN
     centerElement: true
-- tapOn: "Repetisjoner"
+- tapOn: "Repetisjoner for Knebøy"
 - inputText: "5"
 - pressKey: back
 - scrollUntilVisible:
     element:
-      text: "Bekreft planlagt sett for Knebøy"
+      text: "Repetisjoner for Knebøy"
     direction: DOWN
     centerElement: true
-- tapOn: "Bekreft planlagt sett for Knebøy"
+- assertVisible: "^5$"
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Belastning for Knebøy"
+- inputText: "80"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
+- assertVisible: "^80$"
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Repetisjoner for Knebøy"
 - extendedWaitUntil:
     visible: "80 kg · 5 repetisjoner"
     timeout: 30000
-- assertVisible: "Sett 1"
-# Test cancellation dialog while the screen is short (single confirmed set).
+- pressKey: back
+- tapOn: "Lukk redigering av sett 1 for Knebøy"
+- extendedWaitUntil:
+    visible: "80 kg · 5 repetisjoner"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "Marker sett 1 som gjennomført for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Marker sett 1 som gjennomført for Knebøy"
+- extendedWaitUntil:
+    visible: "80 kg · 5 repetisjoner"
+    timeout: 30000
+- assertVisible: "Gjennomført"
+
+# Editing a completed set is independent from status and saves it atomically.
+- tapOn: "Rediger sett 1 for Knebøy"
+- inputText: "2"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
+- assertVisible: "^802$"
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Repetisjoner for Knebøy"
+- extendedWaitUntil:
+    visible: "802 kg · 5 repetisjoner"
+    timeout: 30000
+- pressKey: back
+- tapOn: "Lukk redigering av sett 1 for Knebøy"
+- extendedWaitUntil:
+    visible: "802 kg · 5 repetisjoner"
+    timeout: 30000
+- assertVisible: "Gjennomført"
+
+# Cancellation remains non-destructive when the user keeps the workout.
 - tapOn: "Avbryt"
 - extendedWaitUntil:
     visible: "Avbryt treningen?"
     timeout: 10000
 - tapOn: "Behold treningen"
-# Verify add-set produces a new planned set and the button re-enables.
+
+# Adding a set leaves a compact planned row in stable insertion order.
 - tapOn: "Legg til sett"
-- assertVisible: "Planlagt sett"
+- assertVisible: "Rediger sett 2 for Knebøy"
+- assertVisible: "Planlagt"
 - scrollUntilVisible:
     element:
       text: "Legg til sett"
@@ -56,32 +120,33 @@ tags:
 - assertVisible:
     text: "Legg til sett"
     enabled: true
-# A newly added exercise opens without collapsing the existing card.
+- tapOn: "Marker sett 2 som gjennomført for Knebøy"
+- extendedWaitUntil:
+    visible: "Endre sett 2 til planlagt for Knebøy"
+    timeout: 30000
+- assertVisible: "Rediger sett 1 for Knebøy"
+
+# Completed removal requires confirmation; cancellation retains the row.
+- tapOn: "Rediger sett 2 for Knebøy"
+- pressKey: back
 - scrollUntilVisible:
     element:
-      text: "Legg til øvelse"
-    direction: DOWN
-- tapOn: "Legg til øvelse"
-- tapOn: "Opprett øvelse"
-- tapOn:
-    id: "exercise-name-input"
-- setClipboard: "Markløft"
-- pasteText
-- tapOn:
-    id: "create-exercise-submit"
-- scrollUntilVisible:
-    element:
-      text: "Belastning for Markløft"
+      text: "Fjern sett 2 for Knebøy"
     direction: DOWN
     centerElement: true
-- assertVisible: "Belastning for Markløft"
+- tapOn: "Fjern sett 2 for Knebøy"
+- assertVisible: "Fjern gjennomført sett?"
+- tapOn: "Behold settet"
+- assertVisible: "Lukk redigering av sett 2 for Knebøy"
 - scrollUntilVisible:
     element:
-      text: "80 kg · 5 repetisjoner"
-    direction: UP
-- assertVisible: "80 kg · 5 repetisjoner"
-- scrollUntilVisible:
-    element:
-      text: "Belastning for Markløft"
+      text: "Fjern sett 2 for Knebøy"
     direction: DOWN
-- assertVisible: "Belastning for Markløft"
+    centerElement: true
+- tapOn: "Fjern sett 2 for Knebøy"
+- tapOn: "Bekreft fjerning av gjennomført sett"
+- extendedWaitUntil:
+    notVisible: "Rediger sett 2 for Knebøy"
+    timeout: 30000
+- assertVisible: "Rediger sett 1 for Knebøy"
+- assertVisible: "802 kg · 5 repetisjoner"

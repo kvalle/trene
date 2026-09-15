@@ -18,22 +18,56 @@ tags:
 - pasteText
 - tapOn:
     id: "create-exercise-submit"
-- tapOn: "Belastning"
-- inputText: "80.5"
+- tapOn: "Rediger sett 1 for Knebøy"
+- pressKey: back
 - scrollUntilVisible:
     element:
-      text: "Repetisjoner"
+      text: "Repetisjoner for Knebøy"
     direction: DOWN
     centerElement: true
-- tapOn: "Repetisjoner"
+- tapOn: "Repetisjoner for Knebøy"
 - inputText: "5"
 - pressKey: back
 - scrollUntilVisible:
     element:
-      text: "Bekreft planlagt sett for Knebøy"
+      text: "Repetisjoner for Knebøy"
     direction: DOWN
     centerElement: true
-- tapOn: "Bekreft planlagt sett for Knebøy"
+- assertVisible: "^5$"
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Belastning for Knebøy"
+- inputText: "80.5"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
+- assertVisible: "^80\\.5$"
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Repetisjoner for Knebøy"
+- extendedWaitUntil:
+    visible: "80,5 kg · 5 repetisjoner"
+    timeout: 30000
+- pressKey: back
+- tapOn: "Lukk redigering av sett 1 for Knebøy"
+- extendedWaitUntil:
+    visible: "80,5 kg · 5 repetisjoner"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "Marker sett 1 som gjennomført for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Marker sett 1 som gjennomført for Knebøy"
 - extendedWaitUntil:
     visible: "80,5 kg · 5 repetisjoner"
     timeout: 30000

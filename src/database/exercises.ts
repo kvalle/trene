@@ -158,7 +158,7 @@ async function loadExerciseDetailWithDatabase(
       AND workout_exercises.exercise_id = ?
       AND workout_sets.confirmed_at IS NOT NULL
     ORDER BY workouts.completed_at DESC, workouts.id ASC,
-      workout_sets.confirmed_at ASC, workout_sets.id ASC
+      workout_sets.id ASC
   `, exerciseId);
   const history: ExerciseHistoryWorkout[] = [];
   for (const row of rows) {

@@ -1,4 +1,4 @@
-import { useFocusEffect, usePreventRemove, useTheme } from '@react-navigation/native';
+import { useFocusEffect, usePreventRemove } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -6,6 +6,7 @@ import {
   AccessibilityInfo,
   AppState,
   findNodeHandle,
+  Keyboard,
   LayoutAnimation,
   Platform,
   ScrollView,
@@ -22,9 +23,11 @@ import {
   cancelActiveWorkout,
   completeWorkout,
   confirmWorkoutSet,
+  deleteCompletedWorkoutSet,
   deletePlannedWorkoutSet,
   loadActiveWorkout,
   removeExerciseFromWorkout,
+  saveCompletedWorkoutSet,
   savePlannedWorkoutSet,
   unconfirmWorkoutSet,
   type ActiveWorkout,
@@ -32,12 +35,15 @@ import {
 } from '../database/workouts';
 import { parseLoad, parseRepetitions, validateWorkoutSet } from '../domain/workoutSet';
 import { formatLoad } from '../locale';
+import { typography } from '../theme';
 import { Button } from '../ui/Button';
+import { useAppTheme } from '../ui/AppThemeProvider';
 import { CompactAction } from '../ui/CompactAction';
 import { Dialog } from '../ui/Dialog';
 import { DisclosureCard } from '../ui/DisclosureCard';
 import { ErrorAlert } from '../ui/ErrorAlert';
-import { FormSection } from '../ui/FormSection';
+import { Icon } from '../ui/Icon';
+import { Loader } from '../ui/Loader';
 import { NumericField } from '../ui/NumericField';
 import { PageStatus } from '../ui/PageStatus';
 import { type WorkoutSetDraft, useWorkoutSetDrafts } from '../workoutSetDrafts';
@@ -51,15 +57,9 @@ function isDirty(set: WorkoutSet, draft?: WorkoutSetDraft): boolean {
   return draft.load !== persistedLoad || draft.repetitions !== persistedRepetitions;
 }
 
-function compareWorkoutSets(left: WorkoutSet, right: WorkoutSet): number {
-  if (left.confirmedAt === null) return right.confirmedAt === null ? left.id - right.id : 1;
-  if (right.confirmedAt === null) return -1;
-  return left.confirmedAt.localeCompare(right.confirmedAt) || left.id - right.id;
-}
-
 export function WorkoutScreen({ navigation, route }: Props) {
   const database = useDatabase();
-  const { colors } = useTheme();
+  const { colors } = useAppTheme();
   const { drafts, setDrafts } = useWorkoutSetDrafts();
   const [state, setState] = useState<State>({ status: 'loading' });
   const [reload, setReload] = useState(0);
@@ -69,6 +69,9 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [removeExerciseId, setRemoveExerciseId] = useState<number>();
+  const [removeCompletedSetId, setRemoveCompletedSetId] = useState<number>();
+  const [editingSetId, setEditingSetId] = useState<number>();
+  const [focusSetId, setFocusSetId] = useState<number>();
   const [cancelling, setCancelling] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [completeFailed, setCompleteFailed] = useState(false);
@@ -89,6 +92,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const confirmCancelRef = useRef<View>(null);
   const retryCancelRef = useRef<View>(null);
   const confirmRemoveRef = useRef<View>(null);
+  const confirmRemoveSetRef = useRef<View>(null);
   const removeExerciseRefs = useRef(new Map<number, View>());
   const exerciseRetryRefs = useRef(new Map<number, View>());
   const allowNavigation = useRef(false);
@@ -96,10 +100,15 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const lifecycleFlush = useRef(Promise.resolve(true));
   const saveQueueFailed = useRef(false);
   const pendingSaves = useRef(0);
+  const pendingBlurSaves = useRef(new Map<number, ReturnType<typeof setTimeout>>());
   const cardRefs = useRef(new Map<number, View>());
   const loadInputRefs = useRef(new Map<number, TextInput>());
   const repetitionsInputRefs = useRef(new Map<number, TextInput>());
   const retryRefs = useRef(new Map<number, View>());
+  const rowRefs = useRef(new Map<number, View>());
+  const editRefs = useRef(new Map<number, View>());
+  const removeSetRefs = useRef(new Map<number, View>());
+  const addSetRefs = useRef(new Map<number, View>());
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -145,7 +154,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   }, [expandedIds, navigation, route.params, state]);
 
   const hasDirtyDraft = state.status === 'ready' && state.workout.exercises.some((exercise) =>
-    exercise.sets.some((set) => set.confirmedAt === null && isDirty(
+    exercise.sets.some((set) => isDirty(
       set,
       drafts[set.id]?.workoutId === state.workout.id ? drafts[set.id] : undefined,
     )),
@@ -175,10 +184,21 @@ export function WorkoutScreen({ navigation, route }: Props) {
     else lifecycleFlush.current = flushDrafts();
   }).remove, [state, drafts]);
 
+  useEffect(() => () => {
+    pendingBlurSaves.current.forEach(clearTimeout);
+    pendingBlurSaves.current.clear();
+  }, []);
+
   useEffect(() => {
     if (!setRetryFocus) return;
     focus({ current: retryRefs.current.get(setRetryFocus.setId) ?? null });
   }, [setRetryFocus]);
+
+  useEffect(() => {
+    if (focusSetId === undefined) return;
+    focus({ current: rowRefs.current.get(focusSetId) ?? null });
+    setFocusSetId(undefined);
+  }, [focusSetId, state]);
 
   useEffect(() => {
     if (cancelFailed) focus(retryCancelRef);
@@ -212,6 +232,14 @@ export function WorkoutScreen({ navigation, route }: Props) {
     requestAnimationFrame(() => focus({
       current: workoutExerciseId ? removeExerciseRefs.current.get(workoutExerciseId) ?? null : null,
     }));
+  }
+
+  function closeRemoveSetDialog() {
+    if (pendingSetId !== undefined) return;
+    const setId = removeCompletedSetId;
+    setRemoveCompletedSetId(undefined);
+    if (setFailure?.setId === setId) setSetFailure(undefined);
+    requestAnimationFrame(() => focus({ current: setId ? removeSetRefs.current.get(setId) ?? null : null }));
   }
 
   function draftFor(set: WorkoutSet): WorkoutSetDraft {
@@ -251,7 +279,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
             if (set.id !== setId) return [set];
             const next = update(set);
             return next ? [next] : [];
-          }).sort(compareWorkoutSets),
+          }),
         })),
       },
     }));
@@ -297,7 +325,13 @@ export function WorkoutScreen({ navigation, route }: Props) {
           setSetRetryFocus({ setId: set.id });
           return false;
         }
-        await savePlannedWorkoutSet(database, workoutId, set.id, loadValue, repetitionsValue);
+        if (set.confirmedAt) {
+          if (loadValue === null || repetitionsValue === null) return false;
+          await saveCompletedWorkoutSet(database, workoutId, set.id, loadValue, repetitionsValue);
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else {
+          await savePlannedWorkoutSet(database, workoutId, set.id, loadValue, repetitionsValue);
+        }
         saveQueueFailed.current = false;
         updateDraft(set, { unsaved: false });
         updateWorkoutSet(set.id, (current) => ({ ...current, loadKg: loadValue, repetitions: repetitionsValue }));
@@ -306,6 +340,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
         saveQueueFailed.current = true;
         updateDraft(set, { unsaved: true });
         AccessibilityInfo.announceForAccessibility(`Endringene for ${exerciseName} er ikke lagret.`);
+        if (set.confirmedAt) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setSetRetryFocus({ setId: set.id });
         return false;
       } finally {
@@ -320,10 +355,12 @@ export function WorkoutScreen({ navigation, route }: Props) {
 
   async function flushDrafts(): Promise<boolean> {
     if (state.status !== 'ready') return true;
+    pendingBlurSaves.current.forEach(clearTimeout);
+    pendingBlurSaves.current.clear();
     for (const exercise of state.workout.exercises) {
       for (const set of exercise.sets) {
         const draft = drafts[set.id]?.workoutId === state.workout.id ? drafts[set.id] : undefined;
-        if (set.confirmedAt === null && isDirty(set, draft) && !draft?.unsaved) {
+        if (isDirty(set, draft) && !draft?.unsaved) {
           if (!await saveDraft(state.workout.id, set, exercise.name, draft)) return false;
         }
       }
@@ -331,10 +368,69 @@ export function WorkoutScreen({ navigation, route }: Props) {
     return true;
   }
 
+  function validateCompleteDraft(set: WorkoutSet): boolean {
+    const validation = validateWorkoutSet(draftFor(set).load, draftFor(set).repetitions);
+    if ('loadKg' in validation) return true;
+    updateDraft(set, validation);
+    AccessibilityInfo.announceForAccessibility('Kontroller belastning og repetisjoner.');
+    const invalidInput = validation.loadError
+      ? loadInputRefs.current.get(set.id)
+      : repetitionsInputRefs.current.get(set.id);
+    const exerciseId = state.status === 'ready'
+      ? state.workout.exercises.find((exercise) => exercise.sets.some((candidate) => candidate.id === set.id))?.exerciseId
+      : undefined;
+    if (exerciseId !== undefined) setExpandedIds((current) => new Set(current).add(exerciseId));
+    requestAnimationFrame(() => focus({ current: invalidInput ?? null }));
+    return false;
+  }
+
+  async function leaveEditor(nextSetId?: number, returnFocus = false): Promise<boolean> {
+    if (state.status !== 'ready' || editingSetId === undefined) return true;
+    const current = state.workout.exercises.flatMap((exercise) => exercise.sets)
+      .find((set) => set.id === editingSetId);
+    if (!current || !validateCompleteDraft(current)) return false;
+    const exercise = state.workout.exercises.find((candidate) => candidate.sets.some((set) => set.id === current.id));
+    if (!exercise || !await saveDraft(state.workout.id, current, exercise.name)) return false;
+    setEditingSetId(nextSetId);
+    if (nextSetId === undefined) Keyboard.dismiss();
+    requestAnimationFrame(() => {
+      if (nextSetId !== undefined) loadInputRefs.current.get(nextSetId)?.focus();
+      else if (returnFocus) focus({ current: editRefs.current.get(current.id) ?? null });
+    });
+    return true;
+  }
+
+  async function openEditor(setId: number) {
+    if (editingSetId === setId) return;
+    if (editingSetId !== undefined && !await leaveEditor(setId)) return;
+    if (editingSetId === undefined) setEditingSetId(setId);
+    requestAnimationFrame(() => loadInputRefs.current.get(setId)?.focus());
+  }
+
+  function saveOnBlur(workoutId: number, set: WorkoutSet, exerciseName: string) {
+    const existing = pendingBlurSaves.current.get(set.id);
+    if (existing) clearTimeout(existing);
+    const timeout = setTimeout(() => {
+      pendingBlurSaves.current.delete(set.id);
+      void saveDraft(workoutId, set, exerciseName);
+    }, 100);
+    pendingBlurSaves.current.set(set.id, timeout);
+  }
+
+  function runEditorAction(action: () => void) {
+    if (editingSetId !== undefined) {
+      const pending = pendingBlurSaves.current.get(editingSetId);
+      if (pending) clearTimeout(pending);
+      pendingBlurSaves.current.delete(editingSetId);
+    }
+    action();
+  }
+
   async function confirmSet(workoutId: number, set: WorkoutSet, exerciseName: string) {
     const draft = draftFor(set);
     const validation = validateWorkoutSet(draft.load, draft.repetitions);
     if (!('loadKg' in validation)) {
+      setEditingSetId(set.id);
       updateDraft(set, validation);
       AccessibilityInfo.announceForAccessibility('Kontroller belastning og repetisjoner.');
       const invalidInput = validation.loadError
@@ -354,8 +450,9 @@ export function WorkoutScreen({ navigation, route }: Props) {
         repetitions: validation.repetitions,
         confirmedAt,
       }));
-      AccessibilityInfo.announceForAccessibility(`Sett bekreftet for ${exerciseName}.`);
+      AccessibilityInfo.announceForAccessibility(`Sett gjennomført for ${exerciseName}.`);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      requestAnimationFrame(() => focus({ current: rowRefs.current.get(set.id) ?? null }));
     } catch {
       updateDraft(set, { confirmationFailed: true });
       AccessibilityInfo.announceForAccessibility('Kunne ikke bekrefte settet. Prøv igjen.');
@@ -366,12 +463,53 @@ export function WorkoutScreen({ navigation, route }: Props) {
     }
   }
 
+  async function changeSetStatus(set: WorkoutSet, exerciseName: string) {
+    if (state.status !== 'ready') return;
+    const workout = state.workout;
+    if (editingSetId !== undefined) {
+      const editingSet = workout.exercises.flatMap((exercise) => exercise.sets)
+        .find((candidate) => candidate.id === editingSetId);
+      const editingExercise = workout.exercises
+        .find((exercise) => exercise.sets.some((candidate) => candidate.id === editingSetId));
+      if (!editingSet || !editingExercise || !validateCompleteDraft(editingSet)
+        || !await saveDraft(workout.id, editingSet, editingExercise.name)) return;
+    }
+    if (set.confirmedAt === null) {
+      await confirmSet(workout.id, set, exerciseName);
+      return;
+    }
+    void mutateSet(
+      set.id,
+      () => unconfirmWorkoutSet(database, workout.id, set.id),
+      (current) => ({ ...current, confirmedAt: null }),
+      'Kunne ikke endre settet til planlagt. Prøv igjen.',
+      false,
+      `Sett endret til planlagt for ${exerciseName}.`,
+      () => {
+        requestAnimationFrame(() => focus({ current: rowRefs.current.get(set.id) ?? null }));
+      },
+    );
+  }
+
+  function focusAfterSetRemoval(sets: WorkoutSet[], index: number, workoutExerciseId: number) {
+    const targetId = sets[index - 1]?.id ?? sets[index + 1]?.id;
+    requestAnimationFrame(() => focus({
+      current: targetId !== undefined
+        ? rowRefs.current.get(targetId) ?? null
+        : addSetRefs.current.get(workoutExerciseId) ?? null,
+    }));
+  }
+
   async function mutateSet(
     setId: number,
     operation: () => Promise<void>,
     apply: (set: WorkoutSet) => WorkoutSet | null,
     failure: string,
     removeDraft = false,
+    success?: string,
+    focusAfter?: () => void,
+    failureRetry?: () => void,
+    onFailure?: () => void,
   ) {
     setPendingSetId(setId);
     setSetFailure(undefined);
@@ -381,12 +519,19 @@ export function WorkoutScreen({ navigation, route }: Props) {
       if (removeDraft) {
         setDrafts((current) => { const next = { ...current }; delete next[setId]; return next; });
       }
+      if (success) {
+        AccessibilityInfo.announceForAccessibility(success);
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      focusAfter?.();
     } catch {
+      onFailure?.();
       AccessibilityInfo.announceForAccessibility(failure);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setSetFailure({
         setId,
         message: failure,
-        retry: () => void mutateSet(setId, operation, apply, failure, removeDraft),
+        retry: failureRetry ?? (() => void mutateSet(setId, operation, apply, failure, removeDraft, success, focusAfter)),
       });
       setSetRetryFocus({ setId });
     } finally {
@@ -436,9 +581,10 @@ export function WorkoutScreen({ navigation, route }: Props) {
     setExerciseFailure(undefined);
     try {
       const set = await addWorkoutSet(database, workoutId, workoutExerciseId);
-      updateWorkoutExercise(workoutExerciseId, (sets) => [...sets, set].sort(compareWorkoutSets));
+      updateWorkoutExercise(workoutExerciseId, (sets) => [...sets, set]);
       AccessibilityInfo.announceForAccessibility(`Nytt planlagt sett lagt til for ${exerciseName}.`);
       void Haptics.selectionAsync();
+      setFocusSetId(set.id);
     } catch {
       const message = 'Kunne ikke legge til settet. Prøv igjen.';
       setExerciseFailure({ workoutExerciseId, message, operation: 'add-set' });
@@ -532,6 +678,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                 disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
                 icon="trash"
                 label="Fjern øvelse"
+                tone="destructive"
                 onPress={() => {
                   if (completed > 0) setRemoveExerciseId(exercise.id);
                   else void removeExercise(state.workout.id, exercise.id, exercise.name);
@@ -539,41 +686,81 @@ export function WorkoutScreen({ navigation, route }: Props) {
                 ref={(node) => { if (node) removeExerciseRefs.current.set(exercise.id, node); }}
               />
             )}
-            {exercise.sets.map((set, index) => set.confirmedAt ? (
-              <View key={set.id} style={[styles.receipt, { borderColor: colors.border }]}>
-                <View
-                  accessible
-                  accessibilityLabel={`Sett ${index + 1}, ${set.repetitions} repetisjoner med ${formatLoad(set.loadKg!)} kilogram`}
-                  style={styles.receiptText}
-                >
-                  <Text style={[styles.receiptTitle, { color: colors.text }]}>Sett {index + 1}</Text>
-                  <Text style={{ color: colors.text }}>{formatLoad(set.loadKg!)} kg · {set.repetitions} repetisjoner</Text>
-                </View>
-                <CompactAction
-                  accessibilityLabel={`Rediger sett ${index + 1}`}
-                  disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
-                  icon="restore"
-                  label="Endre"
-                  onPress={() => void mutateSet(
-                    set.id,
-                    () => unconfirmWorkoutSet(database, state.workout.id, set.id),
-                    (current) => ({ ...current, confirmedAt: null }),
-                    'Kunne ikke redigere settet. Prøv igjen.',
-                  )}
-                />
-                {setFailure?.setId === set.id && (
-                  <View style={styles.failure}>
-                    <ErrorAlert message={setFailure.message} />
-                    <Button ref={(node) => { if (node) retryRefs.current.set(set.id, node); }} title="Prøv igjen" variant="secondary" onPress={setFailure.retry} />
-                  </View>
-                )}
-              </View>
-            ) : (() => {
+            {exercise.sets.map((set, index) => {
               const draft = draftFor(set);
               const busy = pendingSetId === set.id;
+              const editing = editingSetId === set.id;
+              const completedSet = set.confirmedAt !== null;
+              const status = completedSet ? 'Gjennomført' : 'Planlagt';
               return (
-                <FormSection key={set.id} title="Planlagt sett" detail={`Sett ${index + 1}`}>
-                  <View style={styles.fields}>
+                <View key={set.id} style={[styles.setContainer, { borderColor: colors.border }]}>
+                  <View style={styles.setRow}>
+                    <View
+                      accessible
+                      accessibilityLabel={`Sett ${index + 1}, ${set.loadKg === null ? 'belastning ikke angitt' : `${formatLoad(set.loadKg)} kilogram`}, ${set.repetitions === null ? 'repetisjoner ikke angitt' : `${set.repetitions} repetisjoner`}, ${status}`}
+                      ref={(node) => { if (node) rowRefs.current.set(set.id, node); }}
+                      style={styles.setCopy}
+                    >
+                      <View style={[
+                        styles.setNumber,
+                        { backgroundColor: completedSet ? colors.secondary : colors.surfaceAlt, borderColor: completedSet ? colors.primary : colors.border },
+                      ]}>
+                        <Text style={[typography.control, { color: completedSet ? colors.onSecondary : colors.text }]}>{index + 1}</Text>
+                      </View>
+                      <View style={styles.setSummary}>
+                        <Text style={[typography.body, { color: colors.text }]}>{set.loadKg === null ? '–' : formatLoad(set.loadKg)} kg · {set.repetitions ?? '–'} repetisjoner</Text>
+                        <View style={styles.status}>
+                          <Icon color={completedSet ? colors.primary : colors.muted} name={completedSet ? 'check' : 'hourglass'} size={16} />
+                          <Text style={[typography.metadata, { color: completedSet ? colors.primary : colors.muted }]}>{status}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View accessible={false} style={styles.rowActions}>
+                      <Button
+                        accessibilityLabel={`${editing ? 'Lukk redigering av' : 'Rediger'} sett ${index + 1} for ${exercise.name}`}
+                        disabled={workoutBusy}
+                        icon={editing ? 'chevron-up' : 'edit'}
+                        ref={(node) => { if (node) editRefs.current.set(set.id, node); }}
+                        variant="secondary"
+                        onPress={() => runEditorAction(() => editing ? void leaveEditor(undefined, true) : void openEditor(set.id))}
+                      />
+                      <Button
+                        accessibilityLabel={completedSet ? `Endre sett ${index + 1} til planlagt for ${exercise.name}` : `Marker sett ${index + 1} som gjennomført for ${exercise.name}`}
+                        disabled={workoutBusy}
+                        icon={completedSet ? 'hourglass' : 'check'}
+                        variant={completedSet ? 'secondary' : 'primary'}
+                        onPress={() => runEditorAction(() => void changeSetStatus(set, exercise.name))}
+                      />
+                    </View>
+                  </View>
+                  {editing && <View style={styles.editor}>
+                  <View accessibilityLabel={`Handlinger for sett ${index + 1} for ${exercise.name}`} style={styles.setActions}>
+                    <CompactAction
+                      accessibilityLabel={`Fjern sett ${index + 1} for ${exercise.name}`}
+                      disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
+                      icon="trash"
+                      label="Fjern sett"
+                      ref={(node) => { if (node) removeSetRefs.current.set(set.id, node); }}
+                      tone={completedSet ? 'destructive' : 'neutral'}
+                      onPress={() => runEditorAction(() => {
+                        if (completedSet) {
+                          setSetFailure(undefined);
+                          Keyboard.dismiss();
+                          setRemoveCompletedSetId(set.id);
+                        }
+                        else void mutateSet(
+                          set.id,
+                          () => deletePlannedWorkoutSet(database, state.workout.id, set.id),
+                          () => null,
+                          'Kunne ikke slette settet. Prøv igjen.',
+                          true,
+                          undefined,
+                          () => { setEditingSetId(undefined); focusAfterSetRemoval(exercise.sets, index, exercise.id); },
+                        );
+                      })}
+                    />
+                  </View>
+                    <View style={styles.fields}>
                     <NumericField
                         aria-describedby={draft.loadError ? `load-error-${set.id}` : undefined}
                         aria-invalid={Boolean(draft.loadError)}
@@ -582,10 +769,12 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         errorID={`load-error-${set.id}`}
                         kind="decimal"
                         label="Belastning"
-                        onBlur={() => void saveDraft(state.workout.id, set, exercise.name)}
+                        containerStyle={styles.field}
+                        onBlur={() => saveOnBlur(state.workout.id, set, exercise.name)}
                         onChangeText={(load) => updateDraft(set, { load, loadError: undefined })}
                         placeholder="Belastning"
                         ref={(node) => { if (node) loadInputRefs.current.set(set.id, node); }}
+                        testID={`workout-set-${set.id}-load`}
                         value={draft.load}
                     />
                     <NumericField
@@ -596,13 +785,16 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         errorID={`repetitions-error-${set.id}`}
                         kind="integer"
                         label="Repetisjoner"
-                        onBlur={() => void saveDraft(state.workout.id, set, exercise.name)}
+                        containerStyle={styles.field}
+                        onBlur={() => saveOnBlur(state.workout.id, set, exercise.name)}
                         onChangeText={(repetitions) => updateDraft(set, { repetitions, repetitionsError: undefined })}
                         placeholder="Repetisjoner"
                         ref={(node) => { if (node) repetitionsInputRefs.current.set(set.id, node); }}
+                        testID={`workout-set-${set.id}-repetitions`}
                         value={draft.repetitions}
                     />
-                  </View>
+                    </View>
+                  {busy && <Loader label="Lagrer endringer" size="compact" />}
                   {draft.unsaved && !draft.confirmationFailed && (
                     <View style={styles.failure}>
                       <ErrorAlert message="Endringene er ikke lagret" />
@@ -621,42 +813,26 @@ export function WorkoutScreen({ navigation, route }: Props) {
                       />
                     </View>
                   )}
-                  <View accessibilityLabel={`Handlinger for planlagt sett for ${exercise.name}`} style={styles.setActions}>
-                    <CompactAction
-                      accessibilityLabel={`Slett planlagt sett for ${exercise.name}`}
-                      disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined}
-                      icon="trash"
-                      label="Fjern sett"
-                      tone="neutral"
-                      onPress={() => void mutateSet(
-                        set.id,
-                        () => deletePlannedWorkoutSet(database, state.workout.id, set.id),
-                        () => null,
-                        'Kunne ikke slette settet. Prøv igjen.',
-                        true,
-                      )}
-                    />
-                    <Button
-                      accessibilityLabel={`Bekreft planlagt sett for ${exercise.name}`}
-                      disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || draft.unsaved || draft.confirmationFailed}
-                      busy={busy}
-                      style={styles.completeSet}
-                      title={busy ? 'Lagrer' : 'Bekreft'}
-                      onPress={() => void confirmSet(state.workout.id, set, exercise.name)}
-                    />
-                  </View>
                   {setFailure?.setId === set.id && (
                     <View style={styles.failure}>
                       <ErrorAlert message={setFailure.message} />
                       <Button ref={(node) => { if (node) retryRefs.current.set(set.id, node); }} title="Prøv igjen" variant="secondary" onPress={setFailure.retry} />
                     </View>
                   )}
-                </FormSection>
+                  </View>}
+                  {setFailure?.setId === set.id && !editing && (
+                    <View style={styles.failure}>
+                      <ErrorAlert message={setFailure.message} />
+                      <Button ref={(node) => { if (node) retryRefs.current.set(set.id, node); }} title="Prøv igjen" variant="secondary" onPress={setFailure.retry} />
+                    </View>
+                  )}
+                </View>
               );
-            })())}
+            })}
             {expanded && (
               <View style={styles.exerciseActions}>
                 <CompactAction
+                  ref={(node) => { if (node) addSetRefs.current.set(exercise.id, node); }}
                   disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || hasUnsavedDraft}
                   busy={pendingExerciseOperation === 'add-set'}
                   icon="plus"
@@ -743,6 +919,64 @@ export function WorkoutScreen({ navigation, route }: Props) {
           />
         </Dialog>
       )}
+      {removeCompletedSetId !== undefined && (
+        <Dialog
+          onRequestClose={closeRemoveSetDialog}
+          visible
+          initialFocusRef={confirmRemoveSetRef}
+          title="Fjern gjennomført sett?"
+        >
+          <Text style={{ color: colors.text }}>Det gjennomførte settet fjernes permanent fra treningen.</Text>
+          {setFailure?.setId === removeCompletedSetId && (
+            <View style={styles.failure}>
+              <ErrorAlert message={setFailure.message} />
+              <Button
+                ref={(node) => { if (node) retryRefs.current.set(removeCompletedSetId, node); }}
+                title="Prøv igjen"
+                variant="secondary"
+                onPress={setFailure.retry}
+              />
+            </View>
+          )}
+          <Button disabled={pendingSetId !== undefined} title="Behold settet" variant="secondary" onPress={closeRemoveSetDialog} />
+          <Button
+            accessibilityLabel="Bekreft fjerning av gjennomført sett"
+            ref={confirmRemoveSetRef}
+            busy={pendingSetId === removeCompletedSetId}
+            disabled={pendingSetId !== undefined}
+            title={pendingSetId === removeCompletedSetId ? 'Fjerner sett' : 'Fjern sett'}
+            variant="destructive"
+            onPress={() => {
+              const exercise = state.workout.exercises.find((candidate) => candidate.sets.some((set) => set.id === removeCompletedSetId));
+              const index = exercise?.sets.findIndex((set) => set.id === removeCompletedSetId) ?? -1;
+              if (!exercise || index < 0) return;
+              const setId = removeCompletedSetId;
+              void mutateSet(
+                setId,
+                async () => {
+                  await deleteCompletedWorkoutSet(database, state.workout.id, setId);
+                  // Keep the native focus launcher mounted until the modal has closed.
+                  setRemoveCompletedSetId(undefined);
+                  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+                },
+                () => null,
+                'Kunne ikke fjerne det gjennomførte settet. Prøv igjen.',
+                true,
+                'Gjennomført sett fjernet.',
+                () => {
+                  setEditingSetId(undefined);
+                  focusAfterSetRemoval(exercise.sets, index, exercise.id);
+                },
+                () => {
+                  setSetFailure(undefined);
+                  setRemoveCompletedSetId(setId);
+                },
+                () => setRemoveCompletedSetId(undefined),
+              );
+            }}
+          />
+        </Dialog>
+      )}
       {completeDialogOpen && (
         <Dialog
           onRequestClose={() => {
@@ -778,12 +1012,17 @@ export function WorkoutScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: { flexGrow: 1, gap: 16, padding: 20 },
   empty: { fontSize: 18, paddingVertical: 36, textAlign: 'center' },
-  fields: { gap: 10 },
-  receipt: { alignItems: 'center', borderBottomWidth: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingBottom: 12 },
-  receiptTitle: { fontSize: 16, fontWeight: '600' },
-  receiptText: { flex: 1, gap: 4 },
+  setContainer: { borderBottomWidth: 1, paddingBottom: 12 },
+  setRow: { alignItems: 'center', flexDirection: 'row', gap: 10, minHeight: 48 },
+  setCopy: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: 10, minWidth: 100 },
+  setNumber: { alignItems: 'center', borderRadius: 24, borderWidth: 1, height: 40, justifyContent: 'center', width: 40 },
+  setSummary: { flex: 1, gap: 2, minWidth: 100 },
+  status: { alignItems: 'center', flexDirection: 'row', gap: 4 },
+  rowActions: { flexDirection: 'row', gap: 8 },
+  editor: { gap: 12, marginLeft: 50, paddingTop: 12 },
+  fields: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  field: { flexBasis: 120, flexGrow: 1 },
   setActions: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
-  completeSet: { flexGrow: 1, minWidth: 180 },
   exerciseActions: { gap: 10 },
   failure: { gap: 10 },
 });

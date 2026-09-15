@@ -33,19 +33,19 @@ tags:
 - tapOn: "Start trening"
 - tapOn: "Legg til øvelse"
 - tapOn: "B"
+- tapOn: "Rediger sett 1 for B"
 - tapOn: "Belastning for B"
 - inputText: "42.5"
 - assertVisible: "^42\\.5$"
 - tapOn: "Repetisjoner for B"
 - inputText: "6"
 - assertVisible: "^6$"
-- tapOn: "Planlagt sett"
 - extendedWaitUntil:
-    visible: "Bekreft planlagt sett for B"
+    visible: "Marker sett 1 som gjennomført for B"
     timeout: 30000
-- tapOn: "Bekreft planlagt sett for B"
+- tapOn: "Marker sett 1 som gjennomført for B"
 - extendedWaitUntil:
-    visible: "Sett 1, 6 repetisjoner med 42,5 kilogram"
+    visible: "Sett 1, 42,5 kilogram, 6 repetisjoner, Gjennomført"
     timeout: 30000
 - extendedWaitUntil:
     visible: "Ferdig"

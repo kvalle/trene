@@ -126,7 +126,7 @@ async function startWorkoutWithDatabase(database: Database): Promise<number> {
       const templateSets = await database.getAllAsync<{ load_kg: number; repetitions: number }>(`
         SELECT load_kg, repetitions FROM workout_sets
         WHERE workout_exercise_id = ? AND confirmed_at IS NOT NULL
-        ORDER BY confirmed_at ASC, id ASC
+        ORDER BY id ASC
       `, templateExercise.id);
       for (const set of templateSets) {
         await database.runAsync(
@@ -241,6 +241,23 @@ async function savePlannedWorkoutSetWithDatabase(
   ));
 }
 
+async function saveCompletedWorkoutSetWithDatabase(
+  database: Database,
+  workoutId: number,
+  setId: number,
+  loadKg: number,
+  repetitions: number,
+): Promise<void> {
+  if (!isValidLoad(loadKg) || !isValidRepetitions(repetitions)) {
+    throw new Error('Invalid workout set values');
+  }
+  await transaction(database, () => updateActiveWorkoutSet(
+    database,
+    'load_kg = ?, repetitions = ?', 'AND confirmed_at IS NOT NULL',
+    loadKg, repetitions, setId, workoutId,
+  ));
+}
+
 async function confirmWorkoutSetWithDatabase(
   database: Database,
   workoutId: number,
@@ -285,6 +302,25 @@ async function deletePlannedWorkoutSetWithDatabase(
         )
     `, setId, workoutId);
     if (result.changes !== 1) throw new Error('Planned set not found');
+  });
+}
+
+async function deleteCompletedWorkoutSetWithDatabase(
+  database: Database,
+  workoutId: number,
+  setId: number,
+): Promise<void> {
+  await transaction(database, async () => {
+    const result = await database.runAsync(`
+      DELETE FROM workout_sets WHERE id = ? AND confirmed_at IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM workout_exercises
+          JOIN workouts ON workouts.id = workout_exercises.workout_id
+          WHERE workout_exercises.id = workout_sets.workout_exercise_id
+            AND workouts.id = ? AND workouts.status = 'active'
+        )
+    `, setId, workoutId);
+    if (result.changes !== 1) throw new Error('Completed set not found');
   });
 }
 
@@ -356,8 +392,7 @@ async function loadActiveWorkoutWithDatabase(database: Database): Promise<Active
     FROM workout_sets
     JOIN workout_exercises ON workout_exercises.id = workout_sets.workout_exercise_id
     WHERE workout_exercises.workout_id = ?
-    ORDER BY workout_sets.confirmed_at IS NULL ASC, workout_sets.confirmed_at ASC,
-      workout_sets.id ASC
+    ORDER BY workout_sets.id ASC
   `, id);
   return {
     id,
@@ -399,7 +434,7 @@ async function loadCompletedWorkoutWithDatabase(
     FROM workout_sets
     JOIN workout_exercises ON workout_exercises.id = workout_sets.workout_exercise_id
     WHERE workout_exercises.workout_id = ? AND workout_sets.confirmed_at IS NOT NULL
-    ORDER BY workout_sets.confirmed_at ASC, workout_sets.id ASC
+    ORDER BY workout_sets.id ASC
   `, workoutId);
   return {
     id: workout.id,
@@ -490,7 +525,7 @@ async function addWorkoutExercise(database: Database, workoutId: number, exercis
         AND history_set.confirmed_at IS NOT NULL
       ORDER BY history.completed_at DESC, history.id ASC LIMIT 1
     ) AND workout_sets.confirmed_at IS NOT NULL
-    ORDER BY workout_sets.confirmed_at ASC, workout_sets.id ASC
+    ORDER BY workout_sets.id ASC
   `, exerciseId);
   if (historySets.length === 0) {
     await database.runAsync('INSERT INTO workout_sets (workout_exercise_id) VALUES (?)', workoutExerciseId);
@@ -545,9 +580,11 @@ export const cancelActiveWorkout = databaseOperation(cancelActiveWorkoutWithData
 export const deleteCompletedWorkout = databaseOperation(deleteCompletedWorkoutWithDatabase);
 export const completeWorkout = databaseOperation(completeWorkoutWithDatabase);
 export const savePlannedWorkoutSet = databaseOperation(savePlannedWorkoutSetWithDatabase);
+export const saveCompletedWorkoutSet = databaseOperation(saveCompletedWorkoutSetWithDatabase);
 export const confirmWorkoutSet = databaseOperation(confirmWorkoutSetWithDatabase);
 export const unconfirmWorkoutSet = databaseOperation(unconfirmWorkoutSetWithDatabase);
 export const deletePlannedWorkoutSet = databaseOperation(deletePlannedWorkoutSetWithDatabase);
+export const deleteCompletedWorkoutSet = databaseOperation(deleteCompletedWorkoutSetWithDatabase);
 export const addWorkoutSet = databaseOperation(addWorkoutSetWithDatabase);
 export const removeExerciseFromWorkout = databaseOperation(removeExerciseFromWorkoutWithDatabase);
 export const loadActiveWorkout = databaseOperation(loadActiveWorkoutWithDatabase);

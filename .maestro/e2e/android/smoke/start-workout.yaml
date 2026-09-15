@@ -23,19 +23,48 @@ tags:
     id: "create-exercise-submit"
 
 - assertVisible: "Knebøy"
-- assertVisible: "Planlagt sett"
-- assertVisible: "Belastning"
-- assertVisible: "Repetisjoner"
+- assertVisible: "Planlagt"
+- assertVisible: "Rediger sett 1 for Knebøy"
 
-- tapOn: "Belastning"
-- inputText: "80.5"
+- tapOn: "Rediger sett 1 for Knebøy"
+- pressKey: back
 - scrollUntilVisible:
     element:
-      text: "Repetisjoner"
+      text: "Repetisjoner for Knebøy"
     direction: DOWN
     centerElement: true
-- tapOn: "Repetisjoner"
+- tapOn: "Repetisjoner for Knebøy"
 - inputText: "5"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner for Knebøy"
+    direction: DOWN
+    centerElement: true
+- assertVisible: "^5$"
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Belastning for Knebøy"
+- inputText: "80.5"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
+- assertVisible: "^80\\.5$"
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Repetisjoner for Knebøy"
+- extendedWaitUntil:
+    visible: "80,5 kg · 5 repetisjoner"
+    timeout: 30000
 - pressKey: back
 
 # Background and resume before confirmation to verify planned values are durable.
@@ -47,19 +76,19 @@ tags:
 - tapOn: "Fortsett trening"
 - assertVisible: "Knebøy"
 - tapOn: "Knebøy"
-- assertVisible: "80,5"
-- assertVisible: "5"
+- assertVisible: "80,5 kg · 5 repetisjoner"
+- assertVisible: "Planlagt"
 
 - scrollUntilVisible:
     element:
-      text: "Bekreft planlagt sett for Knebøy"
+      text: "Marker sett 1 som gjennomført for Knebøy"
     direction: DOWN
     centerElement: true
-- tapOn: "Bekreft planlagt sett for Knebøy"
+- tapOn: "Marker sett 1 som gjennomført for Knebøy"
 - extendedWaitUntil:
     visible: "80,5 kg · 5 repetisjoner"
     timeout: 30000
-- assertVisible: "Sett 1"
+- assertVisible: "Gjennomført"
 
 # Restart the native process without clearing SQLite.
 - stopApp
@@ -71,22 +100,28 @@ tags:
 - tapOn: "Fortsett trening"
 - assertVisible: "Knebøy"
 - tapOn: "Knebøy"
-- assertVisible: "Sett 1"
 - assertVisible: "80,5 kg · 5 repetisjoner"
-- tapOn: "Rediger sett 1"
-- assertVisible: "Planlagt sett"
-- assertVisible: "80,5"
-- assertVisible: "5"
+- assertVisible: "Gjennomført"
+- tapOn: "Endre sett 1 til planlagt for Knebøy"
+- extendedWaitUntil:
+    visible: "Marker sett 1 som gjennomført for Knebøy"
+    timeout: 30000
+- assertVisible: "Planlagt"
+- tapOn: "Rediger sett 1 for Knebøy"
+- pressKey: back
 - scrollUntilVisible:
     element:
-      text: "Bekreft planlagt sett for Knebøy"
+      text: "Belastning for Knebøy"
     direction: DOWN
     centerElement: true
-- tapOn: "Bekreft planlagt sett for Knebøy"
+- assertVisible: "^80[,.]5$"
+- assertVisible: "^5$"
+- tapOn: "Lukk redigering av sett 1 for Knebøy"
+- tapOn: "Marker sett 1 som gjennomført for Knebøy"
 - extendedWaitUntil:
     visible: "80,5 kg · 5 repetisjoner"
     timeout: 30000
-- assertVisible: "Sett 1"
+- assertVisible: "Gjennomført"
 
 - tapOn: "Avbryt"
 - assertVisible: "Avbryt treningen?"

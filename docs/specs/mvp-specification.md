@@ -66,8 +66,10 @@ The active-workout screen contains:
 - independently expandable exercise cards, allowing zero, one, several, or all
   cards to be open; all cards start collapsed when the screen is newly mounted;
 - a collapsed-card status in the form `x av y sett gjennomført`;
-- completed sets grouped above planned sets inside the expanded card;
-- completed sets rendered as compact receipt rows;
+- all sets in one stable mixed-status insertion order inside the expanded card;
+- every set rendered as a compact numbered row with its values and explicit
+  `Planlagt` or `Gjennomført` status;
+- one optional inline editor beneath its compact row, independently of status;
 - `Legg til sett` and `Legg til øvelse` actions;
 - `Ferdig` and the secondary destructive action `Avbryt`.
 
@@ -158,8 +160,8 @@ Renaming changes the exercise everywhere, including historical workout views.
    containing that exercise under the deterministic history order. If none
    exists, it creates one planned set with empty fields.
 4. The user accepts a valid planned set with one explicit confirmation action.
-5. The set becomes completed, gets a confirmation timestamp, moves to the
-   completed group, and receives its derived display number.
+5. The set becomes completed and gets a confirmation timestamp without moving
+   or changing its display number.
 6. The user may switch freely between exercise cards and add exercises or sets.
 
 ### 5.2 Add a set
@@ -173,16 +175,25 @@ Renaming changes the exercise everywhere, including historical workout views.
 
 It does not query history again. The new set must be confirmed separately.
 
-### 5.3 Correct or remove a set
+### 5.3 Correct, change status, or remove a set
 
-A completed set cannot be edited or deleted directly. The user first
-unconfirms it. This removes its confirmation timestamp and display number,
-preserves its values, and returns it to its database-ID position in the
-planned-set group. The user may then edit, delete, or reconfirm it.
-Reconfirmation assigns a new timestamp and therefore a new completed-set
-position.
+Editing and status are independent. The user may open the inline editor for a
+planned or completed set without changing its status. At most one set editor is
+open across the screen. Opening another editor, closing the current editor, or
+changing a set's status first validates and durably saves the current complete
+draft. Invalid or incomplete input keeps that editor open and blocks those
+transitions.
 
-A planned set is deleted immediately without confirmation or undo.
+Saving edited values for a completed set preserves its completed status,
+confirmation timestamp, stable position, and display number, and updates the
+values atomically without an intermediate planned state. Separate explicit
+status actions mark a planned set as completed or return a completed set to
+planned; either status change preserves its stable position and display number.
+
+A planned set is deleted immediately without confirmation or undo. Removing a
+completed set requires explicit destructive confirmation and is atomic. After
+either removal, focus moves to the preceding surviving row, otherwise the
+following row, otherwise `Legg til sett`.
 
 ### 5.4 Remove an exercise from an active workout
 
@@ -310,13 +321,10 @@ A planned set has no confirmation timestamp and is not part of completed
 history. A completed set has valid load and repetitions and a confirmation
 timestamp.
 
-Completed sets sort by confirmation timestamp ascending, then stable database
-ID ascending. Their displayed labels, `Sett 1`, `Sett 2`, and so on, are derived
-from this order and are never stored.
-
-Planned sets show `Planlagt sett` without a number and sort by stable database
-ID ascending. A set retains its ID through persistence and unconfirmation, so
-a reopened set returns to its stable position among the planned sets.
+Planned and completed sets remain mixed in stable database-ID insertion order.
+Their displayed labels, `Sett 1`, `Sett 2`, and so on, are derived from that
+order and are never stored. A set retains its ID, position, and display number
+when its status changes or its completed values are edited.
 
 When suggestions are copied from a previous workout, they are created in that
 workout's displayed order, so increasing IDs preserve the suggestion order.
@@ -456,9 +464,12 @@ phones, with the accessibility matrix applied to each core flow.
 2. **Suggested workout:** Start another workout, select the same exercise, and
    receive every completed set from its newest remaining workout as editable,
    unconfirmed suggestions in the same order.
-3. **Set lifecycle:** Add a set using the specified defaults, confirm it,
-   unconfirm it, edit it, reconfirm it, and observe deterministic regrouping and
-   numbering after app restart.
+3. **Set lifecycle:** Add sets using the specified defaults, change their status
+   independently of editing, atomically edit a completed set, and observe the
+   same mixed insertion order and numbering after status changes and app
+   restart. Remove a planned set immediately and a completed set only after
+   destructive confirmation, with focus moving to the specified survivor or
+   fallback action.
 4. **Interleaved exercises:** Add multiple exercises, switch between them, and
    complete sets in interleaved order without changing exercise-card order or
    adding the same workout exercise twice.

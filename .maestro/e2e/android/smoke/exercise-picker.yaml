@@ -52,8 +52,9 @@ tags:
     timeout: 30000
 - tapOn: "Knebøy"
 - extendedWaitUntil:
-    visible: "Planlagt sett"
+    visible: "Rediger sett 1 for Knebøy"
     timeout: 30000
+- assertVisible: "Planlagt"
 - assertVisible: "Knebøy"
 - tapOn: "Legg til øvelse"
 - extendedWaitUntil:
