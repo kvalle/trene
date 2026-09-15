@@ -25,6 +25,7 @@ tags:
 
 - tapOn: "Rediger sett 1 for Knebøy"
 - pressKey: back
+- waitForAnimationToEnd
 - scrollUntilVisible:
     element:
       text: "Repetisjoner for Knebøy"
