@@ -6,7 +6,7 @@ import { AccessibilityInfo, findNodeHandle, ScrollView, StyleSheet, Text, View }
 import type { RootStackParamList } from '../AppNavigator';
 import { useDatabase } from '../database/DatabaseContext';
 import { deleteCompletedWorkout, loadCompletedWorkout, type CompletedWorkout } from '../database/workouts';
-import { formatDateTime, formatLoad } from '../locale';
+import { formatDateTime, formatDuration, formatLoad } from '../locale';
 import { typography } from '../theme';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
@@ -114,7 +114,11 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={[styles.completedAt, { color: colors.text }]}>{formatDateTime(new Date(state.workout.completedAt))}</Text>
+      <Text style={[typography.metadata, { color: colors.muted }]}>
+        Startet {formatDateTime(new Date(state.workout.startedAt))} ({formatDuration(
+          new Date(state.workout.completedAt).getTime() - new Date(state.workout.startedAt).getTime(),
+        )})
+      </Text>
       {state.workout.exercises.map((exercise) => (
         <Card key={exercise.id}>
           <Text accessibilityRole="header" style={[styles.exerciseTitle, { color: colors.text }]}>{exercise.name}</Text>
@@ -162,7 +166,6 @@ export function CompletedWorkoutScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, gap: 16, padding: 20 },
-  completedAt: typography.body,
   exerciseTitle: typography.sectionTitle,
   failure: { gap: 10 },
   dialogMessage: typography.body,

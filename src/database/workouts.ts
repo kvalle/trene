@@ -25,6 +25,7 @@ export interface WorkoutExercise {
 
 export interface ActiveWorkout {
   id: number;
+  startedAt: string;
   exercises: WorkoutExercise[];
 }
 
@@ -376,8 +377,10 @@ async function removeExerciseFromWorkoutWithDatabase(
 }
 
 async function loadActiveWorkoutWithDatabase(database: Database): Promise<ActiveWorkout | null> {
-  const id = await getActiveWorkoutIdWithDatabase(database);
-  if (id === null) return null;
+  const workout = await database.getFirstAsync<{ id: number; started_at: string }>(
+    "SELECT id, started_at FROM workouts WHERE status = 'active'",
+  );
+  if (!workout) return null;
   const workoutExercises = await database.getAllAsync<WorkoutExerciseRow>(`
     SELECT workout_exercises.id, workout_exercises.exercise_id, exercises.name,
       workout_exercises.position
@@ -385,7 +388,7 @@ async function loadActiveWorkoutWithDatabase(database: Database): Promise<Active
     JOIN exercises ON exercises.id = workout_exercises.exercise_id
     WHERE workout_exercises.workout_id = ?
     ORDER BY workout_exercises.position ASC
-  `, id);
+  `, workout.id);
   const sets = await database.getAllAsync<SetRow>(`
     SELECT workout_sets.id, workout_sets.workout_exercise_id, workout_sets.load_kg,
       workout_sets.repetitions, workout_sets.confirmed_at
@@ -393,9 +396,10 @@ async function loadActiveWorkoutWithDatabase(database: Database): Promise<Active
     JOIN workout_exercises ON workout_exercises.id = workout_sets.workout_exercise_id
     WHERE workout_exercises.workout_id = ?
     ORDER BY workout_sets.id ASC
-  `, id);
+  `, workout.id);
   return {
-    id,
+    id: workout.id,
+    startedAt: workout.started_at,
     exercises: workoutExercises.map((workoutExercise) => ({
       id: workoutExercise.id,
       exerciseId: workoutExercise.exercise_id,
@@ -415,8 +419,8 @@ async function loadCompletedWorkoutWithDatabase(
   database: Database,
   workoutId: number,
 ): Promise<CompletedWorkout | null> {
-  const workout = await database.getFirstAsync<{ id: number; completed_at: string }>(
-    "SELECT id, completed_at FROM workouts WHERE id = ? AND status = 'completed'",
+  const workout = await database.getFirstAsync<{ id: number; started_at: string; completed_at: string }>(
+    "SELECT id, started_at, completed_at FROM workouts WHERE id = ? AND status = 'completed'",
     workoutId,
   );
   if (!workout) return null;
@@ -438,6 +442,7 @@ async function loadCompletedWorkoutWithDatabase(
   `, workoutId);
   return {
     id: workout.id,
+    startedAt: workout.started_at,
     completedAt: workout.completed_at,
     exercises: workoutExercises.map((workoutExercise) => ({
       id: workoutExercise.id,
