@@ -45,6 +45,7 @@ type CatalogStackParamList = {
   AppShellDetail: undefined;
   HeroDetail: undefined;
   IconDetail: undefined;
+  TypographyDetail: undefined;
   LoaderDetail: undefined;
   NoticeDetail: undefined;
   ErrorAlertDetail: undefined;
@@ -89,6 +90,14 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         usage: 'Bruk som støtte for tekst og tilstand, eller alene i en kjent kontroll med eksplisitt tilgjengelig navn.',
         route: 'IconDetail',
         testID: 'catalog-item-icon',
+      },
+      {
+        id: 'typography',
+        name: 'Typografi',
+        description: 'Fem semantiske tekstnivåer med uavhengige teksttoner.',
+        usage: 'Bruk nivå etter tekstens rolle og tone etter tekstens betydning.',
+        route: 'TypographyDetail',
+        testID: 'catalog-item-typography',
       },
     ],
   },
@@ -345,6 +354,7 @@ function CatalogNavigator({
         <Stack.Screen name="AppShellDetail" component={AppShellDetailScreen} options={{ title: 'App-shell' }} />
         <Stack.Screen name="HeroDetail" component={HeroDetailScreen} options={{ title: 'Hero' }} />
         <Stack.Screen name="IconDetail" component={IconDetailScreen} options={{ title: 'Icon' }} />
+        <Stack.Screen name="TypographyDetail" component={TypographyDetailScreen} options={{ title: 'Typografi' }} />
         <Stack.Screen name="LoaderDetail" component={LoaderDetailScreen} options={{ title: 'Loader' }} />
         <Stack.Screen name="NoticeDetail" component={NoticeDetailScreen} options={{ title: 'Notice' }} />
         <Stack.Screen name="ErrorAlertDetail" component={ErrorAlertDetailScreen} options={{ title: 'ErrorAlert' }} />
@@ -574,6 +584,83 @@ export function IconDetailScreen() {
           <View style={[styles.iconState, { backgroundColor: colors.surfaceAlt }]}><Icon color={colors.muted} name="plus" size={24} /><Text style={[typography.metadata, { color: colors.muted }]}>Deaktivert</Text></View>
           <View style={[styles.statusBadge, { backgroundColor: colors.surfaceAlt }]}><Icon color={colors.primary} name="hourglass" size={16} /><Text style={[typography.metadata, { color: colors.text }]}>Planlagt</Text></View>
         </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+const typographyLevels = [
+  {
+    name: 'Skjermtittel',
+    style: typography.screenTitle,
+    example: 'En tydelig hovedtittel',
+    description: 'Det øverste typografiske nivået for én skjerm eller helsides tilstand.',
+    usage: 'Bruk når innholdet trenger en hovedtittel som ikke allerede vises i native navigasjon.',
+  },
+  {
+    name: 'Seksjonstittel',
+    style: typography.sectionTitle,
+    example: 'En avgrenset seksjon',
+    description: 'Overskrift som deler en skjerm eller beholder i tydelige innholdsgrupper.',
+    usage: 'Bruk for seksjoner, korttitler, dialogtitler og ressursidentiteter.',
+  },
+  {
+    name: 'Vanlig tekst',
+    style: typography.body,
+    example: 'Vanlig tekst forklarer innhold og sammenheng.',
+    description: 'Standardnivået for lesbart innhold og forklaringer.',
+    usage: 'Bruk for løpende tekst, verdier og meldinger som skal leses som hovedinnhold.',
+  },
+  {
+    name: 'Metadata og hjelpetekst',
+    style: typography.metadata,
+    example: 'Supplerende informasjon',
+    description: 'Et roligere nivå for informasjon som støtter hovedinnholdet.',
+    usage: 'Bruk for metadata, hjelp, etiketter og sekundære forklaringer.',
+  },
+  {
+    name: 'Kontrolltekst',
+    style: typography.control,
+    example: 'Utfør handling',
+    description: 'Tydelig tekst for interaktive kontroller og handlingsetiketter.',
+    usage: 'Bruk i knapper, valg og andre kontroller som utløser en handling.',
+  },
+] as const;
+
+export function TypographyDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-typography">
+      <DetailHeader
+        name="Typografi"
+        description="Fem semantiske nivåer som henter størrelse, vekt og linjehøyde direkte fra det delte temaet."
+        usage="Velg nivå etter tekstens rolle i hierarkiet, ikke etter ønsket størrelse alene. Velg deretter teksttone uavhengig av nivået."
+      />
+
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted }]}>Semantiske nivåer</Text>
+        {typographyLevels.map((level) => (
+          <View key={level.name} style={styles.typographyLevel}>
+            <Text style={[typography.metadata, { color: colors.muted }]}>{level.name}</Text>
+            <Text style={[level.style, { color: colors.text }]}>{level.example}</Text>
+            <Text style={[typography.metadata, { color: colors.text }]}>{level.description}</Text>
+            <Text style={[typography.metadata, { color: colors.muted }]}>Bruk når: {level.usage}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.sectionTitle, { color: colors.text }]}>Teksttoner</Text>
+        <Text style={[typography.body, { color: colors.muted }]}>Typografisk nivå og semantisk teksttone er uavhengige dimensjoner. Samme nivå kan uttrykke vanlig, sekundær eller konsekvensbærende informasjon.</Text>
+        <Text testID="catalog-typography-tone-normal" style={[typography.body, { color: colors.text }]}>Normal tone</Text>
+        <Text testID="catalog-typography-tone-dempet" style={[typography.body, { color: colors.muted }]}>Dempet tone</Text>
+        <Text testID="catalog-typography-tone-fare-tone" style={[typography.body, { color: colors.danger }]}>Fare-tone</Text>
+      </View>
+
+      <View style={[styles.largeText, { backgroundColor: colors.surfaceAlt }]}>
+        <Text style={[typography.sectionTitle, { color: colors.text }]}>Bryting og stor tekst</Text>
+        <Text testID="catalog-typography-long-text" style={[typography.body, { color: colors.text }]}>Denne generiske eksempelteksten er lang nok til å brytes over flere linjer når plassen er begrenset eller systemets tekststørrelse er stor.</Text>
+        <Text style={[typography.metadata, { color: colors.muted }]}>Aktuell systemskala: {PixelRatio.getFontScale().toFixed(2)}×. Eksemplene bruker native tekstskalering.</Text>
       </View>
     </ScrollView>
   );
@@ -1397,6 +1484,7 @@ const styles = StyleSheet.create({
   variantCell: { gap: 6 },
   iconButtonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   variantLabel: { fontWeight: '600' },
+  typographyLevel: { gap: 6 },
   errorPreview: { borderRadius: radii.control, borderWidth: 1, padding: 12 },
   dialogExample: { gap: 12 },
   statusPreview: {
