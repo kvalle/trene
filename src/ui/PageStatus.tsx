@@ -97,6 +97,7 @@ const styles = StyleSheet.create({
     width: 28,
   },
   iconText: {
+    // The exclamation mark is an icon glyph, not readable content typography.
     fontSize: 16,
     fontWeight: '800',
     lineHeight: 18,

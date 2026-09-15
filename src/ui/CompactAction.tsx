@@ -39,7 +39,7 @@ export const CompactAction = forwardRef<ViewType, CompactActionProps>(function C
     >
       <View accessible={false} style={styles.content}>
         {busy ? <ActivityIndicator color={color} size="small" testID={rest.testID ? `${rest.testID}-busy` : undefined} /> : <Icon color={color} name={icon} size={20} testID={rest.testID ? `${rest.testID}-icon` : undefined} />}
-        <Text style={[typography.metadata, styles.label, { color }]}>{label}</Text>
+        <Text style={[typography.control, { color }]}>{label}</Text>
       </View>
     </Pressable>
   );
@@ -48,7 +48,6 @@ export const CompactAction = forwardRef<ViewType, CompactActionProps>(function C
 const styles = StyleSheet.create({
   action: { alignSelf: 'flex-start', justifyContent: 'center', minHeight: 48, minWidth: 48, paddingHorizontal: 4, paddingVertical: 8 },
   content: { alignItems: 'center', flexDirection: 'row', gap: 5 },
-  label: { fontWeight: '700' },
   pressed: { opacity: 0.72 },
   disabled: { opacity: 1 },
 });

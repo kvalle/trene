@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, findNodeHandle, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { typography } from './theme';
 import { DatabaseProvider } from './database/DatabaseContext';
 import { DatabaseRuntime } from './database/DatabaseRuntime';
 import type { Database } from './database/types';
@@ -95,7 +96,7 @@ export function StartupGate({
       contentContainerStyle={styles.container}
       style={{ backgroundColor: colors.background }}
     >
-      <Text style={[styles.brand, { color: colors.text }]}>Trene</Text>
+      <Text style={[typography.screenTitle, styles.brand, { color: colors.text }]}>Trene</Text>
       {state.status === 'loading' ? (
         <PageStatus
           variant="loading"
@@ -134,5 +135,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
-  brand: { fontSize: 36, fontWeight: '800', marginBottom: 32 },
+  brand: { marginBottom: 32 },
 });

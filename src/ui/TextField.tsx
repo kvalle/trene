@@ -55,7 +55,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
     <View style={[styles.container, containerStyle]}>
       <Text
         nativeID={`${testID ?? label}-label`}
-        style={[typography.metadata, styles.label, { color: colors.text }]}
+        style={[typography.metadata, { color: colors.text }]}
         allowFontScaling
       >
         {label}
@@ -99,9 +99,6 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
 const styles = StyleSheet.create({
   container: {
     gap: 8,
-  },
-  label: {
-    fontWeight: '600',
   },
   input: {
     borderRadius: radii.control,

@@ -9,8 +9,9 @@
 - [ ] The summary reflects the final scope
 - [ ] Exact final verification results are listed below
 - [ ] Required local native verification is complete, or not applicable
-- [ ] All iOS E2E flows pass locally through the iOS broker
+- [ ] All relevant Android smoke tests pass locally, or Android runtime verification is not applicable
+- [ ] All relevant iOS smoke tests pass locally through the iOS broker, or iOS runtime verification is not applicable
 
 ## Verification
 
-<!-- List the exact commands or checks and their results. -->
+<!-- List the exact commands or broker flows and their results. Explain why a platform is not applicable when its smoke tests were not run. -->

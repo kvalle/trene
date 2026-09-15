@@ -10,6 +10,7 @@ import { AppThemeProvider } from '../ui/AppThemeProvider';
 import { cleanupAbandonedBackupExports } from '../backup/nativeBackupPlatform';
 import { cleanupAbandonedRestorePreparations } from '../backup/nativeRestorePlatform';
 import { recoverInterruptedRestore, RestoreSafeStopError } from '../backup/recoverRestore';
+import { typography } from '../theme';
 
 jest.mock('../backup/nativeBackupPlatform', () => ({ cleanupAbandonedBackupExports: jest.fn(async () => undefined) }));
 jest.mock('../backup/nativeRestorePlatform', () => ({
@@ -178,7 +179,7 @@ test('shows loading state with branded title and accessible loader', async () =>
   const openDatabase = jest.fn<Promise<Database>, []>(() => new Promise(() => {}));
   renderWithTheme(<StartupGate openDatabase={openDatabase}><Text>Navigation er klar</Text></StartupGate>);
 
-  expect(screen.getByText('Trene')).toBeOnTheScreen();
+  expect(screen.getByText('Trene')).toHaveStyle(typography.screenTitle);
   expect(screen.getByLabelText('Starter Trene')).toBeOnTheScreen();
   expect(screen.queryByRole('button', { name: 'Prøv igjen' })).not.toBeOnTheScreen();
   expect(openDatabase).not.toHaveBeenCalled();

@@ -10,6 +10,7 @@ import { Notice } from '../Notice';
 import { PageStatus } from '../PageStatus';
 import { PositiveStatus } from '../PositiveStatus';
 import { AppThemeProvider } from '../AppThemeProvider';
+import { typography } from '../../theme';
 
 function renderWithTheme(ui: React.ReactElement) {
   return render(<AppThemeProvider>{ui}</AppThemeProvider>);
@@ -239,8 +240,8 @@ describe('Hero', () => {
       </Hero>,
     );
     expect(screen.getByTestId('hero')).toBeOnTheScreen();
-    expect(screen.getByRole('header', { name: 'Klar for en trening?' })).toBeOnTheScreen();
-    expect(screen.getByText('Registrer øvelser')).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Klar for en trening?' })).toHaveStyle(typography.screenTitle);
+    expect(screen.getByText('Registrer øvelser')).toHaveStyle(typography.body);
     expect(screen.getByText('Action')).toBeOnTheScreen();
   });
 });

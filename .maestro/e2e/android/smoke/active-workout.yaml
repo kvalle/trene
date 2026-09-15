@@ -23,6 +23,7 @@ tags:
 - assertVisible: "Planlagt"
 - tapOn: "Rediger sett 1 for Knebøy"
 - pressKey: back
+- waitForAnimationToEnd
 - scrollUntilVisible:
     element:
       text: "Repetisjoner for Knebøy"
@@ -80,6 +81,7 @@ tags:
 - tapOn: "Rediger sett 1 for Knebøy"
 - inputText: "2"
 - pressKey: back
+- waitForAnimationToEnd
 - scrollUntilVisible:
     element:
       text: "Belastning for Knebøy"
@@ -129,6 +131,7 @@ tags:
 # Completed removal requires confirmation; cancellation retains the row.
 - tapOn: "Rediger sett 2 for Knebøy"
 - pressKey: back
+- waitForAnimationToEnd
 - scrollUntilVisible:
     element:
       text: "Fjern sett 2 for Knebøy"
