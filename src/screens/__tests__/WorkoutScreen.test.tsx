@@ -24,7 +24,7 @@ import { WorkoutScreen } from '../WorkoutScreen';
 import { TrainingDataDeletionProvider } from '../../trainingDataDeletion';
 import { WorkoutSetDraftProvider } from '../../workoutSetDrafts';
 import { HomeScreen } from '../HomeScreen';
-import { typography } from '../../theme';
+import { lightColors, typography } from '../../theme';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual('react-native/Libraries/ReactNative/RendererProxy'),
@@ -327,7 +327,7 @@ test('enables completion only for durable completed sets and warns about planned
   expect(screen.getByText('Treningen lagres i historikken.')).toHaveStyle(typography.body);
   expect(screen.getByText(
     'Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.',
-  )).toHaveStyle(typography.body);
+  )).toHaveStyle({ ...typography.control, color: lightColors.danger });
   expect(mockedComplete).not.toHaveBeenCalled();
 });
 
