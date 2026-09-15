@@ -327,7 +327,7 @@ test('enables completion only for durable completed sets and warns about planned
   expect(screen.getByText('Treningen lagres i historikken.')).toHaveStyle(typography.body);
   expect(screen.getByText(
     'Det er sett som ikke er bekreftet. Disse vil bli forkastet om du fortsetter.',
-  )).toHaveStyle({ ...typography.control, color: lightColors.danger });
+  )).toHaveStyle({ ...typography.body, color: lightColors.danger });
   expect(mockedComplete).not.toHaveBeenCalled();
 });
 
