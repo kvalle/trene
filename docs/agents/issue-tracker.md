@@ -30,6 +30,15 @@ GitHub shares one number space across issues and PRs, so a bare `#42` may be eit
 
 Create a GitHub issue.
 
+Use exactly one issue-type label on every issue:
+
+- `/to-spec` publishes specifications with `type:spec`.
+- `/to-tickets` publishes implementation tickets with `type:ticket`.
+
+Issue-type labels are independent of the triage/status labels defined in
+`docs/agents/triage-labels.md`. For example, an issue may carry both
+`type:ticket` and `ready-for-agent`.
+
 ## When a skill says "fetch the relevant ticket"
 
 Run `gh issue view <number> --comments`.
