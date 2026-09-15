@@ -130,12 +130,6 @@ tags:
 
 # Completed removal requires confirmation; cancellation retains the row.
 - tapOn: "Rediger sett 2 for Knebøy"
-- scrollUntilVisible:
-    element:
-      text: "Belastning for Knebøy"
-    direction: DOWN
-    centerElement: true
-- tapOn: "Belastning for Knebøy"
 - pressKey: back
 - waitForAnimationToEnd
 - scrollUntilVisible:
