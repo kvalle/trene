@@ -30,8 +30,13 @@ tags:
     centerElement: true
 - tapOn: "Repetisjoner for Knebøy"
 - inputText: "5"
-- assertVisible: "^5$"
 - pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner for Knebøy"
+    direction: DOWN
+    centerElement: true
+- assertVisible: "^5$"
 - scrollUntilVisible:
     element:
       text: "Belastning for Knebøy"
@@ -39,8 +44,13 @@ tags:
     centerElement: true
 - tapOn: "Belastning for Knebøy"
 - inputText: "80"
-- assertVisible: "^80$"
 - pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
+- assertVisible: "^80$"
 - scrollUntilVisible:
     element:
       text: "Repetisjoner for Knebøy"
