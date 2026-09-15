@@ -38,7 +38,6 @@ tags:
     when:
       notVisible: "^80\\.5$"
     commands:
-      - tapOn: "Belastning for Knebøy"
       - eraseText
       - inputText: "80.5"
 - assertVisible: "^80\\.5$"
@@ -53,7 +52,6 @@ tags:
     when:
       notVisible: "^5$"
     commands:
-      - tapOn: "Repetisjoner for Knebøy"
       - eraseText
       - inputText: "5"
 - assertVisible: "^5$"
