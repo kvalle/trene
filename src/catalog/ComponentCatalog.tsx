@@ -701,13 +701,13 @@ function DataRowDetailScreen() {
   );
 }
 
-function DisclosureCardDetailScreen() {
+export function DisclosureCardDetailScreen() {
   const { colors } = useAppTheme();
   return (
     <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-disclosurecard">
-      <DetailHeader name="DisclosureCard" description="Utvidbart kort med sammendrag og detaljinnhold." usage="Bruk når hvert innholdselement skal kunne vise eller skjule detaljer uavhengig av de andre." />
-      <DisclosureCard expanded={false} onPress={() => {}} summary="2 av 3 elementer ferdige" title="Kollapset" testID="catalog-disclosurecard-collapsed" />
-      <DisclosureCard expanded onPress={() => {}} summary="2 av 3 elementer ferdige" title="Åpen" testID="catalog-disclosurecard-expanded">
+      <DetailHeader name="DisclosureCard" description="Utvidbart kort med valgfritt ledende innhold, sammendrag og detaljinnhold." usage="Bruk når hvert innholdselement skal kunne vise eller skjule detaljer uavhengig av de andre. Bruk ledende innhold for en kompakt status eller identitet som gjelder hele kortet." />
+      <DisclosureCard accessibilityLabel="Kollapset eksempel, 2 av 3 elementer ferdige" expanded={false} leading={<Icon color={colors.muted} name="hourglass" size={16} testID="catalog-disclosurecard-leading-collapsed" />} onPress={() => {}} summary="2 av 3 elementer ferdige" title="Kollapset" testID="catalog-disclosurecard-collapsed" />
+      <DisclosureCard accessibilityLabel="Åpent eksempel, 3 av 3 elementer ferdige" expanded leading={<Icon color={colors.primary} name="check" size={16} testID="catalog-disclosurecard-leading-expanded" />} onPress={() => {}} summary="3 av 3 elementer ferdige" title="Åpen" testID="catalog-disclosurecard-expanded">
         <Text style={[typography.body, { color: colors.text }]}>Detaljinnholdet vises når kortet er åpent.</Text>
       </DisclosureCard>
     </ScrollView>

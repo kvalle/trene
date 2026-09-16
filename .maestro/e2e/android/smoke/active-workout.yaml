@@ -76,6 +76,21 @@ tags:
     visible: "80 kg · 5 repetisjoner"
     timeout: 30000
 - assertVisible: "Gjennomført"
+- assertVisible: "Knebøy, 1 av 1 sett gjennomført, fullført"
+- tapOn: "Knebøy, 1 av 1 sett gjennomført, fullført"
+- assertVisible: "Knebøy, 1 av 1 sett gjennomført, fullført"
+- tapOn: "Knebøy, 1 av 1 sett gjennomført, fullført"
+- tapOn: "Endre sett 1 til planlagt for Knebøy"
+- extendedWaitUntil:
+    visible: "Knebøy, 0 av 1 sett gjennomført, ikke fullført"
+    timeout: 30000
+- tapOn: "Knebøy, 0 av 1 sett gjennomført, ikke fullført"
+- assertVisible: "Knebøy, 0 av 1 sett gjennomført, ikke fullført"
+- tapOn: "Knebøy, 0 av 1 sett gjennomført, ikke fullført"
+- tapOn: "Marker sett 1 som gjennomført for Knebøy"
+- extendedWaitUntil:
+    visible: "Knebøy, 1 av 1 sett gjennomført, fullført"
+    timeout: 30000
 
 # Editing a completed set is independent from status and saves it atomically.
 - tapOn: "Rediger sett 1 for Knebøy"

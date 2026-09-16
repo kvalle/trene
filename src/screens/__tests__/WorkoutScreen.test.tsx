@@ -326,6 +326,112 @@ test('shows mixed statuses in stable source order with explicit actions', async 
   expect(screen.getByLabelText('Sett 2, belastning ikke angitt, repetisjoner ikke angitt, Planlagt')).toBeOnTheScreen();
 });
 
+test('derives accessible and visual exercise completion from durable set status, including zero sets', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [
+      { id: 4, exerciseId: 5, name: 'Fullført', position: 0, sets: [{ id: 6, loadKg: 80, repetitions: 5, confirmedAt: STARTED_AT }] },
+      { id: 9, exerciseId: 10, name: 'Delvis', position: 1, sets: workoutWithSets.exercises[0].sets },
+      { id: 11, exerciseId: 12, name: 'Planlagt', position: 2, sets: [{ id: 13, loadKg: null, repetitions: null, confirmedAt: null }] },
+      { id: 14, exerciseId: 15, name: 'Ingen sett', position: 3, sets: [] },
+    ],
+  });
+  renderScreen({}, null);
+
+  expect(await screen.findByRole('button', { name: 'Fullført, 1 av 1 sett gjennomført, fullført' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Delvis, 1 av 2 sett gjennomført, ikke fullført' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Planlagt, 0 av 1 sett gjennomført, ikke fullført' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Ingen sett, 0 av 0 sett gjennomført, ikke fullført' })).toBeOnTheScreen();
+  expect(screen.getByTestId('workout-exercise-4-completion', { includeHiddenElements: true })).toHaveStyle({
+    backgroundColor: lightColors.secondary,
+    borderColor: lightColors.primary,
+  });
+  expect(screen.getByTestId('workout-exercise-14-completion', { includeHiddenElements: true })).toHaveStyle({
+    backgroundColor: lightColors.surfaceAlt,
+    borderColor: lightColors.border,
+  });
+  expect(screen.getByTestId('workout-exercise-4-completion-icon-check', { includeHiddenElements: true })).toBeOnTheScreen();
+  expect(screen.getByTestId('workout-exercise-14-completion-icon-hourglass', { includeHiddenElements: true })).toBeOnTheScreen();
+});
+
+test('changes final-set completion only after persistence succeeds and preserves it on failed reopening', async () => {
+  let finishConfirm: () => void = () => undefined;
+  const plannedOnly = {
+    ...workoutWithSets,
+    exercises: [{
+      ...workoutWithSets.exercises[0],
+      sets: [{ ...workoutWithSets.exercises[0].sets[0], confirmedAt: null }],
+    }],
+  };
+  mockedLoad.mockResolvedValue(plannedOnly);
+  mockedConfirm.mockImplementation(() => new Promise<void>((resolve) => { finishConfirm = resolve; }));
+  renderScreen();
+
+  const incompleteName = 'Knebøy, 0 av 1 sett gjennomført, ikke fullført';
+  expect(await screen.findByRole('button', { name: incompleteName })).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: 'Marker sett 1 som gjennomført for Knebøy' }));
+  expect(screen.getByRole('button', { name: incompleteName })).toBeOnTheScreen();
+  await act(async () => finishConfirm());
+  expect(await screen.findByRole('button', { name: 'Knebøy, 1 av 1 sett gjennomført, fullført' })).toBeOnTheScreen();
+
+  mockedUnconfirm.mockRejectedValue(new Error('write failed'));
+  fireEvent.press(screen.getByRole('button', { name: 'Endre sett 1 til planlagt for Knebøy' }));
+  expect(await screen.findByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Knebøy, 1 av 1 sett gjennomført, fullført' })).toBeOnTheScreen();
+});
+
+test('recalculates completion after durable add and delete operations', async () => {
+  const completedOnly = { ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[0]] }] };
+  mockedLoad.mockResolvedValue(completedOnly);
+  mockedAddSet.mockResolvedValue({ id: 8, loadKg: 80, repetitions: 5, confirmedAt: null });
+  mockedDelete.mockResolvedValue();
+  renderScreen();
+
+  expect(await screen.findByRole('button', { name: 'Knebøy, 1 av 1 sett gjennomført, fullført' })).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: 'Legg til sett' }));
+  expect(await screen.findByRole('button', { name: 'Knebøy, 1 av 2 sett gjennomført, ikke fullført' })).toBeOnTheScreen();
+  await openEditor(2);
+  fireEvent.press(screen.getByRole('button', { name: 'Fjern sett 2 for Knebøy' }));
+  expect(await screen.findByRole('button', { name: 'Knebøy, 1 av 1 sett gjennomført, fullført' })).toBeOnTheScreen();
+});
+
+test('preserves completed exercise status when adding a planned set fails', async () => {
+  mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[0]] }] });
+  mockedAddSet.mockRejectedValue(new Error('write failed'));
+  renderScreen();
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Legg til sett' }));
+
+  expect(await screen.findByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Knebøy, 1 av 1 sett gjennomført, fullført' })).toBeOnTheScreen();
+});
+
+test('deleting the final completed set applies the zero-set incomplete exception', async () => {
+  mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[0]] }] });
+  mockedDeleteCompleted.mockResolvedValue();
+  renderScreen();
+
+  await openEditor(1);
+  fireEvent.press(screen.getByRole('button', { name: 'Fjern sett 1 for Knebøy' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av gjennomført sett' }));
+
+  expect(await screen.findByRole('button', { name: 'Knebøy, 0 av 0 sett gjennomført, ikke fullført' })).toBeOnTheScreen();
+});
+
+test('preserves completed exercise status when final-set deletion fails', async () => {
+  mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[0]] }] });
+  mockedDeleteCompleted.mockRejectedValue(new Error('write failed'));
+  renderScreen();
+
+  await openEditor(1);
+  fireEvent.press(screen.getByRole('button', { name: 'Fjern sett 1 for Knebøy' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av gjennomført sett' }));
+
+  expect(await screen.findByText('Kunne ikke fjerne det gjennomførte settet. Prøv igjen.')).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Knebøy, 1 av 1 sett gjennomført, fullført' })).toBeOnTheScreen();
+});
+
 test('enables completion only for durable completed sets and warns about planned sets', async () => {
   mockedLoad.mockResolvedValue(workoutWithSets);
   renderScreen();
