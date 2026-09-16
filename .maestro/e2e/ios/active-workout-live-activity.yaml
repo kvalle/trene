@@ -19,6 +19,7 @@ tags:
 - extendedWaitUntil:
     visible: "Trening pågår"
     timeout: 30000
+- takeScreenshot: after-live-activity
 - tapOn: "Trening pågår"
 - extendedWaitUntil:
     visible: "Ingen øvelser lagt til ennå"
@@ -42,6 +43,7 @@ tags:
 - tapOn: "Innstillinger"
 - tapOn:
     id: "settings-active-workout-visibility"
+- takeScreenshot: after-visibility-settings
 - tapOn:
     id: "active-workout-visibility-disabled"
 - swipe:
