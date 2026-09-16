@@ -1,0 +1,6 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": ["com.kjetilvalle.trene.activeworkoutnotification.ActiveWorkoutNotificationModule"]
+  }
+}

@@ -1,0 +1,111 @@
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useEffect, useRef, useState } from 'react';
+import { ScrollView, StyleSheet } from 'react-native';
+
+import type { RootStackParamList } from '../AppNavigator';
+import { useActiveWorkoutVisibility } from '../activeWorkoutVisibility/ActiveWorkoutVisibilityContext';
+import {
+  activeWorkoutVisibilityLabels,
+  type ActiveWorkoutVisibilityPreference,
+} from '../preferences/activeWorkoutVisibilityPreference';
+import { Button } from '../ui/Button';
+import { ErrorAlert } from '../ui/ErrorAlert';
+import { FormSection } from '../ui/FormSection';
+import { Notice } from '../ui/Notice';
+import { SingleSelectionGroup } from '../ui/SingleSelectionGroup';
+import type { SingleSelectionOption } from '../ui/SingleSelectionGroup';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'ActiveWorkoutVisibility'>;
+
+const options: SingleSelectionOption<ActiveWorkoutVisibilityPreference>[] =
+  (Object.entries(activeWorkoutVisibilityLabels) as [ActiveWorkoutVisibilityPreference, string][])
+  .map(([value, label]) => ({ value, label, testID: `active-workout-visibility-${value}` }));
+
+export function ActiveWorkoutVisibilityScreen({ navigation }: Props) {
+  const {
+    capability,
+    changingPreference,
+    openSystemSettings,
+    preference,
+    reconcile,
+    setPreference,
+  } = useActiveWorkoutVisibility();
+  const [failure, setFailure] = useState<'save' | 'settings' | null>(null);
+  const screenActive = useRef(true);
+
+  useEffect(() => {
+    const removeFocusListener = navigation.addListener('focus', () => {
+      screenActive.current = true;
+      void reconcile();
+    });
+    const removeBlurListener = navigation.addListener('blur', () => {
+      screenActive.current = false;
+      setFailure(null);
+    });
+    return () => {
+      screenActive.current = false;
+      removeFocusListener();
+      removeBlurListener();
+    };
+  }, [navigation, reconcile]);
+
+  async function selectPreference(nextPreference: ActiveWorkoutVisibilityPreference) {
+    setFailure(null);
+    if (!await setPreference(nextPreference) && screenActive.current) setFailure('save');
+  }
+
+  async function openSettings() {
+    setFailure(null);
+    if (!await openSystemSettings() && screenActive.current) setFailure('settings');
+  }
+
+  const unsupported = capability?.supported === false;
+  const unavailable = capability?.supported && !capability.canShow;
+  return (
+    <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
+      <FormSection title="Synlighet">
+        <SingleSelectionGroup
+          accessibilityLabel="Aktiv trening i systemet"
+          options={options.map((option) => ({
+            ...option,
+            disabled: changingPreference || preference === undefined,
+            testID: option.value === preference ? `${option.testID}-selected` : option.testID,
+          }))}
+          value={preference ?? 'enabled'}
+          onValueChange={(value) => { void selectPreference(value); }}
+          testID="active-workout-visibility-options"
+        />
+      </FormSection>
+      <Notice
+        title={unsupported ? 'Ikke tilgjengelig' : unavailable ? 'Varsler er slått av' : 'Viser bare at treningen pågår'}
+        message={unsupported
+          ? 'Denne enheten støtter ikke visning av aktiv trening i systemet.'
+          : unavailable
+          ? 'Valget ditt er lagret, men Android tillater ikke at Trene viser varselet. Du kan endre dette i systeminnstillingene.'
+          : 'Når en trening er aktiv, kan Android vise «Trening pågår». Øvelser, sett og tid vises ikke.'}
+        testID="active-workout-visibility-notice"
+      />
+      {unavailable && capability.supported ? (
+        <Button
+          onPress={() => { void openSettings(); }}
+          testID="active-workout-visibility-open-settings"
+          title="Åpne systeminnstillinger"
+          variant="secondary"
+        />
+      ) : null}
+      {failure ? (
+        <ErrorAlert
+          message={failure === 'save'
+            ? 'Det forrige valget er fortsatt aktivt. Prøv igjen.'
+            : 'Åpne varselinnstillingene manuelt fra Android-innstillingene.'}
+          title={failure === 'save' ? 'Kunne ikke lagre valget' : 'Kunne ikke åpne systeminnstillinger'}
+          testID="active-workout-visibility-error"
+        />
+      ) : null}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flexGrow: 1, gap: 20, padding: 20 },
+});

@@ -1,0 +1,80 @@
+appId: com.kjetilvalle.trene
+name: Keep an active workout visible in Android
+tags:
+  - android
+  - standalone
+  - active-workout-notification
+---
+- launchApp:
+    permissions:
+      all: allow
+- extendedWaitUntil:
+    visible: "Klar for en trening?"
+    timeout: 120000
+- tapOn: "Start trening"
+- assertVisible: "Ingen øvelser lagt til ennå"
+
+# The notification is ongoing and opens the active workout from the background.
+- pressKey: HOME
+- swipe:
+    start: 50%, 0%
+    end: 50%, 70%
+    duration: 500
+- assertVisible: "Trening pågår"
+- tapOn: "Trening pågår"
+- extendedWaitUntil:
+    visible: "Ingen øvelser lagt til ennå"
+    timeout: 30000
+
+# Disabling and enabling the durable preference takes effect immediately.
+- pressKey: back
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-active-workout-visibility"
+- assertVisible:
+    id: "active-workout-visibility-enabled-selected"
+- tapOn:
+    id: "active-workout-visibility-disabled"
+- pressKey: HOME
+- swipe:
+    start: 50%, 0%
+    end: 50%, 70%
+    duration: 500
+- assertNotVisible: "Trening pågår"
+- pressKey: BACK
+- launchApp
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-active-workout-visibility"
+- assertVisible:
+    id: "active-workout-visibility-disabled-selected"
+- tapOn:
+    id: "active-workout-visibility-enabled"
+- pressKey: HOME
+- swipe:
+    start: 50%, 0%
+    end: 50%, 70%
+    duration: 500
+- assertVisible: "Trening pågår"
+
+# Tapping again returns to the durable active workout, then cancellation removes it.
+- pressKey: BACK
+- swipe:
+    start: 50%, 0%
+    end: 50%, 70%
+    duration: 500
+- tapOn: "Trening pågår"
+- extendedWaitUntil:
+    visible: "Ingen øvelser lagt til ennå"
+    timeout: 120000
+- tapOn: "Avbryt"
+- tapOn: "Avbryt treningen"
+- extendedWaitUntil:
+    visible: "Start trening"
+    timeout: 30000
+- pressKey: HOME
+- swipe:
+    start: 50%, 0%
+    end: 50%, 70%
+    duration: 500
+- assertNotVisible: "Trening pågår"

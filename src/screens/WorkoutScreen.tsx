@@ -47,6 +47,7 @@ import { Loader } from '../ui/Loader';
 import { NumericField } from '../ui/NumericField';
 import { PageStatus } from '../ui/PageStatus';
 import { type WorkoutSetDraft, useWorkoutSetDrafts } from '../workoutSetDrafts';
+import { useActiveWorkoutVisibility } from '../activeWorkoutVisibility/ActiveWorkoutVisibilityContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Workout'>;
 type State = { status: 'loading' } | { status: 'failed' } | { status: 'ready'; workout: ActiveWorkout };
@@ -61,6 +62,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const database = useDatabase();
   const { colors } = useAppTheme();
   const { drafts, setDrafts } = useWorkoutSetDrafts();
+  const { reconcile } = useActiveWorkoutVisibility();
   const [state, setState] = useState<State>({ status: 'loading' });
   const [reload, setReload] = useState(0);
   const [expandedIds, setExpandedIds] = useState(() => route.params?.focusExerciseId
@@ -544,6 +546,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
     setCancelFailed(false);
     try {
       await cancelActiveWorkout(database, workoutId);
+      void reconcile();
       setDrafts({});
       setCancelDialogOpen(false);
       allowNavigation.current = true;
@@ -562,6 +565,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
     setCompleteFailed(false);
     try {
       await completeWorkout(database, workoutId);
+      void reconcile();
       setDrafts({});
       setCompleteDialogOpen(false);
       allowNavigation.current = true;

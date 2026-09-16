@@ -19,6 +19,7 @@ import { ErrorAlert } from '../ui/ErrorAlert';
 import { ListContainer } from '../ui/ListContainer';
 import { NavigationRow } from '../ui/NavigationRow';
 import { PageStatus } from '../ui/PageStatus';
+import { useActiveWorkoutVisibility } from '../activeWorkoutVisibility/ActiveWorkoutVisibilityContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'History'>;
 type State =
@@ -28,6 +29,7 @@ type State =
 
 export function HistoryScreen({ navigation, route }: Props) {
   const database = useDatabase();
+  const { reconcile } = useActiveWorkoutVisibility();
   const [state, setState] = useState<State>({ status: 'loading' });
   const [reload, setReload] = useState(0);
   const [starting, setStarting] = useState(false);
@@ -80,6 +82,7 @@ export function HistoryScreen({ navigation, route }: Props) {
     setStartFailed(false);
     try {
       await startWorkout(database);
+      void reconcile();
       allowNavigation.current = true;
       navigation.navigate('Workout');
     } catch {

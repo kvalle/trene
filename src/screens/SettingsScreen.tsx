@@ -6,11 +6,14 @@ import { ListContainer } from '../ui/ListContainer';
 import { NavigationRow } from '../ui/NavigationRow';
 import { useAppTheme } from '../ui/AppThemeProvider';
 import { appearancePreferenceLabels } from '../preferences/appearancePreference';
+import { useActiveWorkoutVisibility } from '../activeWorkoutVisibility/ActiveWorkoutVisibilityContext';
+import { activeWorkoutVisibilityLabels } from '../preferences/activeWorkoutVisibilityPreference';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 export function SettingsScreen({ navigation }: Props) {
   const { preference } = useAppTheme();
+  const { preference: visibilityPreference } = useActiveWorkoutVisibility();
   return (
     <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
       <ListContainer>
@@ -20,6 +23,13 @@ export function SettingsScreen({ navigation }: Props) {
           showSeparator
           testID="settings-appearance"
           title="Utseende"
+        />
+        <NavigationRow
+          metadata={visibilityPreference ? activeWorkoutVisibilityLabels[visibilityPreference] : 'Laster'}
+          onPress={() => navigation.navigate('ActiveWorkoutVisibility')}
+          showSeparator
+          testID="settings-active-workout-visibility"
+          title="Aktiv trening i systemet"
         />
         <NavigationRow
           onPress={() => navigation.navigate('Data')}

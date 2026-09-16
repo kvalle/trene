@@ -5,6 +5,7 @@ import { darkTheme, lightTheme } from '../theme';
 let mockColorScheme: 'light' | 'dark' = 'light';
 
 jest.mock('@react-navigation/native', () => ({
+  createNavigationContainerRef: () => ({ isReady: () => false, reset: jest.fn() }),
   NavigationContainer: ({ children, theme }: { children: React.ReactNode; theme: { dark: boolean } }) => {
     const { View } = require('react-native');
     return (
@@ -90,6 +91,7 @@ describe('AppNavigator', () => {
       { name: 'Exercises', options: { title: 'Øvelser' } },
       { name: 'Settings', options: { title: 'Innstillinger' } },
       { name: 'Appearance', options: { title: 'Utseende' } },
+      { name: 'ActiveWorkoutVisibility', options: { title: 'Aktiv trening i systemet' } },
       { name: 'Data', options: { title: 'Dine data' } },
       { name: 'DeleteTrainingData', options: { title: 'Slett treningsdata' } },
       { name: 'ExercisePicker', options: { presentation: 'modal', title: 'Legg til øvelse' } },

@@ -11,6 +11,7 @@ import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
 import { ErrorAlert } from '../ui/ErrorAlert';
 import { Notice } from '../ui/Notice';
+import { useActiveWorkoutVisibility } from '../activeWorkoutVisibility/ActiveWorkoutVisibilityContext';
 
 const CONSEQUENCE = 'Alle treningsøkter, inkludert en eventuell aktiv trening, og alle øvelser slettes permanent. Lag en sikkerhetskopi først hvis du vil beholde dataene.';
 
@@ -18,6 +19,7 @@ export function DeleteTrainingDataScreen() {
   const runtime = useDatabaseRuntime();
   const { colors } = useAppTheme();
   const { clearDeleted, reportDeleted } = useTrainingDataDeletionStatus();
+  const { reconcile } = useActiveWorkoutVisibility();
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [failure, setFailure] = useState(false);
@@ -31,6 +33,7 @@ export function DeleteTrainingDataScreen() {
     reportDeleted();
     try {
       await deleteAllTrainingData(runtime);
+      void reconcile();
     } catch {
       clearDeleted();
       setConfirmationOpen(false);

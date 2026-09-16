@@ -9,6 +9,7 @@ import { createNativeBackupPlatform } from '../backup/nativeBackupPlatform';
 import { createNativeRestorePlatform } from '../backup/nativeRestorePlatform';
 import { prepareRestore, RestorePreparationError, type PreparedRestore } from '../backup/prepareRestore';
 import { RestoreCommitError } from '../backup/commitRestore';
+import { useActiveWorkoutVisibility } from '../activeWorkoutVisibility/ActiveWorkoutVisibilityContext';
 import { nativeBackupRestoreFaultCheckpoint } from '../backup/nativeRestoreAutomation';
 import type { RootStackParamList } from '../AppNavigator';
 import { useDatabaseRuntime } from '../database/DatabaseContext';
@@ -26,6 +27,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Data'>;
 
 export function DataScreen({ navigation }: Props) {
   const runtime = useDatabaseRuntime();
+  const { reconcile } = useActiveWorkoutVisibility();
   const { colors } = useAppTheme();
   const [operation, setOperation] = useState<'idle' | 'backup' | 'restore' | 'commit'>('idle');
   const [failure, setFailure] = useState<string | null>(null);
@@ -118,6 +120,7 @@ export function DataScreen({ navigation }: Props) {
     setFailure(null);
     try {
       const restored = await restore.commit(runtime);
+      void reconcile();
       const message = `Gjenopprettet ${restored.workouts} treningsøkter og ${restored.exercises} øvelser.`;
       AccessibilityInfo.announceForAccessibility(message);
     } catch (error) {
