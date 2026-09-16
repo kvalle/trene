@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const {
   EXTENSION_FILES,
   configureXcodeProject,
@@ -7,6 +8,30 @@ const {
 } = require('../plugin/withActiveWorkoutLiveActivity');
 
 describe('active workout Live Activity extension generation', () => {
+  it('resolves the Expo module and app delegate subscriber for iOS', () => {
+    const workspaceRoot = path.join(__dirname, '..', '..', '..');
+    const resolved = JSON.parse(execFileSync(
+      process.execPath,
+      [
+        path.join(workspaceRoot, 'node_modules', 'expo-modules-autolinking', 'bin', 'expo-modules-autolinking'),
+        'resolve',
+        '--platform',
+        'ios',
+        '--json',
+      ],
+      { cwd: workspaceRoot, encoding: 'utf8' },
+    ));
+    const activeWorkoutModule = resolved.modules.find(
+      (module) => module.packageName === 'active-workout-notification',
+    );
+
+    expect(activeWorkoutModule).toMatchObject({
+      swiftModuleNames: ['ActiveWorkoutNotification'],
+      modules: [{ class: 'ActiveWorkoutNotificationModule' }],
+      appDelegateSubscribers: ['ActiveWorkoutNotificationAppDelegateSubscriber'],
+    });
+  });
+
   it('copies a complete extension into a generated iOS project repeatedly', () => {
     const artifactsRoot = path.join(__dirname, '..', '..', '..', '.artifacts', 'tests');
     fs.mkdirSync(artifactsRoot, { recursive: true });
