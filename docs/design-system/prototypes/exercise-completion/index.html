@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="nb" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trene - fullfort ovelse-prototype</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="prototype-shell">
+    <aside class="control-panel" aria-label="Prototypekontroller">
+      <p class="eyebrow">Throwaway prototype - #236</p>
+      <h1>Fullført øvelse</h1>
+      <p class="prototype-question">Hvilken behandling gjør fullførte øvelser lettest å skanne uten å konkurrere med navn, fremdrift og utvidelseskontroll?</p>
+
+      <fieldset>
+        <legend>Øvelseskort</legend>
+        <div class="control-grid">
+          <button class="control" data-expansion="collapsed" type="button">Alle lukket</button>
+          <button class="control active" data-expansion="mixed" type="button">Blandet</button>
+          <button class="control" data-expansion="expanded" type="button">Alle åpne</button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Gjennomgang</legend>
+        <div class="control-grid two-column">
+          <button id="theme-toggle" class="control" type="button" aria-pressed="false">Mørk modus</button>
+          <button id="text-toggle" class="control" type="button" aria-pressed="false">Stor tekst</button>
+          <button id="width-toggle" class="control" type="button" aria-pressed="false">Smal telefon</button>
+          <button id="reset-button" class="control" type="button">Nullstill sett</button>
+        </div>
+      </fieldset>
+
+      <section class="review-prompt">
+        <h2>Se etter</h2>
+        <p>Skannbarhet, tydelig forskjell på fullført og ufullført, og minst mulig konkurranse med navn, fremdrift og utvidelseskontroll.</p>
+      </section>
+    </aside>
+
+    <section class="preview-panel">
+      <header class="preview-header">
+        <div>
+          <p class="eyebrow" id="variant-kicker">Variant A</p>
+          <h2 id="variant-title">Ledende status</h2>
+          <p id="variant-description"></p>
+        </div>
+        <p class="prototype-status">Kun prototype. Ingen data lagres.</p>
+      </header>
+
+      <div class="phone-wrap">
+        <section class="phone" id="phone" aria-label="Interaktiv prototype av aktiv treningsøkt">
+          <div class="status-bar" aria-hidden="true"><span>09:41</span><span>5G&nbsp;&nbsp;100%</span></div>
+          <header class="app-header">
+            <button class="back-button" type="button" aria-label="Tilbake">‹</button>
+            <h3>Treningsøkt</h3>
+            <span></span>
+          </header>
+          <div id="screen" class="screen"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <nav class="variant-switcher" aria-label="Velg prototypevariant">
+    <button id="previous-variant" type="button" aria-label="Forrige variant">←</button>
+    <div><span>Variant</span><strong id="variant-switcher-label">A - Ledende status</strong></div>
+    <button id="next-variant" type="button" aria-label="Neste variant">→</button>
+  </nav>
+  <script src="prototype.js"></script>
+</body>
+</html>
