@@ -71,6 +71,13 @@ tags:
     point: "50%,72%"
 - assertNotVisible: "Ingen øvelser lagt til ennå"
 - launchApp
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-active-workout-visibility"
 - tapOn:
     id: "active-workout-visibility-enabled"
 - swipe:
