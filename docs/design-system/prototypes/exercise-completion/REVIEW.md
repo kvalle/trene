@@ -1,6 +1,6 @@
 # Exercise completion treatment prototype review
 
-Status: awaiting explicit selection for #236. This is throwaway prototype code and does not read or write production data.
+Status: variant A selected on 2026-09-16. This is throwaway prototype code and does not read or write production data.
 
 ## Question
 
@@ -30,16 +30,18 @@ All variants use the same completed, partially completed, not-started, and zero-
 6. Enable narrow phone and large text together, then repeat in dark mode.
 7. Select one treatment based on scanability, clear distinction, and minimal visual competition.
 
-## Decision to record on #236
+## Selected direction
 
-The ticket remains open until the user explicitly chooses a variant. Record:
+Variant A, leading status, is selected as the production design source:
 
-- selected indicator and placement
-- color scope
-- accessible completed/incomplete behavior
-- smallest expected `DisclosureCard` API extension
+- Place a compact circular status indicator before the exercise name and set-count summary in both collapsed and expanded headers.
+- Show the existing `check` icon when the exercise has at least one set and all sets are completed. Show the existing `hourglass` icon for partial, not-started, and zero-set exercises.
+- Limit semantic completed color to the indicator: use `secondary` fill with `primary` border and icon. Keep the incomplete indicator neutral with `surfaceAlt`, `border`, and `muted`; do not tint the card or header.
+- Keep the existing visible set-count summary and add no visible status label.
+- Include `fullført` or `ikke fullført` in the disclosure header's accessible name. The decorative indicator itself remains hidden from assistive technology.
+- Extend `DisclosureCard` with a general optional leading-header slot, such as `leading?: ReactNode`, and an explicit header accessibility label forwarded to its `Pressable`. Keep both APIs domain-neutral; the active-workout screen owns derivation, indicator composition, and wording.
 
-Do not infer a production API from this prototype. The current alternatives intentionally test presentation before changing the shared component.
+The production implementation must document and demonstrate the selected shared-component API in the design system and runtime component catalog.
 
 ## Known prototype boundaries
 
