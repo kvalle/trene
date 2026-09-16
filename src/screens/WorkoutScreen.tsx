@@ -735,7 +735,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
                         accessibilityLabel={completedSet ? `Endre sett ${index + 1} til planlagt for ${exercise.name}` : `Marker sett ${index + 1} som gjennomført for ${exercise.name}`}
                         disabled={workoutBusy}
                         icon={completedSet ? 'hourglass' : 'check'}
-                        variant={completedSet ? 'secondary' : 'primary'}
+                        variant="secondary"
                         onPress={() => runEditorAction(() => void changeSetStatus(set, exercise.name))}
                       />
                     </View>

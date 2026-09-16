@@ -532,6 +532,7 @@ const iconLabels: Record<IconName, string> = {
   check: 'Bekreft',
   edit: 'Rediger',
   hourglass: 'Planlagt',
+  'chevron-down': 'Vis',
   'chevron-up': 'Skjul',
   trash: 'Slett',
   plus: 'Legg til',

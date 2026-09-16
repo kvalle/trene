@@ -44,7 +44,7 @@ export function DisclosureCard({ title, summary, expanded, onPress, headerRef, c
           <Text style={[typography.sectionTitle, { color: colors.text }]}>{title}</Text>
           {summary ? <Text style={[typography.metadata, { color: colors.muted }]}>{summary}</Text> : null}
         </View>
-        <Icon color={colors.muted} name={expanded ? 'chevron-up' : 'plus'} size={24} />
+        <Icon color={colors.muted} name={expanded ? 'chevron-up' : 'chevron-down'} size={24} />
       </Pressable>
       {expanded ? <View style={[styles.content, { borderTopColor: colors.border }]}>{children}</View> : null}
     </View>

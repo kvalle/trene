@@ -96,8 +96,10 @@ legge luft inn i selve ikonflaten.
 - Trykkflaten eies av kontrollen rundt ikonet og skal fortsatt være minst `44 x 44`
   punkter på iOS og `48 x 48` dp på Android.
 
-Det første settet er `check`, `edit`, `hourglass`, `chevron-up`, `trash`, `plus`
+Det første settet er `check`, `edit`, `hourglass`, `chevron-down`, `chevron-up`, `trash`, `plus`
 og `restore`. Navnene beskriver generell betydning, ikke treningsdomenet.
+Utvidbare kort bruker `chevron-down` når innholdet er skjult og `chevron-up`
+når innholdet er synlig.
 
 ## Implementeringsstatus
 
