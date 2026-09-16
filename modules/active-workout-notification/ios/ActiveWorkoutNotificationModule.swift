@@ -1,8 +1,13 @@
 import ActivityKit
 import ExpoModulesCore
+import OSLog
 import UIKit
 
 public final class ActiveWorkoutNotificationModule: Module {
+  private let logger = Logger(
+    subsystem: Bundle.main.bundleIdentifier ?? "com.kjetilvalle.trene",
+    category: "ActiveWorkoutVisibility"
+  )
   private var tapObserver: NSObjectProtocol?
   private var isObservingTaps = false
 
@@ -50,9 +55,13 @@ public final class ActiveWorkoutNotificationModule: Module {
     AsyncFunction("showAsync") { () async throws in
       guard #available(iOS 16.1, *) else { return }
       guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+        logger.notice("Live Activity creation skipped because authorization is disabled")
         throw LiveActivityNotAuthorizedException()
       }
-      guard Activity<ActiveWorkoutActivityAttributes>.activities.isEmpty else { return }
+      guard Activity<ActiveWorkoutActivityAttributes>.activities.isEmpty else {
+        logger.debug("Live Activity already exists")
+        return
+      }
 
       do {
         let attributes = ActiveWorkoutActivityAttributes()
@@ -66,13 +75,16 @@ public final class ActiveWorkoutNotificationModule: Module {
         } else {
           _ = try Activity.request(attributes: attributes, contentState: state, pushType: nil)
         }
+        logger.notice("Live Activity created")
       } catch {
+        logger.error("Live Activity creation failed: \(error.localizedDescription, privacy: .public)")
         throw LiveActivityOperationException("start active workout Live Activity", cause: error)
       }
     }
 
     AsyncFunction("removeAsync") { () async throws in
       guard #available(iOS 16.1, *) else { return }
+      logger.debug("Ending \(Activity<ActiveWorkoutActivityAttributes>.activities.count) Live Activities")
       for activity in Activity<ActiveWorkoutActivityAttributes>.activities {
         let state = ActiveWorkoutActivityAttributes.ContentState()
         if #available(iOS 16.2, *) {
