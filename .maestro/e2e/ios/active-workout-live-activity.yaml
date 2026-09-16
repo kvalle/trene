@@ -1,0 +1,102 @@
+appId: com.kjetilvalle.trene
+name: Keep an active workout visible in iOS
+tags:
+  - ios
+  - active-workout-live-activity
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en trening?"
+    timeout: 120000
+- tapOn: "Start trening"
+- assertVisible: "Ingen øvelser lagt til ennå"
+
+# The Live Activity opens the durable workout from a warm app state.
+- pressKey: HOME
+- extendedWaitUntil:
+    visible: "Trening pågår"
+    timeout: 30000
+- tapOn: "Trening pågår"
+- extendedWaitUntil:
+    visible: "Ingen øvelser lagt til ennå"
+    timeout: 30000
+
+# Terminating the process keeps the Live Activity, and tapping it cold-starts Trene.
+- stopApp
+- extendedWaitUntil:
+    visible: "Trening pågår"
+    timeout: 30000
+- tapOn: "Trening pågår"
+- extendedWaitUntil:
+    visible: "Ingen øvelser lagt til ennå"
+    timeout: 120000
+
+# The durable preference takes effect immediately in both directions.
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-active-workout-visibility"
+- tapOn:
+    id: "active-workout-visibility-disabled"
+- pressKey: HOME
+- assertNotVisible: "Trening pågår"
+- launchApp
+- tapOn:
+    id: "active-workout-visibility-enabled"
+- pressKey: HOME
+- extendedWaitUntil:
+    visible: "Trening pågår"
+    timeout: 30000
+- tapOn: "Trening pågår"
+
+# Cancellation ends the Live Activity after the durable mutation.
+- extendedWaitUntil:
+    visible: "Ingen øvelser lagt til ennå"
+    timeout: 30000
+- tapOn: "Avbryt"
+- tapOn: "Avbryt treningen"
+- extendedWaitUntil:
+    visible: "Start trening"
+    timeout: 30000
+- pressKey: HOME
+- assertNotVisible: "Trening pågår"
+
+# Completion also ends it after the workout has been stored in history.
+- launchApp
+- tapOn: "Start trening"
+- tapOn: "Legg til øvelse"
+- tapOn: "Opprett første øvelse"
+- extendedWaitUntil:
+    visible:
+      id: "exercise-name-input"
+    timeout: 30000
+- tapOn:
+    id: "exercise-name-input"
+- inputText: "K"
+- tapOn:
+    id: "create-exercise-submit"
+- extendedWaitUntil:
+    visible: "Rediger sett 1 for K"
+    timeout: 30000
+- tapOn: "Rediger sett 1 for K"
+- tapOn: "Belastning for K"
+- inputText: "8"
+- tapOn: "Repetisjoner for K"
+- inputText: "5"
+- tapOn: "Lukk redigering av sett 1 for K"
+- tapOn: "Marker sett 1 som gjennomført for K"
+- runFlow:
+    when:
+      visible: "Marker sett 1 som gjennomført for K"
+    commands:
+      - tapOn: "Marker sett 1 som gjennomført for K"
+- tapOn: "Ferdig"
+- tapOn: "Fullfør trening"
+- extendedWaitUntil:
+    visible: "Slett trening"
+    timeout: 30000
+- pressKey: HOME
+- assertNotVisible: "Trening pågår"
