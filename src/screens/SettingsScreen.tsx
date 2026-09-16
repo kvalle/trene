@@ -29,7 +29,7 @@ export function SettingsScreen({ navigation }: Props) {
           onPress={() => navigation.navigate('ActiveWorkoutVisibility')}
           showSeparator
           testID="settings-active-workout-visibility"
-          title="Aktiv trening i systemet"
+          title="Notifikasjoner"
         />
         <NavigationRow
           onPress={() => navigation.navigate('Data')}

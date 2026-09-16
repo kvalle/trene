@@ -19,7 +19,7 @@ test('shows the active choices and opens settings destinations', () => {
   const visibilityRow = screen.getByTestId('settings-active-workout-visibility');
   expect(screen.queryByRole('header', { name: 'Innstillinger' })).not.toBeOnTheScreen();
   expect(appearanceRow).toHaveAccessibleName('Utseende, Lys');
-  expect(visibilityRow).toHaveAccessibleName('Aktiv trening i systemet, Vis aktiv trening');
+  expect(visibilityRow).toHaveAccessibleName('Notifikasjoner, Vis aktiv trening');
   fireEvent.press(appearanceRow);
   expect(navigate).toHaveBeenCalledWith('Appearance');
   fireEvent.press(visibilityRow);

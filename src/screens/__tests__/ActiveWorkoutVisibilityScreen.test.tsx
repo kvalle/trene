@@ -44,7 +44,8 @@ it('uses the single-selection pattern and persists a new choice', async () => {
   fireEvent.press(screen.getByTestId('active-workout-visibility-disabled'));
 
   await waitFor(() => expect(setPreference).toHaveBeenCalledWith('disabled'));
-  expect(screen.getByText(/Øvelser, sett og tid vises ikke/)).toBeOnTheScreen();
+  expect(screen.getByText('Viser bare at trening pågår')).toBeOnTheScreen();
+  expect(screen.getByText(/Ingen info om øvelser eller sett blir vist/)).toBeOnTheScreen();
 });
 
 it('explains unavailable authorization and opens Android settings', async () => {

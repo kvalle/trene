@@ -91,7 +91,7 @@ describe('AppNavigator', () => {
       { name: 'Exercises', options: { title: 'Øvelser' } },
       { name: 'Settings', options: { title: 'Innstillinger' } },
       { name: 'Appearance', options: { title: 'Utseende' } },
-      { name: 'ActiveWorkoutVisibility', options: { title: 'Aktiv trening i systemet' } },
+      { name: 'ActiveWorkoutVisibility', options: { title: 'Notifikasjoner' } },
       { name: 'Data', options: { title: 'Dine data' } },
       { name: 'DeleteTrainingData', options: { title: 'Slett treningsdata' } },
       { name: 'ExercisePicker', options: { presentation: 'modal', title: 'Legg til øvelse' } },

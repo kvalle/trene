@@ -67,7 +67,7 @@ export function AppNavigator() {
           <Stack.Screen name="Exercises" component={ExercisesScreen} options={{ title: 'Øvelser' }} />
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Innstillinger' }} />
           <Stack.Screen name="Appearance" component={AppearanceScreen} options={{ title: 'Utseende' }} />
-          <Stack.Screen name="ActiveWorkoutVisibility" component={ActiveWorkoutVisibilityScreen} options={{ title: 'Aktiv trening i systemet' }} />
+          <Stack.Screen name="ActiveWorkoutVisibility" component={ActiveWorkoutVisibilityScreen} options={{ title: 'Notifikasjoner' }} />
           <Stack.Screen name="Data" component={DataScreen} options={{ title: 'Dine data' }} />
           <Stack.Screen name="DeleteTrainingData" component={DeleteTrainingDataScreen} options={{ title: 'Slett treningsdata' }} />
           <Stack.Screen

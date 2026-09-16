@@ -65,7 +65,7 @@ export function ActiveWorkoutVisibilityScreen({ navigation }: Props) {
     <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
       <FormSection title="Synlighet">
         <SingleSelectionGroup
-          accessibilityLabel="Aktiv trening i systemet"
+          accessibilityLabel="Notifikasjoner"
           options={options.map((option) => ({
             ...option,
             disabled: changingPreference || preference === undefined,
@@ -77,12 +77,12 @@ export function ActiveWorkoutVisibilityScreen({ navigation }: Props) {
         />
       </FormSection>
       <Notice
-        title={unsupported ? 'Ikke tilgjengelig' : unavailable ? 'Varsler er slått av' : 'Viser bare at treningen pågår'}
+        title={unsupported ? 'Ikke tilgjengelig' : unavailable ? 'Varsler er slått av' : 'Viser bare at trening pågår'}
         message={unsupported
           ? 'Denne enheten støtter ikke visning av aktiv trening i systemet.'
           : unavailable
           ? 'Valget ditt er lagret, men Android tillater ikke at Trene viser varselet. Du kan endre dette i systeminnstillingene.'
-          : 'Når en trening er aktiv, kan Android vise «Trening pågår». Øvelser, sett og tid vises ikke.'}
+          : 'Så lenge en treningsøkt er aktiv vises systemnotifikasjon om at «Trening pågår». Ingen info om øvelser eller sett blir vist.'}
         testID="active-workout-visibility-notice"
       />
       {unavailable && capability.supported ? (
