@@ -149,7 +149,7 @@ it.each(['light', 'dark'] as const)('shows every CompactAction state in the %s t
 
 it('shows every icon, supported size and representative states', () => {
   render(<AppThemeProvider><IconDetailScreen /></AppThemeProvider>);
-  for (const name of ['check', 'edit', 'hourglass', 'chevron-up', 'trash', 'plus', 'restore']) {
+  for (const name of ['check', 'edit', 'hourglass', 'chevron-down', 'chevron-up', 'trash', 'plus', 'restore']) {
     expect(screen.getByTestId(`catalog-icon-${name}`, { includeHiddenElements: true })).toBeOnTheScreen();
   }
   for (const size of [16, 20, 24]) {

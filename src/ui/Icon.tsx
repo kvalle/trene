@@ -4,6 +4,7 @@ export const iconNames = [
   'check',
   'edit',
   'hourglass',
+  'chevron-down',
   'chevron-up',
   'trash',
   'plus',
@@ -32,6 +33,7 @@ const paths: Record<IconName, React.ReactNode> = {
       <Path d="m9.4 17.8 2.6-2.65 2.6 2.65Z" fill="currentColor" stroke="none" />
     </>
   ),
+  'chevron-down': <Path d="m5.75 9.25 6.25 5.5 6.25-5.5" />,
   'chevron-up': <Path d="m5.75 14.75 6.25-5.5 6.25 5.5" />,
   trash: <Path d="M5.25 7h13.5M9 7V4.75h6V7M7.25 7l.9 12.5h7.7l.9-12.5M10.25 10.5v5.75M13.75 10.5v5.75" />,
   plus: <Path d="M12 4.75v14.5M4.75 12h14.5" />,

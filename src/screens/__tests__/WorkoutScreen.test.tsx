@@ -758,6 +758,18 @@ test('does not let input blur consume a status action', async () => {
   expect(mockedSave).toHaveBeenCalledTimes(1);
 });
 
+test('uses a secondary button to mark a planned set as completed', async () => {
+  mockedLoad.mockResolvedValue({ ...workoutWithSets, exercises: [{ ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] }] });
+  renderScreen();
+
+  const statusButton = await screen.findByRole('button', { name: 'Marker sett 1 som gjennomført for Knebøy' });
+  expect(statusButton).toHaveStyle({
+    backgroundColor: lightColors.surface,
+    borderColor: lightColors.border,
+    borderWidth: 1,
+  });
+});
+
 test('preserves an open completed-set editor when returning it to planned', async () => {
   mockedLoad.mockResolvedValue(workoutWithSets);
   mockedUnconfirm.mockResolvedValue();
