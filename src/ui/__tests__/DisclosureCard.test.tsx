@@ -4,6 +4,13 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import { AppThemeProvider } from '../AppThemeProvider';
 import { DisclosureCard } from '../DisclosureCard';
 
+jest.mock('../Icon', () => ({
+  Icon: ({ name }: { name: string }) => {
+    const { Text: MockText } = jest.requireActual('react-native');
+    return <MockText testID="disclosure-icon">{name}</MockText>;
+  },
+}));
+
 function renderCard(onPress: () => void) {
   return render(
     <AppThemeProvider>
@@ -39,4 +46,17 @@ it('changes disclosure immediately when reduced motion is enabled', async () => 
 
   expect(animate).not.toHaveBeenCalled();
   expect(onPress).toHaveBeenCalled();
+});
+
+it.each([
+  ['chevron-down', false],
+  ['chevron-up', true],
+] as const)('shows %s when expanded is %s', (icon, expanded) => {
+  render(
+    <AppThemeProvider>
+      <DisclosureCard expanded={expanded} title="Detaljer" onPress={() => {}} />
+    </AppThemeProvider>,
+  );
+
+  expect(screen.getByTestId('disclosure-icon')).toHaveTextContent(icon);
 });
