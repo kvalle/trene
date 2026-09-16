@@ -130,7 +130,7 @@ class ActiveWorkoutNotificationModule : Module() {
     )
 
     return Notification.Builder(context, CHANNEL_ID)
-      .setSmallIcon(android.R.drawable.stat_notify_more)
+      .setSmallIcon(R.drawable.ic_trene_notification)
       .setContentText(NOTIFICATION_TEXT)
       .setContentIntent(pendingIntent)
       .setOngoing(true)
