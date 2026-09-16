@@ -34,7 +34,7 @@ tags:
     point: "72%,70%"
 - takeScreenshot: after-live-activity
 - tapOn:
-    point: "50%,59%"
+    point: "50%,72%"
 - extendedWaitUntil:
     visible: "Ingen øvelser lagt til ennå"
     timeout: 30000
@@ -46,7 +46,7 @@ tags:
     end: 50%, 75%
     duration: 500
 - tapOn:
-    point: "50%,59%"
+    point: "50%,72%"
 - extendedWaitUntil:
     visible: "Ingen øvelser lagt til ennå"
     timeout: 120000
@@ -68,7 +68,7 @@ tags:
     duration: 500
 - takeScreenshot: after-live-activity-disabled
 - tapOn:
-    point: "50%,59%"
+    point: "50%,72%"
 - assertNotVisible: "Ingen øvelser lagt til ennå"
 - launchApp
 - tapOn:
@@ -78,7 +78,7 @@ tags:
     end: 50%, 75%
     duration: 500
 - tapOn:
-    point: "50%,59%"
+    point: "50%,72%"
 
 # Cancellation ends the Live Activity after the durable mutation.
 - extendedWaitUntil:
@@ -95,7 +95,7 @@ tags:
     duration: 500
 - takeScreenshot: after-live-activity-cancelled
 - tapOn:
-    point: "50%,59%"
+    point: "50%,72%"
 - assertNotVisible: "Ingen øvelser lagt til ennå"
 
 # Completion also ends it after the workout has been stored in history.
@@ -138,5 +138,5 @@ tags:
     duration: 500
 - takeScreenshot: after-live-activity-completed
 - tapOn:
-    point: "50%,59%"
+    point: "50%,72%"
 - assertNotVisible: "Slett trening"
