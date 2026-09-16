@@ -18,6 +18,29 @@ tags:
     start: 5%, 50%
     end: 95%, 50%
     duration: 500
+- tapOn:
+    id: "settings-appearance"
+- tapOn:
+    id: "appearance-dark"
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
+- tapOn:
+    id: "settings-active-workout-visibility"
+- takeScreenshot: after-visibility-settings-dark
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
+- tapOn:
+    id: "settings-appearance"
+- tapOn:
+    id: "appearance-light"
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
 - swipe:
     start: 5%, 50%
     end: 95%, 50%
