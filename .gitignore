@@ -3,6 +3,8 @@ node_modules/
 .idea/
 android/
 ios/
+!modules/active-workout-notification/android/
+!modules/active-workout-notification/android/**
 !.maestro/e2e/
 !.maestro/e2e/**
 coverage/

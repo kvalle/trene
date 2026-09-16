@@ -14,6 +14,7 @@ import { Loader } from '../ui/Loader';
 import { useTrainingDataDeletionStatus } from '../trainingDataDeletion';
 import { PositiveStatus } from '../ui/PositiveStatus';
 import { useWorkoutSetDrafts } from '../workoutSetDrafts';
+import { useActiveWorkoutVisibility } from '../activeWorkoutVisibility/ActiveWorkoutVisibilityContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -22,6 +23,7 @@ export function HomeScreen({ navigation, route }: Props) {
   const { colors } = useAppTheme();
   const { clearDeleted, deleted } = useTrainingDataDeletionStatus();
   const { drafts } = useWorkoutSetDrafts();
+  const { reconcile } = useActiveWorkoutVisibility();
   const [activeWorkoutId, setActiveWorkoutId] = useState<number | null>();
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState(false);
@@ -64,6 +66,7 @@ export function HomeScreen({ navigation, route }: Props) {
     setError(false);
     try {
       await startWorkout(database);
+      void reconcile();
       allowNavigation.current = true;
       navigation.navigate('Workout');
     } catch {

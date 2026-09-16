@@ -6,6 +6,7 @@ import { StartupGate } from './StartupGate';
 import { TrainingDataDeletionProvider } from './trainingDataDeletion';
 import { AppThemeProvider, useAppTheme } from './ui/AppThemeProvider';
 import { appearancePreferenceStore } from './preferences/appearancePreference';
+import { ActiveWorkoutVisibilityProvider } from './activeWorkoutVisibility/ActiveWorkoutVisibilityContext';
 
 export default function App() {
   return (
@@ -20,8 +21,10 @@ function ThemedApp() {
   return (
     <TrainingDataDeletionProvider>
       <StartupGate openDatabase={openApplicationDatabase}>
-        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-        <AppNavigator />
+        <ActiveWorkoutVisibilityProvider>
+          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+          <AppNavigator />
+        </ActiveWorkoutVisibilityProvider>
       </StartupGate>
     </TrainingDataDeletionProvider>
   );

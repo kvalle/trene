@@ -28,6 +28,7 @@
     },
     "plugins": [
       "expo-sqlite",
+      "./modules/active-workout-notification/app.plugin.js",
       [
         "expo-build-properties",
         {
