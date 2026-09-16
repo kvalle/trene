@@ -20,6 +20,7 @@ describe('active workout iOS native implementation', () => {
     expect(nativeModule).toContain('for activity in Activity<ActiveWorkoutActivityAttributes>.activities');
     expect(nativeModule).toContain('dismissalPolicy: .immediate');
     expect(nativeModule).toContain('logger.notice("Live Activity created")');
+    expect(nativeModule).toContain('logger.notice("Live Activities ended")');
     expect(nativeModule).toContain('logger.error("Live Activity creation failed:');
   });
 

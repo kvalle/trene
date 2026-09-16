@@ -30,21 +30,23 @@ tags:
     start: 50%, 0%
     end: 50%, 75%
     duration: 500
-- extendedWaitUntil:
-    visible: "Trening pågår"
-    timeout: 30000
+- tapOn:
+    point: "72%,70%"
 - takeScreenshot: after-live-activity
-- tapOn: "Trening pågår"
+- tapOn:
+    point: "50%,59%"
 - extendedWaitUntil:
     visible: "Ingen øvelser lagt til ennå"
     timeout: 30000
 
 # Terminating the process keeps the Live Activity, and tapping it cold-starts Trene.
 - stopApp
-- extendedWaitUntil:
-    visible: "Trening pågår"
-    timeout: 30000
-- tapOn: "Trening pågår"
+- swipe:
+    start: 50%, 0%
+    end: 50%, 75%
+    duration: 500
+- tapOn:
+    point: "50%,59%"
 - extendedWaitUntil:
     visible: "Ingen øvelser lagt til ennå"
     timeout: 120000
@@ -64,7 +66,10 @@ tags:
     start: 50%, 0%
     end: 50%, 75%
     duration: 500
-- assertNotVisible: "Trening pågår"
+- takeScreenshot: after-live-activity-disabled
+- tapOn:
+    point: "50%,59%"
+- assertNotVisible: "Ingen øvelser lagt til ennå"
 - launchApp
 - tapOn:
     id: "active-workout-visibility-enabled"
@@ -72,10 +77,8 @@ tags:
     start: 50%, 0%
     end: 50%, 75%
     duration: 500
-- extendedWaitUntil:
-    visible: "Trening pågår"
-    timeout: 30000
-- tapOn: "Trening pågår"
+- tapOn:
+    point: "50%,59%"
 
 # Cancellation ends the Live Activity after the durable mutation.
 - extendedWaitUntil:
@@ -90,7 +93,10 @@ tags:
     start: 50%, 0%
     end: 50%, 75%
     duration: 500
-- assertNotVisible: "Trening pågår"
+- takeScreenshot: after-live-activity-cancelled
+- tapOn:
+    point: "50%,59%"
+- assertNotVisible: "Ingen øvelser lagt til ennå"
 
 # Completion also ends it after the workout has been stored in history.
 - launchApp
@@ -130,4 +136,7 @@ tags:
     start: 50%, 0%
     end: 50%, 75%
     duration: 500
-- assertNotVisible: "Trening pågår"
+- takeScreenshot: after-live-activity-completed
+- tapOn:
+    point: "50%,59%"
+- assertNotVisible: "Slett trening"

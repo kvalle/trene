@@ -96,6 +96,7 @@ public final class ActiveWorkoutNotificationModule: Module {
           await activity.end(using: state, dismissalPolicy: .immediate)
         }
       }
+      logger.notice("Live Activities ended")
     }
 
     AsyncFunction("openSettingsAsync") { () async throws in
