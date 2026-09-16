@@ -1,5 +1,10 @@
 {
-  "platforms": ["android"],
+  "platforms": ["apple", "android"],
+  "apple": {
+    "podspecPath": "ActiveWorkoutNotification.podspec",
+    "modules": ["ActiveWorkoutNotificationModule"],
+    "appDelegateSubscribers": ["ActiveWorkoutNotificationAppDelegateSubscriber"]
+  },
   "android": {
     "modules": ["com.kjetilvalle.trene.activeworkoutnotification.ActiveWorkoutNotificationModule"]
   }

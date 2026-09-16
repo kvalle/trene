@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { Platform, ScrollView, StyleSheet } from 'react-native';
 
 import type { RootStackParamList } from '../AppNavigator';
 import { useActiveWorkoutVisibility } from '../activeWorkoutVisibility/ActiveWorkoutVisibilityContext';
@@ -61,6 +61,8 @@ export function ActiveWorkoutVisibilityScreen({ navigation }: Props) {
 
   const unsupported = capability?.supported === false;
   const unavailable = capability?.supported && !capability.canShow;
+  const platformName = Platform.OS === 'ios' ? 'iOS' : 'Android';
+  const indicatorName = Platform.OS === 'ios' ? 'direkteaktivitet' : 'varsel';
   return (
     <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
       <FormSection title="Synlighet">
@@ -77,12 +79,16 @@ export function ActiveWorkoutVisibilityScreen({ navigation }: Props) {
         />
       </FormSection>
       <Notice
-        title={unsupported ? 'Ikke tilgjengelig' : unavailable ? 'Varsler er slått av' : 'Viser bare at trening pågår'}
+        title={unsupported
+          ? 'Ikke tilgjengelig'
+          : unavailable
+          ? Platform.OS === 'ios' ? 'Direkteaktiviteter er slått av' : 'Varsler er slått av'
+          : 'Viser bare at trening pågår'}
         message={unsupported
           ? 'Denne enheten støtter ikke visning av aktiv trening i systemet.'
           : unavailable
-          ? 'Valget ditt er lagret, men Android tillater ikke at Trene viser varselet. Du kan endre dette i systeminnstillingene.'
-          : 'Så lenge en treningsøkt er aktiv vises systemnotifikasjon om at «Trening pågår». Ingen info om øvelser eller sett blir vist.'}
+          ? `Valget ditt er lagret, men ${platformName} tillater ikke at Trene viser ${indicatorName}. Du kan endre dette i systeminnstillingene.`
+          : `Så lenge en treningsøkt er aktiv vises ${indicatorName}en «Trening pågår». Ingen info om øvelser eller sett blir vist.`}
         testID="active-workout-visibility-notice"
       />
       {unavailable && capability.supported ? (
@@ -97,7 +103,7 @@ export function ActiveWorkoutVisibilityScreen({ navigation }: Props) {
         <ErrorAlert
           message={failure === 'save'
             ? 'Det forrige valget er fortsatt aktivt. Prøv igjen.'
-            : 'Åpne varselinnstillingene manuelt fra Android-innstillingene.'}
+            : `Åpne innstillingene for Trene manuelt fra ${platformName}-innstillingene.`}
           title={failure === 'save' ? 'Kunne ikke lagre valget' : 'Kunne ikke åpne systeminnstillinger'}
           testID="active-workout-visibility-error"
         />

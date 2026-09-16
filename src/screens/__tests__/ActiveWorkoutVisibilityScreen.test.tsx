@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 import { ActiveWorkoutVisibilityScreen } from '../ActiveWorkoutVisibilityScreen';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
@@ -48,14 +49,19 @@ it('uses the single-selection pattern and persists a new choice', async () => {
   expect(screen.getByText(/Ingen info om øvelser eller sett blir vist/)).toBeOnTheScreen();
 });
 
-it('explains unavailable authorization and opens Android settings', async () => {
+it.each([
+  ['android', 'Varsler er slått av', 'Android tillater ikke at Trene viser varsel'],
+  ['ios', 'Direkteaktiviteter er slått av', 'iOS tillater ikke at Trene viser direkteaktivitet'],
+] as const)('explains unavailable authorization and opens %s settings', async (platform, title, message) => {
+  jest.replaceProperty(Platform, 'OS', platform);
   mockedUseVisibility.mockReturnValue({
     ...mockedUseVisibility(),
     capability: { supported: true, authorized: false, canShow: false },
   });
   renderScreen();
 
-  expect(screen.getByText('Varsler er slått av')).toBeOnTheScreen();
+  expect(screen.getByText(title)).toBeOnTheScreen();
+  expect(screen.getByText(new RegExp(message))).toBeOnTheScreen();
   fireEvent.press(screen.getByTestId('active-workout-visibility-open-settings'));
   await waitFor(() => expect(openSystemSettings).toHaveBeenCalled());
 });

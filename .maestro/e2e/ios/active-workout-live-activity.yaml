@@ -1,0 +1,178 @@
+appId: com.kjetilvalle.trene
+name: Keep an active workout visible in iOS
+tags:
+  - ios
+  - active-workout-live-activity
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en trening?"
+    timeout: 120000
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-active-workout-visibility"
+- extendedWaitUntil:
+    visible: "Viser bare at trening pågår"
+    timeout: 30000
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
+- tapOn:
+    id: "settings-appearance"
+- tapOn:
+    id: "appearance-dark"
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
+- tapOn:
+    id: "settings-active-workout-visibility"
+- takeScreenshot: after-visibility-settings-dark
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
+- tapOn:
+    id: "settings-appearance"
+- tapOn:
+    id: "appearance-light"
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
+- tapOn: "Start trening"
+- assertVisible: "Ingen øvelser lagt til ennå"
+
+# Notification Center backgrounds Trene and exposes the Live Activity.
+- swipe:
+    start: 50%, 0%
+    end: 50%, 75%
+    duration: 500
+- tapOn:
+    point: "72%,70%"
+- takeScreenshot: after-live-activity
+- tapOn:
+    point: "50%,72%"
+- extendedWaitUntil:
+    visible: "Ingen øvelser lagt til ennå"
+    timeout: 30000
+
+# Terminating the process keeps the Live Activity, and tapping it cold-starts Trene.
+- stopApp
+- swipe:
+    start: 50%, 0%
+    end: 50%, 75%
+    duration: 500
+- tapOn:
+    point: "50%,72%"
+- extendedWaitUntil:
+    visible: "Ingen øvelser lagt til ennå"
+    timeout: 120000
+
+# The durable preference takes effect immediately in both directions.
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-active-workout-visibility"
+- takeScreenshot: after-visibility-settings
+- tapOn:
+    id: "active-workout-visibility-disabled"
+- swipe:
+    start: 50%, 0%
+    end: 50%, 75%
+    duration: 500
+- takeScreenshot: after-live-activity-disabled
+- tapOn:
+    point: "50%,72%"
+- assertNotVisible: "Ingen øvelser lagt til ennå"
+- launchApp
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-active-workout-visibility"
+- tapOn:
+    id: "active-workout-visibility-enabled"
+- swipe:
+    start: 50%, 0%
+    end: 50%, 75%
+    duration: 500
+- tapOn:
+    point: "72%,70%"
+- tapOn:
+    point: "50%,72%"
+
+# Cancellation ends the Live Activity after the durable mutation.
+- extendedWaitUntil:
+    visible: "Ingen øvelser lagt til ennå"
+    timeout: 30000
+- tapOn: "Avbryt"
+- tapOn: "Avbryt treningen"
+- extendedWaitUntil:
+    visible: "Start trening"
+    timeout: 30000
+- swipe:
+    start: 50%, 0%
+    end: 50%, 75%
+    duration: 500
+- takeScreenshot: after-live-activity-cancelled
+- tapOn:
+    point: "50%,72%"
+- assertNotVisible: "Ingen øvelser lagt til ennå"
+
+# Completion also ends it after the workout has been stored in history.
+- launchApp
+- tapOn: "Start trening"
+- tapOn: "Legg til øvelse"
+- tapOn: "Opprett første øvelse"
+- extendedWaitUntil:
+    visible:
+      id: "exercise-name-input"
+    timeout: 30000
+- tapOn:
+    id: "exercise-name-input"
+- inputText: "K"
+- tapOn:
+    id: "create-exercise-submit"
+- extendedWaitUntil:
+    visible: "Rediger sett 1 for K"
+    timeout: 30000
+- tapOn: "Rediger sett 1 for K"
+- tapOn: "Belastning for K"
+- inputText: "8"
+- tapOn: "Repetisjoner for K"
+- inputText: "5"
+- tapOn: "Lukk redigering av sett 1 for K"
+- tapOn: "Marker sett 1 som gjennomført for K"
+- runFlow:
+    when:
+      visible: "Marker sett 1 som gjennomført for K"
+    commands:
+      - tapOn: "Marker sett 1 som gjennomført for K"
+- tapOn: "Ferdig"
+- tapOn: "Fullfør trening"
+- extendedWaitUntil:
+    visible: "Slett trening"
+    timeout: 30000
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
+- swipe:
+    start: 50%, 0%
+    end: 50%, 75%
+    duration: 500
+- takeScreenshot: after-live-activity-completed
+- tapOn:
+    point: "50%,72%"
+- assertNotVisible: "Slett trening"
