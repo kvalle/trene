@@ -56,10 +56,18 @@ describe('active workout persistence', () => {
     await migrateDatabase(database);
 
     const workoutId = await startWorkout(database);
+    await database.runAsync(
+      "UPDATE workouts SET started_at = '2026-08-05T09:15:00Z' WHERE id = ?",
+      workoutId,
+    );
 
     expect(await startWorkout(database)).toBe(workoutId);
     expect(await getActiveWorkoutId(database)).toBe(workoutId);
-    expect(await loadActiveWorkout(database)).toEqual({ id: workoutId, exercises: [] });
+    expect(await loadActiveWorkout(database)).toEqual({
+      id: workoutId,
+      startedAt: '2026-08-05T09:15:00Z',
+      exercises: [],
+    });
   });
 
   test('prefills a new workout from every completed set in the latest completed workout', async () => {
@@ -110,6 +118,7 @@ describe('active workout persistence', () => {
 
     expect(await loadActiveWorkout(database)).toEqual({
       id: workoutId,
+      startedAt: expect.any(String),
       exercises: [
         {
           id: expect.any(Number), exerciseId: pressId, name: 'Benkpress', position: 0,
@@ -218,6 +227,7 @@ describe('active workout persistence', () => {
 
     expect(await loadActiveWorkout(database)).toEqual({
       id: workoutId,
+      startedAt: expect.any(String),
       exercises: [
         { id: expect.any(Number), exerciseId: aloftId, name: 'Åløft', position: 0,
           sets: [{ id: expect.any(Number), loadKg: null, repetitions: null, confirmedAt: null }] },
@@ -388,7 +398,11 @@ describe('active workout persistence', () => {
     `);
 
     await expect(addExerciseToWorkout(database, activeId, exerciseId)).rejects.toThrow('write failed');
-    expect(await loadActiveWorkout(database)).toEqual({ id: activeId, exercises: [] });
+    expect(await loadActiveWorkout(database)).toEqual({
+      id: activeId,
+      startedAt: expect.any(String),
+      exercises: [],
+    });
     expect(await listAvailableExercises(database, activeId)).toEqual([
       { id: exerciseId, name: 'Markløft' },
     ]);
@@ -550,6 +564,7 @@ describe('active workout persistence', () => {
     expect(await getActiveWorkoutId(database)).toBeNull();
     expect(await loadCompletedWorkout(database, workoutId)).toEqual({
       id: workoutId,
+      startedAt: active.startedAt,
       completedAt: '2026-08-05T10:30:00Z',
       exercises: [
         { ...active.exercises[0], sets: [
@@ -955,7 +970,11 @@ describe('active workout persistence', () => {
 
     await expect(addWorkoutSet(database, workoutId, exercise.id)).rejects.toThrow('write failed');
     await expect(removeExerciseFromWorkout(database, workoutId, exercise.id)).rejects.toThrow('write failed');
-    expect(await loadActiveWorkout(database)).toEqual({ id: workoutId, exercises: [exercise] });
+    expect(await loadActiveWorkout(database)).toEqual({
+      id: workoutId,
+      startedAt: expect.any(String),
+      exercises: [exercise],
+    });
   });
 
   test('rolls back a failed confirmation without false success', async () => {

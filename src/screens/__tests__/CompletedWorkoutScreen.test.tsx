@@ -7,6 +7,8 @@ import type { Database } from '../../database/types';
 import { deleteCompletedWorkout, loadCompletedWorkout } from '../../database/workouts';
 import { CompletedWorkoutScreen } from '../CompletedWorkoutScreen';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
+import { formatDateTime } from '../../locale';
+import { lightColors, typography } from '../../theme';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual('react-native/Libraries/ReactNative/RendererProxy'),
@@ -20,6 +22,12 @@ jest.mock('@react-navigation/native', () => ({
 jest.mock('../../database/workouts', () => ({ deleteCompletedWorkout: jest.fn(), loadCompletedWorkout: jest.fn() }));
 
 const database = {} as Database;
+const completedWorkout = {
+  id: 3,
+  startedAt: new Date(2026, 7, 5, 9, 15).toISOString(),
+  completedAt: new Date(2026, 7, 5, 10, 30).toISOString(),
+  exercises: [],
+};
 const mockedLoad = jest.mocked(loadCompletedWorkout);
 const mockedDelete = jest.mocked(deleteCompletedWorkout);
 
@@ -30,8 +38,7 @@ beforeEach(() => {
 
 test('shows the exact read-only completed result in saved card order', async () => {
   mockedLoad.mockResolvedValue({
-    id: 3,
-    completedAt: '2026-08-05T10:30:00Z',
+    ...completedWorkout,
     exercises: [
       { id: 4, exerciseId: 5, name: 'Knebøy', position: 0, sets: [
         { id: 7, loadKg: 80, repetitions: 5, confirmedAt: '2026-08-05T10:00:00Z' },
@@ -43,7 +50,10 @@ test('shows the exact read-only completed result in saved card order', async () 
   });
   renderScreen();
 
-  expect(await screen.findByText(/5. august 2026/)).toBeOnTheScreen();
+  const metadata = await screen.findByText(
+    `Startet ${formatDateTime(new Date(completedWorkout.startedAt))} (1 t 15 min)`,
+  );
+  expect(metadata).toHaveStyle({ ...typography.metadata, color: lightColors.muted });
   expect(screen.queryByRole('header', { name: 'Fullført trening' })).not.toBeOnTheScreen();
   const headers = screen.getAllByRole('header').map((node) => node.props.children);
   expect(headers).toEqual(['Knebøy', 'Benkpress']);
@@ -55,7 +65,7 @@ test('shows the exact read-only completed result in saved card order', async () 
 
 test('requires explicit confirmation and cancellation preserves the workout', async () => {
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
-  mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
+  mockedLoad.mockResolvedValue(completedWorkout);
   const view = renderScreen();
 
   fireEvent.press(await screen.findByRole('button', { name: 'Slett trening' }));
@@ -70,7 +80,7 @@ test('requires explicit confirmation and cancellation preserves the workout', as
 });
 
 test('blocks confirmation actions while deletion is pending', async () => {
-  mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
+  mockedLoad.mockResolvedValue(completedWorkout);
   mockedDelete.mockImplementation(() => new Promise(() => undefined));
   renderScreen();
 
@@ -83,7 +93,7 @@ test('blocks confirmation actions while deletion is pending', async () => {
 
 test('deletes a post-completion workout before replacing detail with focused history', async () => {
   const replace = jest.fn();
-  mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
+  mockedLoad.mockResolvedValue(completedWorkout);
   mockedDelete.mockResolvedValue({ focusWorkoutId: 2 });
   renderScreen({ replace });
 
@@ -96,7 +106,7 @@ test('deletes a post-completion workout before replacing detail with focused his
 
 test('deletes a history workout before popping to focused history', async () => {
   const popTo = jest.fn();
-  mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
+  mockedLoad.mockResolvedValue(completedWorkout);
   mockedDelete.mockResolvedValue({ focusWorkoutId: 2 });
   renderScreen({ popTo }, false);
 
@@ -111,7 +121,7 @@ test('keeps detail, closes confirmation, and offers focused retry after deletion
   const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   const popTo = jest.fn();
-  mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
+  mockedLoad.mockResolvedValue(completedWorkout);
   mockedDelete.mockRejectedValue(new Error('write failed'));
   renderScreen({ popTo });
 
@@ -128,7 +138,7 @@ test('keeps detail, closes confirmation, and offers focused retry after deletion
 
 test('returns Home from post-completion detail', async () => {
   const popTo = jest.fn();
-  mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
+  mockedLoad.mockResolvedValue(completedWorkout);
   renderScreen({ popTo });
 
   fireEvent.press(await screen.findByRole('button', { name: 'Tilbake til forsiden' }));
@@ -136,9 +146,7 @@ test('returns Home from post-completion detail', async () => {
 });
 
 test('shows retry instead of an empty result when loading fails', async () => {
-  mockedLoad.mockRejectedValueOnce(new Error('read failed')).mockResolvedValueOnce({
-    id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [],
-  });
+  mockedLoad.mockRejectedValueOnce(new Error('read failed')).mockResolvedValueOnce(completedWorkout);
   renderScreen();
 
   fireEvent.press(await screen.findByRole('button', { name: 'Prøv igjen' }));
@@ -163,7 +171,7 @@ test('returns to fresh history when a history workout no longer exists', async (
 });
 
 test('uses ordinary stack Back when opened from history', async () => {
-  mockedLoad.mockResolvedValue({ id: 3, completedAt: '2026-08-05T10:30:00Z', exercises: [] });
+  mockedLoad.mockResolvedValue(completedWorkout);
   renderScreen({}, false);
 
   await screen.findByRole('button', { name: 'Slett trening' });
