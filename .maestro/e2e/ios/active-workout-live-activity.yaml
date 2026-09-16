@@ -8,6 +8,20 @@ tags:
 - extendedWaitUntil:
     visible: "Klar for en trening?"
     timeout: 120000
+- tapOn: "Innstillinger"
+- tapOn:
+    id: "settings-active-workout-visibility"
+- extendedWaitUntil:
+    visible: "Viser bare at trening pågår"
+    timeout: 30000
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
+- swipe:
+    start: 5%, 50%
+    end: 95%, 50%
+    duration: 500
 - tapOn: "Start trening"
 - assertVisible: "Ingen øvelser lagt til ennå"
 
