@@ -1,5 +1,4 @@
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const {
   EXTENSION_FILES,
@@ -9,7 +8,9 @@ const {
 
 describe('active workout Live Activity extension generation', () => {
   it('copies a complete extension into a generated iOS project repeatedly', () => {
-    const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'trene-live-activity-'));
+    const artifactsRoot = path.join(__dirname, '..', '..', '..', '.artifacts', 'tests');
+    fs.mkdirSync(artifactsRoot, { recursive: true });
+    const projectRoot = fs.mkdtempSync(path.join(artifactsRoot, 'live-activity-'));
     const templateRoot = path.join(__dirname, '..', 'plugin', 'extension');
 
     copyExtensionSources(projectRoot, templateRoot);
