@@ -11,8 +11,11 @@ tags:
 - tapOn: "Start trening"
 - assertVisible: "Ingen øvelser lagt til ennå"
 
-# The Live Activity opens the durable workout from a warm app state.
-- pressKey: HOME
+# Notification Center backgrounds Trene and exposes the Live Activity.
+- swipe:
+    start: 50%, 0%
+    end: 50%, 75%
+    duration: 500
 - extendedWaitUntil:
     visible: "Trening pågår"
     timeout: 30000
@@ -41,12 +44,18 @@ tags:
     id: "settings-active-workout-visibility"
 - tapOn:
     id: "active-workout-visibility-disabled"
-- pressKey: HOME
+- swipe:
+    start: 50%, 0%
+    end: 50%, 75%
+    duration: 500
 - assertNotVisible: "Trening pågår"
 - launchApp
 - tapOn:
     id: "active-workout-visibility-enabled"
-- pressKey: HOME
+- swipe:
+    start: 50%, 0%
+    end: 50%, 75%
+    duration: 500
 - extendedWaitUntil:
     visible: "Trening pågår"
     timeout: 30000
@@ -61,7 +70,10 @@ tags:
 - extendedWaitUntil:
     visible: "Start trening"
     timeout: 30000
-- pressKey: HOME
+- swipe:
+    start: 50%, 0%
+    end: 50%, 75%
+    duration: 500
 - assertNotVisible: "Trening pågår"
 
 # Completion also ends it after the workout has been stored in history.
@@ -98,5 +110,8 @@ tags:
 - extendedWaitUntil:
     visible: "Slett trening"
     timeout: 30000
-- pressKey: HOME
+- swipe:
+    start: 50%, 0%
+    end: 50%, 75%
+    duration: 500
 - assertNotVisible: "Trening pågår"
