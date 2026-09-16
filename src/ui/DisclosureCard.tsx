@@ -10,11 +10,13 @@ type DisclosureCardProps = ViewProps & {
   summary?: string;
   expanded: boolean;
   onPress: () => void;
+  accessibilityLabel?: string;
+  leading?: React.ReactNode;
   headerRef?: (node: View | null) => void;
   children?: React.ReactNode;
 };
 
-export function DisclosureCard({ title, summary, expanded, onPress, headerRef, children, style, ...rest }: DisclosureCardProps) {
+export function DisclosureCard({ title, summary, expanded, onPress, accessibilityLabel, leading, headerRef, children, style, ...rest }: DisclosureCardProps) {
   const { colors } = useAppTheme();
   const [reduceMotion, setReduceMotion] = useState(true);
 
@@ -34,12 +36,14 @@ export function DisclosureCard({ title, summary, expanded, onPress, headerRef, c
   return (
     <View {...rest} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, style]}>
       <Pressable
+        accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
         accessibilityState={{ expanded }}
         onPress={toggle}
         ref={headerRef}
         style={({ pressed }) => [styles.header, pressed && styles.pressed]}
       >
+        {leading}
         <View style={styles.copy}>
           <Text style={[typography.sectionTitle, { color: colors.text }]}>{title}</Text>
           {summary ? <Text style={[typography.metadata, { color: colors.muted }]}>{summary}</Text> : null}

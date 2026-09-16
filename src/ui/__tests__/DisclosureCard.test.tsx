@@ -60,3 +60,23 @@ it.each([
 
   expect(screen.getByTestId('disclosure-icon')).toHaveTextContent(icon);
 });
+
+it('renders generic leading content and forwards the explicit accessible name', () => {
+  render(
+    <AppThemeProvider>
+      <DisclosureCard
+        accessibilityLabel="Eksempel, tilgjengelig status"
+        expanded={false}
+        leading={<Text testID="leading">Status</Text>}
+        title="Detaljer"
+        onPress={() => {}}
+      />
+    </AppThemeProvider>,
+  );
+
+  expect(screen.getByTestId('leading')).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Eksempel, tilgjengelig status' })).toHaveProp(
+    'accessibilityState',
+    { expanded: false },
+  );
+});

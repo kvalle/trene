@@ -66,10 +66,21 @@ tags:
     timeout: 60000
 - tapOn: "Fortsett trening"
 - extendedWaitUntil:
-    visible: "K, 1 av 1 sett gjennomført"
+    visible: "K, 1 av 1 sett gjennomført, fullført"
     timeout: 60000
-- tapOn: "K, 1 av 1 sett gjennomført"
+- tapOn: "K, 1 av 1 sett gjennomført, fullført"
 - assertVisible: "Sett 1, 8 kilogram, 56 repetisjoner, Gjennomført"
+- tapOn: "Endre sett 1 til planlagt for K"
+- extendedWaitUntil:
+    visible: "K, 0 av 1 sett gjennomført, ikke fullført"
+    timeout: 30000
+- tapOn: "K, 0 av 1 sett gjennomført, ikke fullført"
+- assertVisible: "K, 0 av 1 sett gjennomført, ikke fullført"
+- tapOn: "K, 0 av 1 sett gjennomført, ikke fullført"
+- tapOn: "Marker sett 1 som gjennomført for K"
+- extendedWaitUntil:
+    visible: "K, 1 av 1 sett gjennomført, fullført"
+    timeout: 30000
 
 # A second compact row can change status without opening its editor.
 - tapOn: "Legg til sett"

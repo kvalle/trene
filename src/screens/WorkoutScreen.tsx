@@ -665,9 +665,12 @@ export function WorkoutScreen({ navigation, route }: Props) {
       {state.workout.exercises.map((exercise) => {
         const expanded = expandedIds.has(exercise.exerciseId);
         const completed = exercise.sets.filter((set) => set.confirmedAt !== null).length;
+        const exerciseCompleted = exercise.sets.length > 0 && completed === exercise.sets.length;
+        const summary = `${completed} av ${exercise.sets.length} sett gjennomført`;
         return (
           <DisclosureCard
             key={exercise.id}
+            accessibilityLabel={`${exercise.name}, ${summary}, ${exerciseCompleted ? 'fullført' : 'ikke fullført'}`}
             expanded={expanded}
             headerRef={(node) => { if (node) cardRefs.current.set(exercise.exerciseId, node); }}
             onPress={() => setExpandedIds((current) => {
@@ -676,7 +679,22 @@ export function WorkoutScreen({ navigation, route }: Props) {
               else next.add(exercise.exerciseId);
               return next;
             })}
-            summary={`${completed} av ${exercise.sets.length} sett gjennomført`}
+            leading={(
+              <View
+                accessible={false}
+                testID={`workout-exercise-${exercise.id}-completion`}
+                style={[
+                  styles.exerciseStatus,
+                  {
+                    backgroundColor: exerciseCompleted ? colors.secondary : colors.surfaceAlt,
+                    borderColor: exerciseCompleted ? colors.primary : colors.border,
+                  },
+                ]}
+              >
+                <Icon color={exerciseCompleted ? colors.primary : colors.muted} name={exerciseCompleted ? 'check' : 'hourglass'} size={16} testID={`workout-exercise-${exercise.id}-completion-icon-${exerciseCompleted ? 'check' : 'hourglass'}`} />
+              </View>
+            )}
+            summary={summary}
             title={exercise.name}
           >
             {expanded && (
@@ -1019,6 +1037,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: { flexGrow: 1, gap: 16, padding: 20 },
   empty: { paddingVertical: 36, textAlign: 'center' },
+  exerciseStatus: { alignItems: 'center', borderRadius: 16, borderWidth: 1, height: 32, justifyContent: 'center', width: 32 },
   setContainer: { borderBottomWidth: 1, paddingBottom: 12 },
   setRow: { alignItems: 'center', flexDirection: 'row', gap: 10, minHeight: 48 },
   setCopy: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: 10, minWidth: 100 },

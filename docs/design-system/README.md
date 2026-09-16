@@ -162,6 +162,10 @@ navigasjon, valg og statiske data. Radens ledende innhold, tekstblokk og
 etterfølgende innhold er plasser i raden, ikke egne komponenter. Metadata, lokal
 handling og opptatt tilstand er varianter. Oppsummeringer er komposisjoner av
 kort og datarader. Utvidbare kort dokumenteres i både kollapset og åpen tilstand.
+`DisclosureCard` kan ha valgfritt, domenenøytralt ledende headerinnhold for en
+kompakt status eller identitet som gjelder hele kortet. Komponenten tar også en
+eksplisitt tilgjengelighetsetikett for headeren; skjermen som komponerer kortet
+eier statusbetydning og ordlyd, mens ledende ikoner er dekorative.
 
 Feedback og sidevisninger holdes adskilt. Loader, informasjonsvarsel og
 feilvarsel er komponenter som kan plasseres i ulike kontekster. `PositiveStatus`
