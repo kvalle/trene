@@ -165,7 +165,10 @@ kort og datarader. Utvidbare kort dokumenteres i både kollapset og åpen tilsta
 `DisclosureCard` kan ha valgfritt, domenenøytralt ledende headerinnhold for en
 kompakt status eller identitet som gjelder hele kortet. Komponenten tar også en
 eksplisitt tilgjengelighetsetikett for headeren; skjermen som komponerer kortet
-eier statusbetydning og ordlyd, mens ledende ikoner er dekorative.
+eier statusbetydning og ordlyd, mens ledende ikoner er dekorative. En valgfri,
+normalisert fremdriftsverdi fyller headeren fra venstre med `secondary` under
+innholdet. Verdien avgrenses til 0–1 og endres uten animasjon ved redusert
+bevegelse; synlig ikon og tekst skal fortsatt kommunisere statusen.
 
 Feedback og sidevisninger holdes adskilt. Loader, informasjonsvarsel og
 feilvarsel er komponenter som kan plasseres i ulike kontekster. `PositiveStatus`

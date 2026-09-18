@@ -705,9 +705,10 @@ export function DisclosureCardDetailScreen() {
   const { colors } = useAppTheme();
   return (
     <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-disclosurecard">
-      <DetailHeader name="DisclosureCard" description="Utvidbart kort med valgfritt ledende innhold, sammendrag og detaljinnhold." usage="Bruk når hvert innholdselement skal kunne vise eller skjule detaljer uavhengig av de andre. Bruk ledende innhold for en kompakt status eller identitet som gjelder hele kortet." />
-      <DisclosureCard accessibilityLabel="Kollapset eksempel, 2 av 3 elementer ferdige" expanded={false} leading={<Icon color={colors.muted} name="hourglass" size={16} testID="catalog-disclosurecard-leading-collapsed" />} onPress={() => {}} summary="2 av 3 elementer ferdige" title="Kollapset" testID="catalog-disclosurecard-collapsed" />
-      <DisclosureCard accessibilityLabel="Åpent eksempel, 3 av 3 elementer ferdige" expanded leading={<Icon color={colors.primary} name="check" size={16} testID="catalog-disclosurecard-leading-expanded" />} onPress={() => {}} summary="3 av 3 elementer ferdige" title="Åpen" testID="catalog-disclosurecard-expanded">
+      <DetailHeader name="DisclosureCard" description="Utvidbart kort med valgfritt ledende innhold, sammendrag, normalisert fremdrift og detaljinnhold." usage="Bruk når hvert innholdselement skal kunne vise eller skjule detaljer uavhengig av de andre. Bruk fremdrift når en kjent andel av kortets innhold er ferdig, og behold ikon og tekst som selvstendige statussignaler." />
+      <DisclosureCard accessibilityLabel="Ingen fremdrift, 0 av 3 elementer ferdige" expanded={false} leading={<Icon color={colors.muted} name="hourglass" size={16} />} onPress={() => {}} progress={0} summary="0 av 3 elementer ferdige" title="Ingen fremdrift" testID="catalog-disclosurecard-progress-zero" />
+      <DisclosureCard accessibilityLabel="Kollapset eksempel, 2 av 3 elementer ferdige" expanded={false} leading={<Icon color={colors.muted} name="hourglass" size={16} testID="catalog-disclosurecard-leading-collapsed" />} onPress={() => {}} progress={2 / 3} summary="2 av 3 elementer ferdige" title="Kollapset" testID="catalog-disclosurecard-progress-partial" />
+      <DisclosureCard accessibilityLabel="Åpent eksempel, 3 av 3 elementer ferdige" expanded leading={<Icon color={colors.primary} name="check" size={16} testID="catalog-disclosurecard-leading-expanded" />} onPress={() => {}} progress={1} summary="3 av 3 elementer ferdige" title="Åpen" testID="catalog-disclosurecard-progress-complete">
         <Text style={[typography.body, { color: colors.text }]}>Detaljinnholdet vises når kortet er åpent.</Text>
       </DisclosureCard>
     </ScrollView>

@@ -70,6 +70,7 @@ const STARTED_AT = new Date(2026, 7, 5, 10, 0).toISOString();
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
   jest.spyOn(global, 'requestAnimationFrame').mockImplementation((callback) => {
     callback(0);
     return 1;
@@ -87,6 +88,11 @@ const workoutWithSets = {
     ],
   }],
 };
+
+function exerciseProgress(exerciseId: number) {
+  const style = screen.UNSAFE_getByProps({ testID: `workout-exercise-${exerciseId}-progress` }).props.style.flat(Infinity);
+  return style.find((entry: { transform?: unknown }) => entry?.transform)?.transform[0].scaleX._value;
+}
 
 test('shows an active workout and opens its cancellable exercise picker', async () => {
   const navigate = jest.fn();
@@ -335,6 +341,12 @@ test('derives accessible and visual exercise completion from durable set status,
       { id: 9, exerciseId: 10, name: 'Delvis', position: 1, sets: workoutWithSets.exercises[0].sets },
       { id: 11, exerciseId: 12, name: 'Planlagt', position: 2, sets: [{ id: 13, loadKg: null, repetitions: null, confirmedAt: null }] },
       { id: 14, exerciseId: 15, name: 'Ingen sett', position: 3, sets: [] },
+      { id: 16, exerciseId: 17, name: 'Tre av fire', position: 4, sets: [
+        { id: 18, loadKg: 20, repetitions: 10, confirmedAt: STARTED_AT },
+        { id: 19, loadKg: 20, repetitions: 10, confirmedAt: STARTED_AT },
+        { id: 20, loadKg: 20, repetitions: 10, confirmedAt: STARTED_AT },
+        { id: 21, loadKg: 20, repetitions: 10, confirmedAt: null },
+      ] },
     ],
   });
   renderScreen({}, null);
@@ -343,6 +355,7 @@ test('derives accessible and visual exercise completion from durable set status,
   expect(screen.getByRole('button', { name: 'Delvis, 1 av 2 sett gjennomført, ikke fullført' })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Planlagt, 0 av 1 sett gjennomført, ikke fullført' })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Ingen sett, 0 av 0 sett gjennomført, ikke fullført' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Tre av fire, 3 av 4 sett gjennomført, ikke fullført' })).toBeOnTheScreen();
   expect(screen.getByTestId('workout-exercise-4-completion', { includeHiddenElements: true })).toHaveStyle({
     backgroundColor: lightColors.secondary,
     borderColor: lightColors.primary,
@@ -353,6 +366,32 @@ test('derives accessible and visual exercise completion from durable set status,
   });
   expect(screen.getByTestId('workout-exercise-4-completion-icon-check', { includeHiddenElements: true })).toBeOnTheScreen();
   expect(screen.getByTestId('workout-exercise-14-completion-icon-hourglass', { includeHiddenElements: true })).toBeOnTheScreen();
+  expect(exerciseProgress(4)).toBe(1);
+  expect(exerciseProgress(9)).toBe(0.5);
+  expect(exerciseProgress(11)).toBe(0);
+  expect(exerciseProgress(14)).toBe(0);
+  expect(exerciseProgress(16)).toBe(0.75);
+});
+
+test('uses neutral planned and green completed set-number treatments', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  renderScreen();
+
+  await screen.findByLabelText('Sett 1, 80 kilogram, 5 repetisjoner, Gjennomført');
+  expect(screen.UNSAFE_getByProps({ testID: 'workout-set-7-number' }).props.style).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+    backgroundColor: lightColors.secondary,
+    borderColor: lightColors.primary,
+    }),
+  ]));
+  expect(screen.UNSAFE_getByProps({ testID: 'workout-set-7-number-text' }).props.style).toEqual(expect.arrayContaining([expect.objectContaining({ color: lightColors.onSecondary })]));
+  expect(screen.UNSAFE_getByProps({ testID: 'workout-set-6-number' }).props.style).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+    backgroundColor: lightColors.surface,
+    borderColor: lightColors.border,
+    }),
+  ]));
+  expect(screen.UNSAFE_getByProps({ testID: 'workout-set-6-number-text' }).props.style).toEqual(expect.arrayContaining([expect.objectContaining({ color: lightColors.muted })]));
 });
 
 test('changes final-set completion only after persistence succeeds and preserves it on failed reopening', async () => {
@@ -374,11 +413,13 @@ test('changes final-set completion only after persistence succeeds and preserves
   expect(screen.getByRole('button', { name: incompleteName })).toBeOnTheScreen();
   await act(async () => finishConfirm());
   expect(await screen.findByRole('button', { name: 'Knebøy, 1 av 1 sett gjennomført, fullført' })).toBeOnTheScreen();
+  expect(exerciseProgress(4)).toBe(1);
 
   mockedUnconfirm.mockRejectedValue(new Error('write failed'));
   fireEvent.press(screen.getByRole('button', { name: 'Endre sett 1 til planlagt for Knebøy' }));
   expect(await screen.findByRole('button', { name: 'Prøv igjen' })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Knebøy, 1 av 1 sett gjennomført, fullført' })).toBeOnTheScreen();
+  expect(exerciseProgress(4)).toBe(1);
 });
 
 test('recalculates completion after durable add and delete operations', async () => {
@@ -391,9 +432,11 @@ test('recalculates completion after durable add and delete operations', async ()
   expect(await screen.findByRole('button', { name: 'Knebøy, 1 av 1 sett gjennomført, fullført' })).toBeOnTheScreen();
   fireEvent.press(screen.getByRole('button', { name: 'Legg til sett' }));
   expect(await screen.findByRole('button', { name: 'Knebøy, 1 av 2 sett gjennomført, ikke fullført' })).toBeOnTheScreen();
+  expect(exerciseProgress(4)).toBe(0.5);
   await openEditor(2);
   fireEvent.press(screen.getByRole('button', { name: 'Fjern sett 2 for Knebøy' }));
   expect(await screen.findByRole('button', { name: 'Knebøy, 1 av 1 sett gjennomført, fullført' })).toBeOnTheScreen();
+  expect(exerciseProgress(4)).toBe(1);
 });
 
 test('preserves completed exercise status when adding a planned set fails', async () => {
@@ -417,6 +460,7 @@ test('deleting the final completed set applies the zero-set incomplete exception
   fireEvent.press(screen.getByRole('button', { name: 'Bekreft fjerning av gjennomført sett' }));
 
   expect(await screen.findByRole('button', { name: 'Knebøy, 0 av 0 sett gjennomført, ikke fullført' })).toBeOnTheScreen();
+  expect(exerciseProgress(4)).toBe(0);
 });
 
 test('preserves completed exercise status when final-set deletion fails', async () => {
@@ -885,6 +929,7 @@ test('preserves an open completed-set editor when returning it to planned', asyn
   fireEvent.press(screen.getByRole('button', { name: 'Endre sett 1 til planlagt for Knebøy' }));
 
   await waitFor(() => expect(mockedUnconfirm).toHaveBeenCalledWith(database, 3, 7));
+  expect(exerciseProgress(4)).toBe(0);
   expect(screen.getByLabelText('Belastning for Knebøy')).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Lukk redigering av sett 1 for Knebøy' })).toBeOnTheScreen();
 });

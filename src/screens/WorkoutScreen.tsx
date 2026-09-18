@@ -679,6 +679,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
               else next.add(exercise.exerciseId);
               return next;
             })}
+            progress={exercise.sets.length === 0 ? 0 : completed / exercise.sets.length}
             leading={(
               <View
                 accessible={false}
@@ -695,6 +696,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
               </View>
             )}
             summary={summary}
+            testID={`workout-exercise-${exercise.id}`}
             title={exercise.name}
           >
             {expanded && (
@@ -728,9 +730,9 @@ export function WorkoutScreen({ navigation, route }: Props) {
                     >
                       <View style={[
                         styles.setNumber,
-                        { backgroundColor: completedSet ? colors.secondary : colors.surfaceAlt, borderColor: completedSet ? colors.primary : colors.border },
-                      ]}>
-                        <Text style={[typography.control, { color: completedSet ? colors.onSecondary : colors.text }]}>{index + 1}</Text>
+                        { backgroundColor: completedSet ? colors.secondary : colors.surface, borderColor: completedSet ? colors.primary : colors.border },
+                      ]} testID={`workout-set-${set.id}-number`}>
+                        <Text style={[typography.control, { color: completedSet ? colors.onSecondary : colors.muted }]} testID={`workout-set-${set.id}-number-text`}>{index + 1}</Text>
                       </View>
                       <View style={styles.setSummary}>
                         <Text style={[typography.body, { color: colors.text }]}>{set.loadKg === null ? '–' : formatLoad(set.loadKg)} kg · {set.repetitions ?? '–'} repetisjoner</Text>
