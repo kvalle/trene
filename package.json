@@ -9,6 +9,7 @@
     "catalog:android": "sh scripts/run-catalog.sh --android",
     "catalog:ios": "sh scripts/run-catalog.sh --ios",
     "prototype:active-workout": "printf 'Active Workout-prototypen kjorer pa http://localhost:4175\n' && python3 -m http.server 4175 --directory docs/design-system/prototypes/active-workout",
+    "prototype:current-workout": "printf 'Gjeldende treningsokt-prototype kjorer pa http://localhost:4180\n' && python3 -m http.server 4180 --directory docs/design-system/prototypes/current-workout",
     "prototype:appearance": "printf 'Appearance-prototypen kjorer pa http://localhost:4176\n' && python3 -m http.server 4176 --directory docs/design-system/prototypes/appearance",
     "prototype:exercise-completion": "printf 'Exercise completion-prototypen kjorer pa http://localhost:4177\n' && python3 -m http.server 4177 --directory docs/design-system/prototypes/exercise-completion",
     "start:android": "sh scripts/start-android-metro.sh",

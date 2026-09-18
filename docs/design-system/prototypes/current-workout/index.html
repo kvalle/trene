@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="nb" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trene - gjeldende treningsøkt</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside class="prototype-tools" aria-label="Prototypeverktøy">
+    <strong>Prototype: dagens skjerm</strong>
+    <span>Endringer lagres ikke</span>
+    <button id="theme-toggle" type="button">Mørk modus</button>
+    <button id="reset" type="button">Nullstill</button>
+  </aside>
+
+  <main class="stage">
+    <section class="phone" aria-label="Aktiv treningsøkt">
+      <div class="status-bar" aria-hidden="true"><span>9:52</span><span>● ◢ ▮</span></div>
+      <header class="app-header">
+        <button type="button" aria-label="Tilbake">‹</button>
+        <h1>Treningsøkt</h1>
+      </header>
+      <div class="screen">
+        <p class="started">Startet 18. september 2026 kl. 09:41</p>
+        <div id="exercise-list" class="exercise-list"></div>
+        <div class="workout-actions">
+          <button class="button secondary" type="button">Legg til øvelse</button>
+          <button id="finish" class="button primary" type="button">Ferdig</button>
+          <button class="button text" type="button">Avbryt</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="prototype.js"></script>
+</body>
+</html>
