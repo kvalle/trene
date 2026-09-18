@@ -97,7 +97,7 @@ export function DisclosureCard({ title, summary, expanded, onPress, accessibilit
 const styles = StyleSheet.create({
   card: { borderRadius: radii.container, borderWidth: 1, overflow: 'hidden' },
   header: { alignItems: 'center', flexDirection: 'row', gap: 12, minHeight: 56, padding: 16 },
-  progress: { bottom: 0, left: 0, position: 'absolute', top: 0, transformOrigin: 'left', width: '100%' },
+  progress: { bottom: 0, left: 0, position: 'absolute', right: 0, top: 0, transformOrigin: 'left' },
   copy: { flex: 1, gap: 4 },
   content: { borderTopWidth: 1, gap: 16, padding: 16 },
   pressed: { opacity: 0.72 },
