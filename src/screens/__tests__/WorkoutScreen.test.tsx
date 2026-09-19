@@ -834,7 +834,7 @@ test('blocks navigation and screen actions during an active drag', async () => {
   expect(dispatch).not.toHaveBeenCalled();
 });
 
-test('rejects drag while a set draft is dirty without swallowing the next card tap', async () => {
+test('keeps a dirty set draft attached while dragging and does not save it on collapse', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
     startedAt: STARTED_AT,
@@ -848,10 +848,11 @@ test('rejects drag while a set draft is dirty without swallowing the next card t
 
   fireEvent(deadlift, 'longPress');
   fireEvent(deadlift, 'touchEnd');
-  fireEvent.press(deadlift);
 
-  expect(deadlift).toHaveProp('accessibilityState', { expanded: true });
-  expect(screen.queryByText('Dra for å endre rekkefølge')).not.toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: /Knebøy/ })).toHaveProp('accessibilityState', { expanded: false });
+  fireEvent.press(screen.getByRole('button', { name: /Knebøy/ }));
+  expect(screen.getByLabelText('Belastning for Knebøy')).toHaveProp('value', '90');
+  expect(mockedSave).not.toHaveBeenCalled();
   expect(mockedReorderExercises).not.toHaveBeenCalled();
 });
 

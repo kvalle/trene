@@ -149,6 +149,6 @@ const styles = StyleSheet.create({
   progress: { bottom: 0, left: 0, position: 'absolute', right: 0, top: 0, transformOrigin: 'left' },
   copy: { flex: 1, gap: 4 },
   content: { borderTopWidth: 1, gap: 16, padding: 16 },
-  emphasizedSummary: { fontStyle: 'italic', fontWeight: '700' },
+  emphasizedSummary: { fontStyle: 'italic' },
   pressed: { opacity: 0.72 },
 });

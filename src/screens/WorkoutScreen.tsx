@@ -128,6 +128,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const cardLayouts = useRef(new Map<number, { height: number; y: number }>());
   const autoScrollTimer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const lastDragPageY = useRef(0);
+  const collapseForDrag = useRef(false);
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -432,6 +433,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   }
 
   function saveOnBlur(workoutId: number, set: WorkoutSet, exerciseName: string) {
+    if (collapseForDrag.current) return;
     const existing = pendingBlurSaves.current.get(set.id);
     if (existing) clearTimeout(existing);
     const timeout = setTimeout(() => {
@@ -765,12 +767,14 @@ export function WorkoutScreen({ navigation, route }: Props) {
 
   function startDrag(workoutExerciseId: number) {
     if (state.status !== 'ready' || state.workout.exercises.length < 2 || cancelling || completing
-      || pendingSetId !== undefined || pendingExerciseOperation !== undefined || pendingSaves.current > 0 || hasDirtyDraft) return false;
+      || pendingSetId !== undefined || pendingExerciseOperation !== undefined || pendingSaves.current > 0) return false;
     const startIndex = state.workout.exercises.findIndex((exercise) => exercise.id === workoutExerciseId);
     if (startIndex < 0) return false;
     pendingBlurSaves.current.forEach(clearTimeout);
     pendingBlurSaves.current.clear();
+    collapseForDrag.current = true;
     setExpandedIds(new Set());
+    requestAnimationFrame(() => { collapseForDrag.current = false; });
     setReorderFailure(false);
     const session = { workoutExerciseId, startIndex, targetIndex: startIndex, previousExercises: state.workout.exercises };
     dragExercisesRef.current = state.workout.exercises;
@@ -817,7 +821,8 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const hasPlannedSet = state.workout.exercises.some((exercise) =>
     exercise.sets.some((set) => set.confirmedAt === null),
   );
-  const workoutBusy = cancelling || completing || pendingSetId !== undefined || pendingExerciseOperation !== undefined || dragSession !== undefined;
+  const savingDraft = pendingSaves.current > 0;
+  const workoutBusy = cancelling || completing || pendingSetId !== undefined || pendingExerciseOperation !== undefined || savingDraft || dragSession !== undefined;
 
   return (
     <ScrollView
@@ -879,7 +884,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
             onReorderMove={moveDrag}
             onReorderStart={() => startDrag(exercise.id)}
             progress={exercise.sets.length === 0 ? 0 : completed / exercise.sets.length}
-            reorderEnabled={!workoutBusy && pendingSaves.current === 0 && state.workout.exercises.length > 1}
+            reorderEnabled={!workoutBusy && state.workout.exercises.length > 1}
             reordering={reordering}
             leading={(
               <View

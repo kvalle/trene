@@ -184,7 +184,7 @@ it('renders the generic reordering and emphasized-summary states', () => {
   );
 
   expect(screen.getByTestId('card')).toHaveStyle({ borderLeftWidth: 4 });
-  expect(screen.getByText('Flytt til #2')).toHaveStyle({ fontStyle: 'italic', fontWeight: '700' });
+  expect(screen.getByText('Flytt til #2')).toHaveStyle({ fontStyle: 'italic' });
 });
 
 it.each([
