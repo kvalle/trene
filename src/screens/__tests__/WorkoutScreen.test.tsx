@@ -882,7 +882,7 @@ test('removes optional reorder animation when reduced motion is enabled', async 
   renderScreen({}, null);
   fireEvent(await screen.findByTestId('workout-exercise-4'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 40 } } });
   fireEvent(screen.getByTestId('workout-exercise-9'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 126 } } });
-  fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'longPress');
+  fireEvent(screen.getAllByRole('button', { name: /Knebøy/ })[0], 'longPress');
   animate.mockClear();
 
   fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'touchMove', { nativeEvent: { pageY: 180 } });
@@ -919,6 +919,28 @@ test('rolls a failed reorder back without losing exercise data or draft values',
   expect(screen.getByRole('button', { name: 'Knebøy' })).toHaveProp('accessibilityActions', [
     { name: 'moveDown', label: 'Flytt ned' },
   ]);
+});
+
+test('rolls a failed drag reorder back and keeps every card collapsed', async () => {
+  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
+  });
+  mockedReorderExercises.mockRejectedValue(new Error('write failed'));
+  renderScreen({}, null);
+  fireEvent.press(await screen.findByRole('button', { name: /Knebøy/ }));
+  fireEvent(screen.getByTestId('workout-exercise-4'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 40 } } });
+  fireEvent(screen.getByTestId('workout-exercise-9'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 126 } } });
+  fireEvent(screen.getAllByRole('button', { name: /Knebøy/ })[0], 'longPress');
+  fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'touchMove', { nativeEvent: { pageY: 180 } });
+  fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'touchEnd');
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/Kunne ikke flytte øvelsen\. Prøv igjen\./);
+  expect(screen.getAllByText(/^(Knebøy|Markløft)$/).map((node) => node.props.children)).toEqual(['Knebøy', 'Markløft']);
+  expect(screen.getByRole('button', { name: /Knebøy/ })).toHaveProp('accessibilityState', { expanded: false });
+  expect(announce).toHaveBeenCalledWith('Kunne ikke flytte øvelsen. Prøv igjen.');
 });
 
 test('blocks navigation and further workout mutations while a reorder is being saved', async () => {
