@@ -108,6 +108,85 @@ it('exposes contextual actions on the interactive header', () => {
   }));
 });
 
+it('starts reorder on long press, forwards movement and drop, and suppresses the ordinary press', () => {
+  const onPress = jest.fn();
+  const onReorderStart = jest.fn();
+  const onReorderMove = jest.fn();
+  const onReorderEnd = jest.fn();
+  render(
+    <AppThemeProvider>
+      <DisclosureCard
+        expanded={false}
+        onPress={onPress}
+        onReorderEnd={onReorderEnd}
+        onReorderMove={onReorderMove}
+        onReorderStart={onReorderStart}
+        reorderEnabled
+        title="Detaljer"
+      />
+    </AppThemeProvider>,
+  );
+  const header = screen.getByRole('button', { name: 'Detaljer' });
+
+  fireEvent(header, 'longPress');
+  fireEvent(header, 'touchMove', { nativeEvent: { pageY: 240 } });
+  fireEvent(header, 'touchEnd');
+  fireEvent.press(header);
+
+  expect(onReorderStart).toHaveBeenCalledTimes(1);
+  expect(onReorderMove).toHaveBeenCalledWith(240);
+  expect(onReorderEnd).toHaveBeenCalledTimes(1);
+  expect(onPress).not.toHaveBeenCalled();
+});
+
+it('forwards reorder cancellation and does not start while disabled', () => {
+  const onReorderStart = jest.fn();
+  const onReorderCancel = jest.fn();
+  const rendered = render(
+    <AppThemeProvider>
+      <DisclosureCard expanded={false} onPress={() => {}} onReorderCancel={onReorderCancel} onReorderStart={onReorderStart} reorderEnabled title="Detaljer" />
+    </AppThemeProvider>,
+  );
+  fireEvent(screen.getByRole('button', { name: 'Detaljer' }), 'longPress');
+  fireEvent(screen.getByRole('button', { name: 'Detaljer' }), 'touchCancel');
+  expect(onReorderCancel).toHaveBeenCalledTimes(1);
+
+  rendered.rerender(
+    <AppThemeProvider>
+      <DisclosureCard expanded={false} onPress={() => {}} onReorderStart={onReorderStart} reorderEnabled={false} title="Detaljer" />
+    </AppThemeProvider>,
+  );
+  fireEvent(screen.getByRole('button', { name: 'Detaljer' }), 'longPress');
+  expect(onReorderStart).toHaveBeenCalledTimes(1);
+});
+
+it('keeps the next ordinary press when the reorder start is rejected', () => {
+  const onPress = jest.fn();
+  render(
+    <AppThemeProvider>
+      <DisclosureCard expanded={false} onPress={onPress} onReorderStart={() => false} reorderEnabled title="Detaljer" />
+    </AppThemeProvider>,
+  );
+  const header = screen.getByRole('button', { name: 'Detaljer' });
+
+  fireEvent(header, 'longPress');
+  fireEvent(header, 'touchEnd');
+  fireEvent.press(header);
+
+  expect(onPress).toHaveBeenCalledTimes(1);
+});
+
+it('renders the generic reordering and emphasized-summary states', () => {
+  render(
+    <AppThemeProvider>
+      <DisclosureCard expanded={false} onPress={() => {}} reordering summary="Flytt til #2" summaryEmphasized testID="card" title="Detaljer" />
+    </AppThemeProvider>,
+  );
+
+  expect(screen.getByTestId('card')).toHaveStyle({ borderLeftWidth: 4 });
+  expect(screen.getByText('Flytt til #2')).toHaveStyle({ fontStyle: 'italic', fontWeight: '700' });
+});
+
 it.each([
   [-1, 0],
   [0, 0],

@@ -537,6 +537,7 @@ const iconLabels: Record<IconName, string> = {
   trash: 'Slett',
   plus: 'Legg til',
   restore: 'Gjenopprett',
+  'move-vertical': 'Flytt vertikalt',
 };
 
 export function IconDetailScreen() {
@@ -705,7 +706,7 @@ export function DisclosureCardDetailScreen() {
   const { colors } = useAppTheme();
   return (
     <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-disclosurecard">
-      <DetailHeader name="DisclosureCard" description="Utvidbart kort med valgfritt ledende innhold, sammendrag, normalisert fremdrift og kontekstuelle tilgjengelighetshandlinger." usage="Bruk når hvert innholdselement skal kunne vise eller skjule detaljer uavhengig av de andre. I en ordnet liste kan headeren tilby mulige flyttehandlinger til hjelpemidler." />
+      <DetailHeader name="DisclosureCard" description="Utvidbart kort med valgfritt ledende innhold, sammendrag, normalisert fremdrift og generiske sorteringstilstander." usage="Bruk når hvert innholdselement skal kunne vise eller skjule detaljer uavhengig av de andre. I en ordnet liste kan headeren tilby flyttehandlinger til hjelpemidler og langt trykk for dra-sortering." />
       <DisclosureCard accessibilityLabel="Ingen fremdrift, 0 av 3 elementer ferdige" expanded={false} leading={<Icon color={colors.muted} name="hourglass" size={16} />} onPress={() => {}} progress={0} summary="0 av 3 elementer ferdige" title="Ingen fremdrift" testID="catalog-disclosurecard-progress-zero" />
       <DisclosureCard accessibilityLabel="Kollapset eksempel, 2 av 3 elementer ferdige" expanded={false} leading={<Icon color={colors.muted} name="hourglass" size={16} testID="catalog-disclosurecard-leading-collapsed" />} onPress={() => {}} progress={2 / 3} summary="2 av 3 elementer ferdige" title="Kollapset" testID="catalog-disclosurecard-progress-partial" />
       <DisclosureCard accessibilityLabel="Åpent eksempel, 3 av 3 elementer ferdige" expanded leading={<Icon color={colors.primary} name="check" size={16} testID="catalog-disclosurecard-leading-expanded" />} onPress={() => {}} progress={1} summary="3 av 3 elementer ferdige" title="Åpen" testID="catalog-disclosurecard-progress-complete">
@@ -715,6 +716,9 @@ export function DisclosureCardDetailScreen() {
       <DisclosureCard accessibilityActions={[{ name: 'moveDown', label: 'Flytt ned' }]} expanded={false} onAccessibilityAction={() => {}} onPress={() => {}} summary="Første element" title="Kun ned" testID="catalog-disclosurecard-action-down" />
       <DisclosureCard accessibilityActions={[{ name: 'moveUp', label: 'Flytt opp' }]} expanded={false} onAccessibilityAction={() => {}} onPress={() => {}} summary="Siste element" title="Kun opp" testID="catalog-disclosurecard-action-up" />
       <DisclosureCard accessibilityActions={[]} expanded={false} onAccessibilityAction={() => {}} onPress={() => {}} summary="Handlinger fjernet mens listen er opptatt" title="Opptatt liste" testID="catalog-disclosurecard-actions-busy" />
+      <DisclosureCard expanded={false} leading={<Icon color={colors.onPrimary} name="move-vertical" size={16} />} onPress={() => {}} reordering summary="Dra for å endre rekkefølge" summaryEmphasized title="Flyttes fra opprinnelig plass" testID="catalog-disclosurecard-reordering-origin" />
+      <DisclosureCard expanded={false} leading={<Icon color={colors.onPrimary} name="move-vertical" size={16} />} onPress={() => {}} reordering summary="Flytt til #3" summaryEmphasized title="Prospektiv plassering" testID="catalog-disclosurecard-reordering-target" />
+      <Text style={[typography.metadata, { color: colors.muted }]}>Ved redusert bevegelse brukes de samme tekst-, ikon-, flate- og kanttilstandene, men kortene skifter plass uten overgang.</Text>
     </ScrollView>
   );
 }

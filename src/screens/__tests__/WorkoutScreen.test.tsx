@@ -1,6 +1,6 @@
 import { NavigationContainer, usePreventRemove } from '@react-navigation/native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { AccessibilityInfo, AppState, type AppStateStatus, Keyboard, Modal } from 'react-native';
+import { AccessibilityInfo, AppState, type AppStateStatus, Keyboard, LayoutAnimation, Modal } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
@@ -32,7 +32,9 @@ jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   findNodeHandle: jest.fn((node) => node ? 12 : null),
 }));
 jest.mock('expo-haptics', () => ({
+  ImpactFeedbackStyle: { Medium: 'medium' },
   NotificationFeedbackType: { Error: 'error', Success: 'success' },
+  impactAsync: jest.fn(),
   notificationAsync: jest.fn(),
   selectionAsync: jest.fn(),
 }));
@@ -760,6 +762,132 @@ test('moves exercises in both directions immediately, persists each complete ord
   expect(screen.getAllByText(/^(Knebøy|Markløft|Benkpress)$/).map((node) => node.props.children))
     .toEqual(['Knebøy', 'Markløft', 'Benkpress']);
   expect(announce).toHaveBeenCalledWith('Markløft flyttet til plass 2 av 3.');
+});
+
+test('drags an exercise across positions, collapses every card, and persists once on drop', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [
+      ...workoutWithSets.exercises,
+      { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
+      { id: 11, exerciseId: 12, name: 'Benkpress', position: 2, sets: [] },
+    ],
+  });
+  renderScreen({}, null);
+  fireEvent.press(await screen.findByRole('button', { name: 'Knebøy' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Markløft' }));
+  fireEvent(screen.getByTestId('workout-exercise-4'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 40 } } });
+  fireEvent(screen.getByTestId('workout-exercise-9'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 126 } } });
+  fireEvent(screen.getByTestId('workout-exercise-11'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 212 } } });
+
+  fireEvent(screen.getAllByRole('button', { name: /Markløft/ })[0], 'longPress');
+
+  expect(screen.getByRole('button', { name: /Knebøy/ })).toHaveProp('accessibilityState', { expanded: false });
+  expect(screen.getByRole('button', { name: /Markløft/ })).toHaveProp('accessibilityState', { expanded: false });
+  expect(screen.getByText('Dra for å endre rekkefølge')).toBeOnTheScreen();
+  expect(screen.UNSAFE_getByProps({ testID: 'workout-exercise-9-completion-icon-move-vertical' })).toBeDefined();
+
+  fireEvent(screen.getByRole('button', { name: /Markløft/ }), 'touchMove', { nativeEvent: { pageY: 260 } });
+  expect(screen.getAllByText(/^(Knebøy|Markløft|Benkpress)$/).map((node) => node.props.children))
+    .toEqual(['Knebøy', 'Benkpress', 'Markløft']);
+  expect(screen.getByText('Flytt til #3')).toBeOnTheScreen();
+  expect(mockedReorderExercises).not.toHaveBeenCalled();
+
+  fireEvent(screen.getByRole('button', { name: /Markløft/ }), 'touchEnd');
+  await waitFor(() => expect(mockedReorderExercises).toHaveBeenCalledTimes(1));
+  expect(mockedReorderExercises).toHaveBeenCalledWith(database, 3, [4, 11, 9]);
+});
+
+test('does not persist an unchanged drag and keeps cards collapsed', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
+  });
+  renderScreen({}, null);
+  const squat = await screen.findByRole('button', { name: 'Knebøy' });
+  fireEvent.press(squat);
+  fireEvent(squat, 'longPress');
+  fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'touchEnd');
+
+  expect(mockedReorderExercises).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: /Knebøy/ })).toHaveProp('accessibilityState', { expanded: false });
+});
+
+test('blocks navigation and screen actions during an active drag', async () => {
+  let preventRemove: ((event: { data: { action: object } }) => void) | undefined;
+  const dispatch = jest.fn();
+  jest.mocked(usePreventRemove).mockImplementation((_, callback) => { preventRemove = callback as typeof preventRemove; });
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
+  });
+  renderScreen({ dispatch }, null);
+  fireEvent(await screen.findByRole('button', { name: /Knebøy/ }), 'longPress');
+
+  await waitFor(() => expect(usePreventRemove).toHaveBeenLastCalledWith(true, expect.any(Function)));
+  expect(screen.getByRole('button', { name: 'Legg til øvelse' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Avbryt' })).toBeDisabled();
+  act(() => preventRemove?.({ data: { action: { type: 'GO_BACK' } } }));
+  expect(dispatch).not.toHaveBeenCalled();
+});
+
+test('rejects drag while a set draft is dirty without swallowing the next card tap', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
+  });
+  renderScreen({}, null);
+  fireEvent.press(await screen.findByRole('button', { name: /Knebøy/ }));
+  await openEditor(2);
+  fireEvent.changeText(screen.getByLabelText('Belastning for Knebøy'), '90');
+  const deadlift = screen.getByRole('button', { name: /Markløft/ });
+
+  fireEvent(deadlift, 'longPress');
+  fireEvent(deadlift, 'touchEnd');
+  fireEvent.press(deadlift);
+
+  expect(deadlift).toHaveProp('accessibilityState', { expanded: true });
+  expect(screen.queryByText('Dra for å endre rekkefølge')).not.toBeOnTheScreen();
+  expect(mockedReorderExercises).not.toHaveBeenCalled();
+});
+
+test('cancels a drag without persistence and restores the saved order collapsed', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
+  });
+  renderScreen({}, null);
+  fireEvent(await screen.findByTestId('workout-exercise-4'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 40 } } });
+  fireEvent(screen.getByTestId('workout-exercise-9'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 126 } } });
+  fireEvent(await screen.findByRole('button', { name: /Knebøy/ }), 'longPress');
+  fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'touchMove', { nativeEvent: { pageY: 180 } });
+  fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'touchCancel');
+
+  expect(screen.getAllByText(/^(Knebøy|Markløft)$/).map((node) => node.props.children)).toEqual(['Knebøy', 'Markløft']);
+  expect(mockedReorderExercises).not.toHaveBeenCalled();
+});
+
+test('removes optional reorder animation when reduced motion is enabled', async () => {
+  const animate = jest.spyOn(LayoutAnimation, 'configureNext');
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
+  });
+  renderScreen({}, null);
+  fireEvent(await screen.findByTestId('workout-exercise-4'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 40 } } });
+  fireEvent(screen.getByTestId('workout-exercise-9'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 126 } } });
+  fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'longPress');
+  animate.mockClear();
+
+  fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'touchMove', { nativeEvent: { pageY: 180 } });
+
+  expect(animate).not.toHaveBeenCalled();
 });
 
 test('rolls a failed reorder back without losing exercise data or draft values', async () => {
