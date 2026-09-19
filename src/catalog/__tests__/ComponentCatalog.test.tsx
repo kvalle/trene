@@ -187,11 +187,14 @@ it('shows every NumericField state and keyboard kind', () => {
   expect(screen.getByTestId('catalog-numericfield-focus')).toHaveProp('autoFocus', true);
 });
 
-it('documents DisclosureCard leading content and explicit accessible labels', () => {
+it('documents DisclosureCard progress, leading content, and explicit accessible labels', () => {
   render(<AppThemeProvider><DisclosureCardDetailScreen /></AppThemeProvider>);
 
   expect(screen.getByTestId('catalog-disclosurecard-leading-collapsed', { includeHiddenElements: true })).toBeOnTheScreen();
   expect(screen.getByTestId('catalog-disclosurecard-leading-expanded', { includeHiddenElements: true })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Kollapset eksempel, 2 av 3 elementer ferdige' })).toHaveProp('accessibilityState', { expanded: false });
   expect(screen.getByRole('button', { name: 'Åpent eksempel, 3 av 3 elementer ferdige' })).toHaveProp('accessibilityState', { expanded: true });
+  expect(screen.getByTestId('catalog-disclosurecard-progress-zero-progress', { includeHiddenElements: true })).toBeOnTheScreen();
+  expect(screen.getByTestId('catalog-disclosurecard-progress-partial-progress', { includeHiddenElements: true })).toBeOnTheScreen();
+  expect(screen.getByTestId('catalog-disclosurecard-progress-complete-progress', { includeHiddenElements: true })).toBeOnTheScreen();
 });
