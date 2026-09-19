@@ -705,12 +705,16 @@ export function DisclosureCardDetailScreen() {
   const { colors } = useAppTheme();
   return (
     <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-disclosurecard">
-      <DetailHeader name="DisclosureCard" description="Utvidbart kort med valgfritt ledende innhold, sammendrag, normalisert fremdrift og detaljinnhold." usage="Bruk når hvert innholdselement skal kunne vise eller skjule detaljer uavhengig av de andre. Bruk fremdrift når en kjent andel av kortets innhold er ferdig, og behold ikon og tekst som selvstendige statussignaler." />
+      <DetailHeader name="DisclosureCard" description="Utvidbart kort med valgfritt ledende innhold, sammendrag, normalisert fremdrift og kontekstuelle tilgjengelighetshandlinger." usage="Bruk når hvert innholdselement skal kunne vise eller skjule detaljer uavhengig av de andre. I en ordnet liste kan headeren tilby mulige flyttehandlinger til hjelpemidler." />
       <DisclosureCard accessibilityLabel="Ingen fremdrift, 0 av 3 elementer ferdige" expanded={false} leading={<Icon color={colors.muted} name="hourglass" size={16} />} onPress={() => {}} progress={0} summary="0 av 3 elementer ferdige" title="Ingen fremdrift" testID="catalog-disclosurecard-progress-zero" />
       <DisclosureCard accessibilityLabel="Kollapset eksempel, 2 av 3 elementer ferdige" expanded={false} leading={<Icon color={colors.muted} name="hourglass" size={16} testID="catalog-disclosurecard-leading-collapsed" />} onPress={() => {}} progress={2 / 3} summary="2 av 3 elementer ferdige" title="Kollapset" testID="catalog-disclosurecard-progress-partial" />
       <DisclosureCard accessibilityLabel="Åpent eksempel, 3 av 3 elementer ferdige" expanded leading={<Icon color={colors.primary} name="check" size={16} testID="catalog-disclosurecard-leading-expanded" />} onPress={() => {}} progress={1} summary="3 av 3 elementer ferdige" title="Åpen" testID="catalog-disclosurecard-progress-complete">
         <Text style={[typography.body, { color: colors.text }]}>Detaljinnholdet vises når kortet er åpent.</Text>
       </DisclosureCard>
+      <DisclosureCard accessibilityActions={[{ name: 'moveUp', label: 'Flytt opp' }, { name: 'moveDown', label: 'Flytt ned' }]} expanded={false} onAccessibilityAction={() => {}} onPress={() => {}} summary="Midterste element i ordnet liste" title="Kontekstuelle handlinger" testID="catalog-disclosurecard-actions" />
+      <DisclosureCard accessibilityActions={[{ name: 'moveDown', label: 'Flytt ned' }]} expanded={false} onAccessibilityAction={() => {}} onPress={() => {}} summary="Første element" title="Kun ned" testID="catalog-disclosurecard-action-down" />
+      <DisclosureCard accessibilityActions={[{ name: 'moveUp', label: 'Flytt opp' }]} expanded={false} onAccessibilityAction={() => {}} onPress={() => {}} summary="Siste element" title="Kun opp" testID="catalog-disclosurecard-action-up" />
+      <DisclosureCard accessibilityActions={[]} expanded={false} onAccessibilityAction={() => {}} onPress={() => {}} summary="Handlinger fjernet mens listen er opptatt" title="Opptatt liste" testID="catalog-disclosurecard-actions-busy" />
     </ScrollView>
   );
 }

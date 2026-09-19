@@ -75,19 +75,28 @@ async function compactWorkoutExercisePositions(
   const workoutExercises = await database.getAllAsync<{ id: number }>(`
     SELECT id FROM workout_exercises WHERE workout_id = ? ORDER BY position ASC
   `, workoutId);
-  if (workoutExercises.length === 0) return;
+  await rewriteWorkoutExercisePositions(database, workoutId, workoutExercises.map(({ id }) => id));
+}
+
+async function rewriteWorkoutExercisePositions(
+  database: Database,
+  workoutId: number,
+  workoutExerciseIds: readonly number[],
+): Promise<void> {
+  if (workoutExerciseIds.length === 0) return;
   const offset = (await database.getFirstAsync<{ offset: number }>(`
     SELECT MAX(position) + 1 AS offset FROM workout_exercises WHERE workout_id = ?
-  `, workoutId))?.offset ?? workoutExercises.length;
+  `, workoutId))?.offset ?? workoutExerciseIds.length;
   await database.runAsync(
     'UPDATE workout_exercises SET position = position + ? WHERE workout_id = ?',
     offset, workoutId,
   );
-  for (const [position, workoutExercise] of workoutExercises.entries()) {
-    await database.runAsync(
-      'UPDATE workout_exercises SET position = ? WHERE id = ?',
-      position, workoutExercise.id,
+  for (const [position, workoutExerciseId] of workoutExerciseIds.entries()) {
+    const result = await database.runAsync(
+      'UPDATE workout_exercises SET position = ? WHERE id = ? AND workout_id = ?',
+      position, workoutExerciseId, workoutId,
     );
+    if (result.changes !== 1) throw new Error('Workout exercise order does not match active workout');
   }
 }
 
@@ -376,6 +385,32 @@ async function removeExerciseFromWorkoutWithDatabase(
   });
 }
 
+async function reorderActiveWorkoutExercisesWithDatabase(
+  database: Database,
+  workoutId: number,
+  workoutExerciseIds: readonly number[],
+): Promise<void> {
+  await transaction(database, async () => {
+    const activeWorkout = await database.getFirstAsync<WorkoutRow>(
+      "SELECT id FROM workouts WHERE id = ? AND status = 'active'",
+      workoutId,
+    );
+    if (!activeWorkout) throw new Error('Active workout not found');
+
+    const workoutExercises = await database.getAllAsync<{ id: number; position: number }>(`
+      SELECT id, position FROM workout_exercises WHERE workout_id = ? ORDER BY position ASC
+    `, workoutId);
+    const suppliedIds = new Set(workoutExerciseIds);
+    if (suppliedIds.size !== workoutExerciseIds.length
+      || workoutExercises.length !== workoutExerciseIds.length
+      || workoutExercises.some(({ id }) => !suppliedIds.has(id))) {
+      throw new Error('Workout exercise order does not match active workout');
+    }
+    if (workoutExercises.length < 2) throw new Error('Workout requires at least two exercises to reorder');
+    await rewriteWorkoutExercisePositions(database, workoutId, workoutExerciseIds);
+  });
+}
+
 async function loadActiveWorkoutWithDatabase(database: Database): Promise<ActiveWorkout | null> {
   const workout = await database.getFirstAsync<{ id: number; started_at: string }>(
     "SELECT id, started_at FROM workouts WHERE status = 'active'",
@@ -592,6 +627,7 @@ export const deletePlannedWorkoutSet = databaseOperation(deletePlannedWorkoutSet
 export const deleteCompletedWorkoutSet = databaseOperation(deleteCompletedWorkoutSetWithDatabase);
 export const addWorkoutSet = databaseOperation(addWorkoutSetWithDatabase);
 export const removeExerciseFromWorkout = databaseOperation(removeExerciseFromWorkoutWithDatabase);
+export const reorderActiveWorkoutExercises = databaseOperation(reorderActiveWorkoutExercisesWithDatabase);
 export const loadActiveWorkout = databaseOperation(loadActiveWorkoutWithDatabase);
 export const loadCompletedWorkout = databaseOperation(loadCompletedWorkoutWithDatabase);
 export const listCompletedWorkouts = databaseOperation(listCompletedWorkoutsWithDatabase);

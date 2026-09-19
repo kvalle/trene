@@ -169,6 +169,9 @@ eier statusbetydning og ordlyd, mens ledende ikoner er dekorative. En valgfri,
 normalisert fremdriftsverdi fyller headeren fra venstre med `secondary` under
 innholdet. Verdien avgrenses til 0–1 og endres uten animasjon ved redusert
 bevegelse; synlig ikon og tekst skal fortsatt kommunisere statusen.
+Headeren kan eksponere kontekstuelle tilgjengelighetshandlinger når kort inngår
+i en ordnet liste. Bare handlinger som er mulige i gjeldende posisjon tilbys,
+og handlingene fjernes mens listen er opptatt med en mutasjon.
 
 Feedback og sidevisninger holdes adskilt. Loader, informasjonsvarsel og
 feilvarsel er komponenter som kan plasseres i ulike kontekster. `PositiveStatus`

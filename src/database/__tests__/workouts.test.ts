@@ -24,6 +24,7 @@ import {
   loadCompletedWorkout,
   loadActiveWorkout,
   removeExerciseFromWorkout,
+  reorderActiveWorkoutExercises,
   saveCompletedWorkoutSet,
   savePlannedWorkoutSet,
   startWorkout,
@@ -931,6 +932,166 @@ describe('active workout persistence', () => {
     expect((await loadActiveWorkout(database))!.exercises.map(({ exerciseId, position }) => ({ exerciseId, position })))
       .toEqual([{ exerciseId: secondId, position: 0 }, { exerciseId: thirdId, position: 1 }]);
     await expect(addExerciseToWorkout(database, workoutId, secondId)).rejects.toThrow();
+  });
+
+  describe('exercise reordering', () => {
+    async function createWorkoutWithThreeExercises(database: TestDatabase) {
+      await migrateDatabase(database);
+      const workoutId = await startWorkout(database);
+      for (const name of ['Knebøy', 'Benkpress', 'Markløft']) {
+        const exerciseId = await createExercise(database, name, exerciseNameKey(name));
+        await addExerciseToWorkout(database, workoutId, exerciseId);
+      }
+      return { workoutId, exercises: (await loadActiveWorkout(database))!.exercises };
+    }
+
+    test('moves exercises down and up with unique contiguous positions', async () => {
+      const database = new TestDatabase();
+      const { workoutId, exercises: [first, second, third] } = await createWorkoutWithThreeExercises(database);
+
+      await reorderActiveWorkoutExercises(database, workoutId, [second.id, first.id, third.id]);
+      expect((await loadActiveWorkout(database))!.exercises.map(({ id, position }) => ({ id, position })))
+        .toEqual([
+          { id: second.id, position: 0 },
+          { id: first.id, position: 1 },
+          { id: third.id, position: 2 },
+        ]);
+
+      await reorderActiveWorkoutExercises(database, workoutId, [second.id, third.id, first.id]);
+      expect((await database.getAllAsync<{ id: number; position: number }>(`
+        SELECT id, position FROM workout_exercises WHERE workout_id = ? ORDER BY position ASC
+      `, workoutId))).toEqual([
+        { id: second.id, position: 0 },
+        { id: third.id, position: 1 },
+        { id: first.id, position: 2 },
+      ]);
+
+      await reorderActiveWorkoutExercises(database, workoutId, [first.id, third.id, second.id]);
+      expect((await loadActiveWorkout(database))!.exercises.map(({ id, position }) => ({ id, position })))
+        .toEqual([
+          { id: first.id, position: 0 },
+          { id: third.id, position: 1 },
+          { id: second.id, position: 2 },
+        ]);
+    });
+
+    test.each([
+      ['a missing identity', (ids: number[]) => ids.slice(0, 2)],
+      ['a duplicate identity', (ids: number[]) => [ids[0], ids[0], ids[2]]],
+      ['an unknown identity', (ids: number[]) => [ids[0], ids[1], 999_999]],
+      ['an extra identity', (ids: number[]) => [...ids, 999_999]],
+    ])('rejects an order containing %s without changing positions', async (_case, order) => {
+      const database = new TestDatabase();
+      const { workoutId, exercises } = await createWorkoutWithThreeExercises(database);
+      const ids = exercises.map(({ id }) => id);
+
+      await expect(reorderActiveWorkoutExercises(database, workoutId, order(ids)))
+        .rejects.toThrow('Workout exercise order does not match active workout');
+      expect((await loadActiveWorkout(database))!.exercises.map(({ id, position }) => ({ id, position })))
+        .toEqual(exercises.map(({ id, position }) => ({ id, position })));
+    });
+
+    test('rejects identities belonging to another workout', async () => {
+      const database = new TestDatabase();
+      const { workoutId, exercises } = await createWorkoutWithThreeExercises(database);
+      const exerciseId = await createExercise(database, 'Roing', exerciseNameKey('Roing'));
+      const completedWorkout = await database.runAsync(
+        "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'start', 'done')",
+      );
+      const foreign = await database.runAsync(
+        'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
+        completedWorkout.lastInsertRowId, exerciseId,
+      );
+
+      await expect(reorderActiveWorkoutExercises(database, workoutId, [
+        exercises[0].id, exercises[1].id, foreign.lastInsertRowId,
+      ])).rejects.toThrow('Workout exercise order does not match active workout');
+      expect((await loadActiveWorkout(database))!.exercises).toEqual(exercises);
+    });
+
+    test('rejects inactive and missing workouts', async () => {
+      const database = new TestDatabase();
+      const { workoutId, exercises } = await createWorkoutWithThreeExercises(database);
+      const ids = exercises.map(({ id }) => id);
+      await database.runAsync(
+        "UPDATE workouts SET status = 'completed', completed_at = 'done' WHERE id = ?",
+        workoutId,
+      );
+
+      await expect(reorderActiveWorkoutExercises(database, workoutId, ids))
+        .rejects.toThrow('Active workout not found');
+      await expect(reorderActiveWorkoutExercises(database, workoutId + 1, []))
+        .rejects.toThrow('Active workout not found');
+      expect((await loadCompletedWorkout(database, workoutId))!.exercises.map(({ id, position }) => ({ id, position })))
+        .toEqual(exercises.map(({ id, position }) => ({ id, position })));
+    });
+
+    test('rejects reordering when the active workout has fewer than two exercises', async () => {
+      const database = new TestDatabase();
+      await migrateDatabase(database);
+      const workoutId = await startWorkout(database);
+
+      await expect(reorderActiveWorkoutExercises(database, workoutId, []))
+        .rejects.toThrow('Workout requires at least two exercises to reorder');
+
+      const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+      await addExerciseToWorkout(database, workoutId, exerciseId);
+      const [workoutExercise] = (await loadActiveWorkout(database))!.exercises;
+      await expect(reorderActiveWorkoutExercises(database, workoutId, [workoutExercise.id]))
+        .rejects.toThrow('Workout requires at least two exercises to reorder');
+      expect((await loadActiveWorkout(database))!.exercises).toEqual([workoutExercise]);
+    });
+
+    test('rolls back every position when a rewrite fails', async () => {
+      const database = new TestDatabase();
+      const { workoutId, exercises: [first, second, third] } = await createWorkoutWithThreeExercises(database);
+      await database.execAsync(`
+        CREATE TRIGGER reject_reorder_position BEFORE UPDATE OF position ON workout_exercises
+        WHEN OLD.id = ${first.id} AND NEW.position = 1
+        BEGIN SELECT RAISE(ABORT, 'write failed'); END;
+      `);
+
+      await expect(reorderActiveWorkoutExercises(database, workoutId, [second.id, first.id, third.id]))
+        .rejects.toThrow('write failed');
+      expect((await loadActiveWorkout(database))!.exercises).toEqual([first, second, third]);
+    });
+
+    test('preserves exercise and set data and supplies persisted order to history and the next template', async () => {
+      const database = new TestDatabase();
+      const { workoutId, exercises: [first, second, third] } = await createWorkoutWithThreeExercises(database);
+      await savePlannedWorkoutSet(database, workoutId, first.sets[0].id, 80, 5);
+      await confirmWorkoutSet(database, workoutId, second.sets[0].id, 60, 8, 'second-confirmed');
+      await confirmWorkoutSet(database, workoutId, third.sets[0].id, 100, 3, 'third-confirmed');
+      const extraSet = await addWorkoutSet(database, workoutId, second.id);
+      await savePlannedWorkoutSet(database, workoutId, extraSet.id, 62.5, 6);
+      const before = (await loadActiveWorkout(database))!.exercises;
+
+      await reorderActiveWorkoutExercises(database, workoutId, [third.id, first.id, second.id]);
+
+      expect((await loadActiveWorkout(database))!.exercises).toEqual([
+        { ...before[2], position: 0 },
+        { ...before[0], position: 1 },
+        { ...before[1], position: 2 },
+      ]);
+
+      await confirmWorkoutSet(database, workoutId, first.sets[0].id, 80, 5, 'first-confirmed');
+      await completeWorkout(database, workoutId, 'completed');
+      expect((await loadCompletedWorkout(database, workoutId))!.exercises.map(({ id, position }) => ({ id, position })))
+        .toEqual([
+          { id: third.id, position: 0 },
+          { id: first.id, position: 1 },
+          { id: second.id, position: 2 },
+        ]);
+
+      const nextWorkoutId = await startWorkout(database);
+      expect((await loadActiveWorkout(database))!.exercises.map(({ exerciseId, position }) => ({ exerciseId, position })))
+        .toEqual([
+          { exerciseId: third.exerciseId, position: 0 },
+          { exerciseId: first.exerciseId, position: 1 },
+          { exerciseId: second.exerciseId, position: 2 },
+        ]);
+      expect(nextWorkoutId).not.toBe(workoutId);
+    });
   });
 
   test('compacts positions when completion removes an empty exercise', async () => {

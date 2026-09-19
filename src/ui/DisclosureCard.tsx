@@ -17,7 +17,7 @@ type DisclosureCardProps = ViewProps & {
   children?: React.ReactNode;
 };
 
-export function DisclosureCard({ title, summary, expanded, onPress, accessibilityLabel, leading, progress, headerRef, children, style, testID, ...rest }: DisclosureCardProps) {
+export function DisclosureCard({ title, summary, expanded, onPress, accessibilityLabel, accessibilityActions, onAccessibilityAction, leading, progress, headerRef, children, style, testID, ...rest }: DisclosureCardProps) {
   const { colors } = useAppTheme();
   const [reduceMotion, setReduceMotion] = useState(true);
   const normalizedProgress = Number.isFinite(progress) ? Math.min(1, Math.max(0, progress ?? 0)) : 0;
@@ -64,9 +64,11 @@ export function DisclosureCard({ title, summary, expanded, onPress, accessibilit
   return (
     <View {...rest} testID={testID} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, style]}>
       <Pressable
+        accessibilityActions={accessibilityActions}
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
         accessibilityState={{ expanded }}
+        onAccessibilityAction={onAccessibilityAction}
         onPress={toggle}
         ref={headerRef}
         style={({ pressed }) => [styles.header, pressed && styles.pressed]}

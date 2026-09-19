@@ -16,6 +16,7 @@ import {
   getActiveWorkoutId,
   loadActiveWorkout,
   removeExerciseFromWorkout,
+  reorderActiveWorkoutExercises,
   saveCompletedWorkoutSet,
   savePlannedWorkoutSet,
   unconfirmWorkoutSet,
@@ -49,6 +50,7 @@ jest.mock('../../database/workouts', () => ({
   getActiveWorkoutId: jest.fn(),
   loadActiveWorkout: jest.fn(),
   removeExerciseFromWorkout: jest.fn(),
+  reorderActiveWorkoutExercises: jest.fn(),
   saveCompletedWorkoutSet: jest.fn(),
   savePlannedWorkoutSet: jest.fn(),
   unconfirmWorkoutSet: jest.fn(),
@@ -65,6 +67,7 @@ const mockedGetActiveWorkoutIdForSharedDraft = jest.mocked(getActiveWorkoutId);
 const mockedSave = jest.mocked(savePlannedWorkoutSet);
 const mockedSaveCompleted = jest.mocked(saveCompletedWorkoutSet);
 const mockedRemoveExercise = jest.mocked(removeExerciseFromWorkout);
+const mockedReorderExercises = jest.mocked(reorderActiveWorkoutExercises);
 const mockedUnconfirm = jest.mocked(unconfirmWorkoutSet);
 const STARTED_AT = new Date(2026, 7, 5, 10, 0).toISOString();
 
@@ -687,6 +690,158 @@ test('starts collapsed and lets every exercise expand and collapse independently
   expect(deadlift).toHaveProp('accessibilityState', { expanded: true });
   fireEvent.press(deadlift);
   expect(deadlift).toHaveProp('accessibilityState', { expanded: false });
+});
+
+test('exposes only possible reorder actions on exercise headers', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [
+      ...workoutWithSets.exercises,
+      { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
+      { id: 11, exerciseId: 12, name: 'Benkpress', position: 2, sets: [] },
+    ],
+  });
+  renderScreen({}, null);
+
+  expect(await screen.findByRole('button', { name: 'Knebøy' })).toHaveProp(
+    'accessibilityActions',
+    [{ name: 'moveDown', label: 'Flytt ned' }],
+  );
+  expect(screen.getByRole('button', { name: 'Markløft' })).toHaveProp('accessibilityActions', [
+    { name: 'moveUp', label: 'Flytt opp' },
+    { name: 'moveDown', label: 'Flytt ned' },
+  ]);
+  expect(screen.getByRole('button', { name: 'Benkpress' })).toHaveProp(
+    'accessibilityActions',
+    [{ name: 'moveUp', label: 'Flytt opp' }],
+  );
+});
+
+test('does not expose reorder actions for a one-exercise workout', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  renderScreen({}, null);
+
+  expect(await screen.findByRole('button', { name: 'Knebøy' })).toHaveProp('accessibilityActions', []);
+});
+
+test('moves exercises in both directions immediately, persists each complete order, and announces success', async () => {
+  let finishFirstMove: () => void = () => undefined;
+  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [
+      ...workoutWithSets.exercises,
+      { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
+      { id: 11, exerciseId: 12, name: 'Benkpress', position: 2, sets: [] },
+    ],
+  });
+  mockedReorderExercises
+    .mockImplementationOnce(() => new Promise<void>((resolve) => { finishFirstMove = resolve; }))
+    .mockResolvedValueOnce();
+  renderScreen({}, null);
+
+  const deadlift = await screen.findByRole('button', { name: 'Markløft' });
+  fireEvent(deadlift, 'accessibilityAction', { nativeEvent: { actionName: 'moveUp' } });
+
+  expect(screen.getAllByText(/^(Knebøy|Markløft|Benkpress)$/).map((node) => node.props.children))
+    .toEqual(['Markløft', 'Knebøy', 'Benkpress']);
+  expect(mockedReorderExercises).toHaveBeenCalledWith(database, 3, [9, 4, 11]);
+  expect(screen.getByRole('button', { name: 'Knebøy' })).toHaveProp('accessibilityActions', []);
+
+  await act(async () => finishFirstMove());
+  expect(announce).toHaveBeenCalledWith('Markløft flyttet til plass 1 av 3.');
+
+  fireEvent(screen.getByRole('button', { name: 'Markløft' }), 'accessibilityAction', {
+    nativeEvent: { actionName: 'moveDown' },
+  });
+  await waitFor(() => expect(mockedReorderExercises).toHaveBeenLastCalledWith(database, 3, [4, 9, 11]));
+  expect(screen.getAllByText(/^(Knebøy|Markløft|Benkpress)$/).map((node) => node.props.children))
+    .toEqual(['Knebøy', 'Markløft', 'Benkpress']);
+  expect(announce).toHaveBeenCalledWith('Markløft flyttet til plass 2 av 3.');
+});
+
+test('rolls a failed reorder back without losing exercise data or draft values', async () => {
+  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [
+      ...workoutWithSets.exercises,
+      { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
+    ],
+  });
+  mockedReorderExercises.mockRejectedValue(new Error('write failed'));
+  renderScreen({}, null);
+  fireEvent.press(await screen.findByRole('button', { name: 'Knebøy' }));
+  await openEditor(2);
+  fireEvent.changeText(screen.getByLabelText('Belastning for Knebøy'), '82,5');
+
+  fireEvent(screen.getByRole('button', { name: 'Knebøy' }), 'accessibilityAction', {
+    nativeEvent: { actionName: 'moveDown' },
+  });
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/Kunne ikke flytte øvelsen\. Prøv igjen\./);
+  expect(screen.getAllByText(/^(Knebøy|Markløft)$/).map((node) => node.props.children))
+    .toEqual(['Knebøy', 'Markløft']);
+  expect(screen.getByLabelText('Belastning for Knebøy')).toHaveProp('value', '82,5');
+  expect(screen.getByLabelText('Sett 1, 80 kilogram, 5 repetisjoner, Gjennomført')).toBeOnTheScreen();
+  expect(announce).toHaveBeenCalledWith('Kunne ikke flytte øvelsen. Prøv igjen.');
+  expect(screen.getByRole('button', { name: 'Knebøy' })).toHaveProp('accessibilityActions', [
+    { name: 'moveDown', label: 'Flytt ned' },
+  ]);
+});
+
+test('blocks navigation and further workout mutations while a reorder is being saved', async () => {
+  let preventRemove: ((event: { data: { action: object } }) => void) | undefined;
+  const dispatch = jest.fn();
+  jest.mocked(usePreventRemove).mockImplementation((_, callback) => { preventRemove = callback as typeof preventRemove; });
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [
+      ...workoutWithSets.exercises,
+      { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
+    ],
+  });
+  mockedReorderExercises.mockImplementation(() => new Promise(() => {}));
+  renderScreen({ dispatch }, null);
+
+  fireEvent(await screen.findByRole('button', { name: 'Knebøy' }), 'accessibilityAction', {
+    nativeEvent: { actionName: 'moveDown' },
+  });
+
+  await waitFor(() => expect(usePreventRemove).toHaveBeenLastCalledWith(true, expect.any(Function)));
+  expect(screen.getByRole('button', { name: 'Knebøy' })).toHaveProp('accessibilityActions', []);
+  expect(screen.getByRole('button', { name: 'Legg til øvelse' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Avbryt' })).toBeDisabled();
+  act(() => preventRemove?.({ data: { action: { type: 'GO_BACK' } } }));
+  expect(dispatch).not.toHaveBeenCalled();
+});
+
+test('does not reorder while a set save is in progress', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [
+      ...workoutWithSets.exercises,
+      { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
+    ],
+  });
+  mockedSave.mockImplementation(() => new Promise(() => {}));
+  renderScreen({}, null);
+  fireEvent.press(await screen.findByRole('button', { name: 'Knebøy' }));
+  await openEditor(2);
+  const load = await screen.findByLabelText('Belastning for Knebøy');
+  fireEvent.changeText(load, '90');
+  fireEvent(load, 'blur');
+  await waitFor(() => expect(mockedSave).toHaveBeenCalled());
+
+  const squat = screen.getByRole('button', { name: 'Knebøy' });
+  expect(squat).toHaveProp('accessibilityActions', []);
+  fireEvent(squat, 'accessibilityAction', { nativeEvent: { actionName: 'moveDown' } });
+  expect(mockedReorderExercises).not.toHaveBeenCalled();
 });
 
 test('preserves expansion while the workout screen instance remains mounted', async () => {
