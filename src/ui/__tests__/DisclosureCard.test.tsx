@@ -86,6 +86,28 @@ it('renders generic leading content and forwards the explicit accessible name', 
   );
 });
 
+it('exposes contextual actions on the interactive header', () => {
+  const onAccessibilityAction = jest.fn();
+  render(
+    <AppThemeProvider>
+      <DisclosureCard
+        accessibilityActions={[{ name: 'moveUp', label: 'Flytt opp' }]}
+        expanded={false}
+        onAccessibilityAction={onAccessibilityAction}
+        title="Detaljer"
+        onPress={() => {}}
+      />
+    </AppThemeProvider>,
+  );
+
+  const header = screen.getByRole('button', { name: 'Detaljer' });
+  expect(header).toHaveProp('accessibilityActions', [{ name: 'moveUp', label: 'Flytt opp' }]);
+  fireEvent(header, 'accessibilityAction', { nativeEvent: { actionName: 'moveUp' } });
+  expect(onAccessibilityAction).toHaveBeenCalledWith(expect.objectContaining({
+    nativeEvent: expect.objectContaining({ actionName: 'moveUp' }),
+  }));
+});
+
 it.each([
   [-1, 0],
   [0, 0],

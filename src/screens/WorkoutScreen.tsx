@@ -27,6 +27,7 @@ import {
   deletePlannedWorkoutSet,
   loadActiveWorkout,
   removeExerciseFromWorkout,
+  reorderActiveWorkoutExercises,
   saveCompletedWorkoutSet,
   savePlannedWorkoutSet,
   unconfirmWorkoutSet,
@@ -79,12 +80,13 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const [completeFailed, setCompleteFailed] = useState(false);
   const [cancelFailed, setCancelFailed] = useState(false);
   const [pendingSetId, setPendingSetId] = useState<number>();
-  const [pendingExerciseOperation, setPendingExerciseOperation] = useState<'add-set' | 'remove-exercise'>();
+  const [pendingExerciseOperation, setPendingExerciseOperation] = useState<'add-set' | 'remove-exercise' | 'reorder-exercises'>();
   const [setFailure, setSetFailure] = useState<{ setId: number; message: string; retry: () => void }>();
   const [setRetryFocus, setSetRetryFocus] = useState<{ setId: number }>();
   const [exerciseFailure, setExerciseFailure] = useState<{
     workoutExerciseId: number; message: string; operation: 'add-set' | 'remove-exercise';
   }>();
+  const [reorderFailure, setReorderFailure] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(true);
   const addExerciseRef = useRef<View>(null);
   const cancelRef = useRef<View>(null);
@@ -103,6 +105,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const saveQueueFailed = useRef(false);
   const pendingSaves = useRef(0);
   const pendingBlurSaves = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+  const reorderInProgress = useRef(false);
   const cardRefs = useRef(new Map<number, View>());
   const loadInputRefs = useRef(new Map<number, TextInput>());
   const repetitionsInputRefs = useRef(new Map<number, TextInput>());
@@ -639,6 +642,59 @@ export function WorkoutScreen({ navigation, route }: Props) {
     }
   }
 
+  async function moveExercise(workoutExerciseId: number, offset: -1 | 1) {
+    if (state.status !== 'ready' || cancelling || completing || pendingSetId !== undefined
+      || pendingExerciseOperation !== undefined || reorderInProgress.current || pendingSaves.current > 0) return;
+    pendingBlurSaves.current.forEach(clearTimeout);
+    pendingBlurSaves.current.clear();
+    const previousExercises = state.workout.exercises;
+    const from = previousExercises.findIndex((exercise) => exercise.id === workoutExerciseId);
+    const to = from + offset;
+    if (from < 0 || to < 0 || to >= previousExercises.length) return;
+    const exercises = [...previousExercises];
+    const [moved] = exercises.splice(from, 1);
+    exercises.splice(to, 0, moved);
+    const positionedExercises = exercises.map((exercise, position) => ({ ...exercise, position }));
+
+    setReorderFailure(false);
+    reorderInProgress.current = true;
+    setPendingExerciseOperation('reorder-exercises');
+    setState({ status: 'ready', workout: { ...state.workout, exercises: positionedExercises } });
+    try {
+      const persistence = reorderActiveWorkoutExercises(
+        database,
+        state.workout.id,
+        positionedExercises.map((exercise) => exercise.id),
+      );
+      saveQueue.current = persistence.then(() => undefined, () => undefined);
+      await persistence;
+      AccessibilityInfo.announceForAccessibility(
+        `${moved.name} flyttet til plass ${to + 1} av ${positionedExercises.length}.`,
+      );
+    } catch {
+      setState((current) => {
+        if (current.status !== 'ready') return current;
+        const currentById = new Map(current.workout.exercises.map((exercise) => [exercise.id, exercise]));
+        return {
+          status: 'ready',
+          workout: {
+            ...current.workout,
+            exercises: previousExercises.map((exercise, position) => ({
+              ...(currentById.get(exercise.id) ?? exercise),
+              position,
+            })),
+          },
+        };
+      });
+      setReorderFailure(true);
+      AccessibilityInfo.announceForAccessibility('Kunne ikke flytte øvelsen. Prøv igjen.');
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      reorderInProgress.current = false;
+      setPendingExerciseOperation(undefined);
+    }
+  }
+
   if (state.status === 'loading') return <PageStatus variant="loading" loaderLabel="Laster treningsøkt" />;
   if (state.status === 'failed') return <PageStatus variant="error" title="Kunne ikke laste inn" actionTitle="Prøv igjen" onAction={() => setReload((value) => value + 1)} />;
 
@@ -648,7 +704,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const hasPlannedSet = state.workout.exercises.some((exercise) =>
     exercise.sets.some((set) => set.confirmedAt === null),
   );
-  const workoutBusy = completing || pendingSetId !== undefined || pendingExerciseOperation !== undefined;
+  const workoutBusy = cancelling || completing || pendingSetId !== undefined || pendingExerciseOperation !== undefined;
 
   return (
     <ScrollView
@@ -662,7 +718,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
       {state.workout.exercises.length === 0 && (
         <Text style={[typography.body, styles.empty, { color: colors.text }]}>Ingen øvelser lagt til ennå</Text>
       )}
-      {state.workout.exercises.map((exercise) => {
+      {state.workout.exercises.map((exercise, exerciseIndex) => {
         const expanded = expandedIds.has(exercise.exerciseId);
         const completed = exercise.sets.filter((set) => set.confirmedAt !== null).length;
         const exerciseCompleted = exercise.sets.length > 0 && completed === exercise.sets.length;
@@ -670,6 +726,10 @@ export function WorkoutScreen({ navigation, route }: Props) {
         return (
           <DisclosureCard
             key={exercise.id}
+            accessibilityActions={workoutBusy ? [] : [
+              ...(exerciseIndex > 0 ? [{ name: 'moveUp', label: 'Flytt opp' }] : []),
+              ...(exerciseIndex < state.workout.exercises.length - 1 ? [{ name: 'moveDown', label: 'Flytt ned' }] : []),
+            ]}
             accessibilityLabel={`${exercise.name}, ${summary}, ${exerciseCompleted ? 'fullført' : 'ikke fullført'}`}
             expanded={expanded}
             headerRef={(node) => { if (node) cardRefs.current.set(exercise.exerciseId, node); }}
@@ -679,6 +739,10 @@ export function WorkoutScreen({ navigation, route }: Props) {
               else next.add(exercise.exerciseId);
               return next;
             })}
+            onAccessibilityAction={(event) => {
+              if (event.nativeEvent.actionName === 'moveUp') void moveExercise(exercise.id, -1);
+              if (event.nativeEvent.actionName === 'moveDown') void moveExercise(exercise.id, 1);
+            }}
             progress={exercise.sets.length === 0 ? 0 : completed / exercise.sets.length}
             leading={(
               <View
@@ -882,6 +946,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
           </DisclosureCard>
         );
       })}
+      {reorderFailure && <ErrorAlert message="Kunne ikke flytte øvelsen. Prøv igjen." />}
       <Button
         ref={addExerciseRef}
         disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || hasUnsavedDraft}
