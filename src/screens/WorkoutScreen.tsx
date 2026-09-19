@@ -661,7 +661,13 @@ export function WorkoutScreen({ navigation, route }: Props) {
     setPendingExerciseOperation('reorder-exercises');
     setState({ status: 'ready', workout: { ...state.workout, exercises: positionedExercises } });
     try {
-      await reorderActiveWorkoutExercises(database, state.workout.id, positionedExercises.map((exercise) => exercise.id));
+      const persistence = reorderActiveWorkoutExercises(
+        database,
+        state.workout.id,
+        positionedExercises.map((exercise) => exercise.id),
+      );
+      saveQueue.current = persistence.then(() => undefined, () => undefined);
+      await persistence;
       AccessibilityInfo.announceForAccessibility(
         `${moved.name} flyttet til plass ${to + 1} av ${positionedExercises.length}.`,
       );
