@@ -131,7 +131,7 @@ it('starts reorder on long press, forwards movement and drop, and suppresses the
 
   fireEvent(header, 'longPress');
   fireEvent(header, 'touchMove', { nativeEvent: { pageY: 240 } });
-  fireEvent(header, 'touchEnd');
+  fireEvent(header, 'pressOut');
   fireEvent.press(header);
 
   expect(onReorderStart).toHaveBeenCalledTimes(1);
@@ -176,7 +176,7 @@ it('keeps the next ordinary press when the reorder start is rejected', () => {
   const header = screen.getByRole('button', { name: 'Detaljer' });
 
   fireEvent(header, 'longPress');
-  fireEvent(header, 'touchEnd');
+  fireEvent(header, 'pressOut');
   fireEvent.press(header);
 
   expect(onPress).toHaveBeenCalledTimes(1);

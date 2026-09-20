@@ -110,8 +110,8 @@ export function DisclosureCard({ title, summary, summaryEmphasized = false, expa
           longPressStarted.current = onReorderStart?.() !== false;
         } : undefined}
         onPress={toggle}
+        onPressOut={end}
         onTouchCancel={cancel}
-        onTouchEnd={end}
         onTouchMove={move}
         ref={headerRef}
         style={({ pressed }) => [styles.header, pressed && styles.pressed]}
