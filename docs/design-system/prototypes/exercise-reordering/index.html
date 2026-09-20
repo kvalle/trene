@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="nb" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trene - flytting av ovelseskort</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="prototype-shell">
+    <aside class="control-panel" aria-label="Prototypekontroller">
+      <p class="eyebrow">Throwaway prototype - #264</p>
+      <h1>Flytting av kort</h1>
+      <p class="prototype-question">Hvilket mønster viser tydeligst både kortet som flyttes og stedet det vil bli sluppet?</p>
+
+      <fieldset>
+        <legend>Interaksjon</legend>
+        <button id="demo-toggle" class="control primary-control" type="button">Vis dragtilstand</button>
+        <p class="hint">Dra Benkpress direkte med mus. På berøringsskjerm holder du først inne headeren, drar og slipper.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Gjennomgang</legend>
+        <div class="control-grid">
+          <button id="theme-toggle" class="control" type="button" aria-pressed="false">Mørk modus</button>
+          <button id="motion-toggle" class="control" type="button" aria-pressed="false">Redusert bevegelse</button>
+          <button id="text-toggle" class="control" type="button" aria-pressed="false">Stor tekst</button>
+          <button id="reset-button" class="control" type="button">Nullstill</button>
+        </div>
+      </fieldset>
+
+      <section class="review-prompt">
+        <h2>Se etter</h2>
+        <p>Er identiteten til kortet og ny plassering forståelig uten bare farge, bevegelse eller haptikk? Blir listen rolig nok under drag?</p>
+      </section>
+    </aside>
+
+    <section class="preview-panel">
+      <header class="preview-header">
+        <div>
+          <p class="eyebrow" id="variant-kicker">Variant C</p>
+          <h2 id="variant-title">Prospektiv plassering</h2>
+          <p id="variant-description"></p>
+        </div>
+        <p class="prototype-status" aria-live="polite" id="prototype-status">Klar til å flytte</p>
+      </header>
+
+      <div class="phone-wrap">
+        <section class="phone" id="phone" aria-label="Interaktiv prototype av aktiv treningsøkt">
+          <div class="status-bar" aria-hidden="true"><span>09:41</span><span>5G&nbsp;&nbsp;100%</span></div>
+          <header class="app-header">
+            <button class="back-button" type="button" aria-label="Tilbake">‹</button>
+            <h3>Treningsøkt</h3>
+            <span></span>
+          </header>
+          <div id="screen" class="screen"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <nav class="variant-switcher" aria-label="Velg prototypevariant">
+    <button id="previous-variant" type="button" aria-label="Forrige variant">←</button>
+    <div><span>Variant</span><strong id="variant-switcher-label">C - Prospektiv plassering</strong></div>
+    <button id="next-variant" type="button" aria-label="Neste variant">→</button>
+  </nav>
+  <script src="prototype.js"></script>
+</body>
+</html>

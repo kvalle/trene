@@ -9,6 +9,7 @@ export const iconNames = [
   'trash',
   'plus',
   'restore',
+  'move-vertical',
 ] as const;
 
 export type IconName = (typeof iconNames)[number];
@@ -44,6 +45,7 @@ const paths: Record<IconName, React.ReactNode> = {
       <Path d="M4.25 4v4h4Z" fill="currentColor" stroke="none" />
     </>
   ),
+  'move-vertical': <Path d="M8 18V6M5 9l3-3 3 3M16 6v12M13 15l3 3 3-3" />,
 };
 
 export function Icon({ name, size = 20, color = 'currentColor', ...rest }: IconProps) {

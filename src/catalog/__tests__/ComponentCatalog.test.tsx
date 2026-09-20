@@ -187,7 +187,7 @@ it('shows every NumericField state and keyboard kind', () => {
   expect(screen.getByTestId('catalog-numericfield-focus')).toHaveProp('autoFocus', true);
 });
 
-it('documents DisclosureCard progress, leading content, and explicit accessible labels', () => {
+it('documents DisclosureCard progress, leading content, reorder states, and explicit accessible labels', () => {
   render(<AppThemeProvider><DisclosureCardDetailScreen /></AppThemeProvider>);
 
   expect(screen.getByTestId('catalog-disclosurecard-leading-collapsed', { includeHiddenElements: true })).toBeOnTheScreen();
@@ -197,4 +197,8 @@ it('documents DisclosureCard progress, leading content, and explicit accessible 
   expect(screen.getByTestId('catalog-disclosurecard-progress-zero-progress', { includeHiddenElements: true })).toBeOnTheScreen();
   expect(screen.getByTestId('catalog-disclosurecard-progress-partial-progress', { includeHiddenElements: true })).toBeOnTheScreen();
   expect(screen.getByTestId('catalog-disclosurecard-progress-complete-progress', { includeHiddenElements: true })).toBeOnTheScreen();
+  expect(screen.getByTestId('catalog-disclosurecard-reordering-origin')).toBeOnTheScreen();
+  expect(screen.getByText('Dra for å endre rekkefølge')).toHaveStyle({ fontStyle: 'italic' });
+  expect(screen.getByTestId('catalog-disclosurecard-reordering-target')).toBeOnTheScreen();
+  expect(screen.getByText('Flytt til #3')).toBeOnTheScreen();
 });

@@ -96,8 +96,8 @@ legge luft inn i selve ikonflaten.
 - Trykkflaten eies av kontrollen rundt ikonet og skal fortsatt være minst `44 x 44`
   punkter på iOS og `48 x 48` dp på Android.
 
-Det første settet er `check`, `edit`, `hourglass`, `chevron-down`, `chevron-up`, `trash`, `plus`
-og `restore`. Navnene beskriver generell betydning, ikke treningsdomenet.
+Det første settet er `check`, `edit`, `hourglass`, `chevron-down`, `chevron-up`, `trash`, `plus`,
+`restore` og `move-vertical`. Navnene beskriver generell betydning, ikke treningsdomenet.
 Utvidbare kort bruker `chevron-down` når innholdet er skjult og `chevron-up`
 når innholdet er synlig.
 
@@ -172,6 +172,19 @@ bevegelse; synlig ikon og tekst skal fortsatt kommunisere statusen.
 Headeren kan eksponere kontekstuelle tilgjengelighetshandlinger når kort inngår
 i en ordnet liste. Bare handlinger som er mulige i gjeldende posisjon tilbys,
 og handlingene fjernes mens listen er opptatt med en mutasjon.
+I en dra-sorterbar komposisjon er hele headeren aktiveringsflaten: vanlig trykk
+åpner eller lukker kortet, mens langt trykk starter flytting uten å utløse den
+vanlige handlingen. Start av flytting lukker hele samlingen, og tidligere åpne
+tilstander gjenopprettes ikke etter slipp eller avbrudd. Kortet vises direkte i
+sin prospektive plassering når det krysser et annet kort. Det flyttede kortet
+bruker `secondary`-flate, `primary`-kant og en bredere ledende kant; ledende
+status erstattes med `move-vertical`. Sammendraget erstattes uten høydeendring av
+kursiv «Dra for å endre rekkefølge» på opprinnelig plass og «Flytt til #X» etter
+at plasseringen er endret. Posisjonsendringer animeres kort, men skjer umiddelbart
+ved redusert bevegelse. Listen auto-ruller ved øvre og nedre skjermkant.
+Endret slipp lagrer komplett rekkefølge én gang; uendret slipp og avbrudd lagrer
+ikke. Mens listen eller en annen mutasjon er opptatt, er både drag og
+tilgjengelighetshandlingene utilgjengelige.
 
 Feedback og sidevisninger holdes adskilt. Loader, informasjonsvarsel og
 feilvarsel er komponenter som kan plasseres i ulike kontekster. `PositiveStatus`

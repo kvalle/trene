@@ -8,6 +8,7 @@ import {
   findNodeHandle,
   Keyboard,
   LayoutAnimation,
+  type LayoutChangeEvent,
   Platform,
   ScrollView,
   StyleSheet,
@@ -52,6 +53,8 @@ import { useActiveWorkoutVisibility } from '../activeWorkoutVisibility/ActiveWor
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Workout'>;
 type State = { status: 'loading' } | { status: 'failed' } | { status: 'ready'; workout: ActiveWorkout };
+type WorkoutExercise = ActiveWorkout['exercises'][number];
+type DragSession = { workoutExerciseId: number; startIndex: number; targetIndex: number; previousExercises: WorkoutExercise[] };
 function isDirty(set: WorkoutSet, draft?: WorkoutSetDraft): boolean {
   if (!draft) return false;
   const persistedLoad = set.loadKg === null ? '' : formatLoad(set.loadKg);
@@ -88,6 +91,9 @@ export function WorkoutScreen({ navigation, route }: Props) {
   }>();
   const [reorderFailure, setReorderFailure] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(true);
+  const [dragSession, setDragSession] = useState<DragSession>();
+  const dragSessionRef = useRef<DragSession | undefined>(undefined);
+  const dragExercisesRef = useRef<WorkoutExercise[]>([]);
   const addExerciseRef = useRef<View>(null);
   const cancelRef = useRef<View>(null);
   const completeRef = useRef<View>(null);
@@ -114,6 +120,15 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const editRefs = useRef(new Map<number, View>());
   const removeSetRefs = useRef(new Map<number, View>());
   const addSetRefs = useRef(new Map<number, View>());
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollOffset = useRef(0);
+  const scrollPageY = useRef(0);
+  const viewportHeight = useRef(0);
+  const contentHeight = useRef(0);
+  const cardLayouts = useRef(new Map<number, { height: number; y: number }>());
+  const autoScrollTimer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const lastDragPageY = useRef(0);
+  const collapseForDrag = useRef(false);
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -144,6 +159,10 @@ export function WorkoutScreen({ navigation, route }: Props) {
     return () => subscription.remove();
   }, []);
 
+  useEffect(() => () => {
+    if (autoScrollTimer.current) clearInterval(autoScrollTimer.current);
+  }, []);
+
   useEffect(() => {
     if (state.status !== 'ready') return;
     const focusExerciseId = route.params?.focusExerciseId;
@@ -168,7 +187,8 @@ export function WorkoutScreen({ navigation, route }: Props) {
     draft.workoutId === state.workout.id && draft.unsaved,
   );
 
-  usePreventRemove(cancelling || completing || pendingSetId !== undefined || pendingExerciseOperation !== undefined || hasDirtyDraft, ({ data }) => {
+  usePreventRemove(cancelling || completing || pendingSetId !== undefined || pendingExerciseOperation !== undefined || dragSession !== undefined || hasDirtyDraft, ({ data }) => {
+    if (dragSession !== undefined) return;
     if (allowNavigation.current) navigation.dispatch(data.action);
     else if (!cancelling && !completing && pendingSetId === undefined && pendingExerciseOperation === undefined && hasUnsavedDraft) {
       navigation.dispatch(data.action);
@@ -413,6 +433,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   }
 
   function saveOnBlur(workoutId: number, set: WorkoutSet, exerciseName: string) {
+    if (collapseForDrag.current) return;
     const existing = pendingBlurSaves.current.get(set.id);
     if (existing) clearTimeout(existing);
     const timeout = setTimeout(() => {
@@ -642,35 +663,24 @@ export function WorkoutScreen({ navigation, route }: Props) {
     }
   }
 
-  async function moveExercise(workoutExerciseId: number, offset: -1 | 1) {
-    if (state.status !== 'ready' || cancelling || completing || pendingSetId !== undefined
-      || pendingExerciseOperation !== undefined || reorderInProgress.current || pendingSaves.current > 0) return;
-    pendingBlurSaves.current.forEach(clearTimeout);
-    pendingBlurSaves.current.clear();
-    const previousExercises = state.workout.exercises;
-    const from = previousExercises.findIndex((exercise) => exercise.id === workoutExerciseId);
-    const to = from + offset;
-    if (from < 0 || to < 0 || to >= previousExercises.length) return;
-    const exercises = [...previousExercises];
-    const [moved] = exercises.splice(from, 1);
-    exercises.splice(to, 0, moved);
-    const positionedExercises = exercises.map((exercise, position) => ({ ...exercise, position }));
+  function positioned(exercises: WorkoutExercise[]) {
+    return exercises.map((exercise, position) => ({ ...exercise, position }));
+  }
 
+  async function persistExerciseOrder(previousExercises: WorkoutExercise[], exercises: WorkoutExercise[], moved: WorkoutExercise) {
+    const to = exercises.findIndex((exercise) => exercise.id === moved.id);
+    if (to < 0 || previousExercises.every((exercise, index) => exercise.id === exercises[index]?.id)) return;
     setReorderFailure(false);
     reorderInProgress.current = true;
     setPendingExerciseOperation('reorder-exercises');
-    setState({ status: 'ready', workout: { ...state.workout, exercises: positionedExercises } });
+    setState((current) => current.status === 'ready'
+      ? { status: 'ready', workout: { ...current.workout, exercises } }
+      : current);
     try {
-      const persistence = reorderActiveWorkoutExercises(
-        database,
-        state.workout.id,
-        positionedExercises.map((exercise) => exercise.id),
-      );
+      const persistence = reorderActiveWorkoutExercises(database, state.status === 'ready' ? state.workout.id : 0, exercises.map((exercise) => exercise.id));
       saveQueue.current = persistence.then(() => undefined, () => undefined);
       await persistence;
-      AccessibilityInfo.announceForAccessibility(
-        `${moved.name} flyttet til plass ${to + 1} av ${positionedExercises.length}.`,
-      );
+      AccessibilityInfo.announceForAccessibility(`${moved.name} flyttet til plass ${to + 1} av ${exercises.length}.`);
     } catch {
       setState((current) => {
         if (current.status !== 'ready') return current;
@@ -679,10 +689,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
           status: 'ready',
           workout: {
             ...current.workout,
-            exercises: previousExercises.map((exercise, position) => ({
-              ...(currentById.get(exercise.id) ?? exercise),
-              position,
-            })),
+            exercises: previousExercises.map((exercise, position) => ({ ...(currentById.get(exercise.id) ?? exercise), position })),
           },
         };
       });
@@ -695,6 +702,120 @@ export function WorkoutScreen({ navigation, route }: Props) {
     }
   }
 
+  async function moveExercise(workoutExerciseId: number, offset: -1 | 1) {
+    if (state.status !== 'ready' || cancelling || completing || pendingSetId !== undefined
+      || pendingExerciseOperation !== undefined || reorderInProgress.current || pendingSaves.current > 0) return;
+    pendingBlurSaves.current.forEach(clearTimeout);
+    pendingBlurSaves.current.clear();
+    const previousExercises = state.workout.exercises;
+    const from = previousExercises.findIndex((exercise) => exercise.id === workoutExerciseId);
+    const to = from + offset;
+    if (from < 0 || to < 0 || to >= previousExercises.length) return;
+    setExpandedIds(new Set());
+    const exercises = [...previousExercises];
+    const [moved] = exercises.splice(from, 1);
+    exercises.splice(to, 0, moved);
+    await persistExerciseOrder(previousExercises, positioned(exercises), moved);
+  }
+
+  function stopAutoScroll() {
+    if (autoScrollTimer.current) clearInterval(autoScrollTimer.current);
+    autoScrollTimer.current = undefined;
+  }
+
+  function updateDragTarget(pageY: number) {
+    const session = dragSessionRef.current;
+    if (!session || state.status !== 'ready') return;
+    lastDragPageY.current = pageY;
+    const contentY = pageY - scrollPageY.current + scrollOffset.current;
+    const withoutMoved = dragExercisesRef.current.filter((exercise) => exercise.id !== session.workoutExerciseId);
+    let nextIndex = withoutMoved.findIndex((exercise) => {
+      const layout = cardLayouts.current.get(exercise.id);
+      return layout ? contentY < layout.y + layout.height / 2 : false;
+    });
+    if (nextIndex < 0) nextIndex = withoutMoved.length;
+    if (nextIndex === session.targetIndex) return;
+    if (!reduceMotion) LayoutAnimation.configureNext({
+      duration: 180,
+      update: { duration: 180, type: LayoutAnimation.Types.easeInEaseOut },
+    });
+    const moved = dragExercisesRef.current.find((exercise) => exercise.id === session.workoutExerciseId);
+    if (!moved) return;
+    const exercises = dragExercisesRef.current.filter((exercise) => exercise.id !== moved.id);
+    exercises.splice(nextIndex, 0, moved);
+    const nextExercises = positioned(exercises);
+    const nextSession = { ...session, targetIndex: nextIndex };
+    dragExercisesRef.current = nextExercises;
+    dragSessionRef.current = nextSession;
+    setState({ status: 'ready', workout: { ...state.workout, exercises: nextExercises } });
+    setDragSession(nextSession);
+    AccessibilityInfo.announceForAccessibility(`Flytt til plass ${nextIndex + 1} av ${nextExercises.length}.`);
+  }
+
+  function updateAutoScroll(pageY: number) {
+    if (!dragSessionRef.current) return;
+    const relativeY = pageY - scrollPageY.current;
+    const direction = relativeY < 72 ? -1 : relativeY > viewportHeight.current - 72 ? 1 : 0;
+    stopAutoScroll();
+    if (!direction) return;
+    autoScrollTimer.current = setInterval(() => {
+      const maxOffset = Math.max(0, contentHeight.current - viewportHeight.current);
+      const nextOffset = Math.max(0, Math.min(maxOffset, scrollOffset.current + direction * 12));
+      if (nextOffset === scrollOffset.current) {
+        stopAutoScroll();
+        return;
+      }
+      scrollRef.current?.scrollTo({ animated: false, y: nextOffset });
+    }, 32);
+  }
+
+  function startDrag(workoutExerciseId: number) {
+    if (state.status !== 'ready' || state.workout.exercises.length < 2 || cancelling || completing
+      || pendingSetId !== undefined || pendingExerciseOperation !== undefined || pendingSaves.current > 0) return false;
+    const startIndex = state.workout.exercises.findIndex((exercise) => exercise.id === workoutExerciseId);
+    if (startIndex < 0) return false;
+    pendingBlurSaves.current.forEach(clearTimeout);
+    pendingBlurSaves.current.clear();
+    collapseForDrag.current = true;
+    setExpandedIds(new Set());
+    requestAnimationFrame(() => { collapseForDrag.current = false; });
+    setReorderFailure(false);
+    const session = { workoutExerciseId, startIndex, targetIndex: startIndex, previousExercises: state.workout.exercises };
+    dragExercisesRef.current = state.workout.exercises;
+    dragSessionRef.current = session;
+    setDragSession(session);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    AccessibilityInfo.announceForAccessibility(`${state.workout.exercises[startIndex].name} kan flyttes. Plass ${startIndex + 1} av ${state.workout.exercises.length}.`);
+    return true;
+  }
+
+  function moveDrag(pageY: number) {
+    updateDragTarget(pageY);
+    updateAutoScroll(pageY);
+  }
+
+  function cancelDrag() {
+    stopAutoScroll();
+    const session = dragSessionRef.current;
+    if (!session) return;
+    setState((current) => current.status === 'ready'
+      ? { status: 'ready', workout: { ...current.workout, exercises: positioned(session.previousExercises) } }
+      : current);
+    dragSessionRef.current = undefined;
+    setDragSession(undefined);
+  }
+
+  function dropDrag() {
+    stopAutoScroll();
+    const session = dragSessionRef.current;
+    if (!session || state.status !== 'ready') return;
+    const exercises = dragExercisesRef.current;
+    const moved = exercises.find((exercise) => exercise.id === session.workoutExerciseId);
+    dragSessionRef.current = undefined;
+    setDragSession(undefined);
+    if (moved) void persistExerciseOrder(session.previousExercises, exercises, moved);
+  }
+
   if (state.status === 'loading') return <PageStatus variant="loading" loaderLabel="Laster treningsøkt" />;
   if (state.status === 'failed') return <PageStatus variant="error" title="Kunne ikke laste inn" actionTitle="Prøv igjen" onAction={() => setReload((value) => value + 1)} />;
 
@@ -704,13 +825,26 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const hasPlannedSet = state.workout.exercises.some((exercise) =>
     exercise.sets.some((set) => set.confirmedAt === null),
   );
-  const workoutBusy = cancelling || completing || pendingSetId !== undefined || pendingExerciseOperation !== undefined;
+  const savingDraft = pendingSaves.current > 0;
+  const workoutBusy = cancelling || completing || pendingSetId !== undefined || pendingExerciseOperation !== undefined || savingDraft || dragSession !== undefined;
 
   return (
     <ScrollView
       automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
       contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled"
+      onContentSizeChange={(_width, height) => { contentHeight.current = height; }}
+      onLayout={(event) => {
+        viewportHeight.current = event.nativeEvent.layout.height;
+        scrollRef.current?.getNativeScrollRef()?.measureInWindow((_x: number, y: number) => { scrollPageY.current = y; });
+      }}
+      onScroll={(event) => {
+        scrollOffset.current = event.nativeEvent.contentOffset.y;
+        if (dragSessionRef.current) updateDragTarget(lastDragPageY.current);
+      }}
+      ref={scrollRef}
+      scrollEnabled={!dragSession}
+      scrollEventThrottle={16}
     >
       <Text style={[typography.metadata, { color: colors.muted }]}>
         Startet {formatDateTime(new Date(state.workout.startedAt))}
@@ -722,7 +856,10 @@ export function WorkoutScreen({ navigation, route }: Props) {
         const expanded = expandedIds.has(exercise.exerciseId);
         const completed = exercise.sets.filter((set) => set.confirmedAt !== null).length;
         const exerciseCompleted = exercise.sets.length > 0 && completed === exercise.sets.length;
-        const summary = `${completed} av ${exercise.sets.length} sett gjennomført`;
+        const reordering = dragSession?.workoutExerciseId === exercise.id;
+        const summary = reordering
+          ? dragSession.targetIndex === dragSession.startIndex ? 'Dra for å endre rekkefølge' : `Flytt til #${dragSession.targetIndex + 1}`
+          : `${completed} av ${exercise.sets.length} sett gjennomført`;
         return (
           <DisclosureCard
             key={exercise.id}
@@ -733,6 +870,9 @@ export function WorkoutScreen({ navigation, route }: Props) {
             accessibilityLabel={`${exercise.name}, ${summary}, ${exerciseCompleted ? 'fullført' : 'ikke fullført'}`}
             expanded={expanded}
             headerRef={(node) => { if (node) cardRefs.current.set(exercise.exerciseId, node); }}
+            onLayout={(event: LayoutChangeEvent) => {
+              cardLayouts.current.set(exercise.id, event.nativeEvent.layout);
+            }}
             onPress={() => setExpandedIds((current) => {
               const next = new Set(current);
               if (expanded) next.delete(exercise.exerciseId);
@@ -743,7 +883,13 @@ export function WorkoutScreen({ navigation, route }: Props) {
               if (event.nativeEvent.actionName === 'moveUp') void moveExercise(exercise.id, -1);
               if (event.nativeEvent.actionName === 'moveDown') void moveExercise(exercise.id, 1);
             }}
+            onReorderCancel={cancelDrag}
+            onReorderEnd={dropDrag}
+            onReorderMove={moveDrag}
+            onReorderStart={() => startDrag(exercise.id)}
             progress={exercise.sets.length === 0 ? 0 : completed / exercise.sets.length}
+            reorderEnabled={!workoutBusy && state.workout.exercises.length > 1}
+            reordering={reordering}
             leading={(
               <View
                 accessible={false}
@@ -752,14 +898,16 @@ export function WorkoutScreen({ navigation, route }: Props) {
                   styles.exerciseStatus,
                   {
                     backgroundColor: exerciseCompleted ? colors.secondary : colors.surfaceAlt,
-                    borderColor: exerciseCompleted ? colors.primary : colors.border,
+                    borderColor: reordering || exerciseCompleted ? colors.primary : colors.border,
+                    ...(reordering ? { backgroundColor: colors.primary } : {}),
                   },
                 ]}
               >
-                <Icon color={exerciseCompleted ? colors.primary : colors.muted} name={exerciseCompleted ? 'check' : 'hourglass'} size={16} testID={`workout-exercise-${exercise.id}-completion-icon-${exerciseCompleted ? 'check' : 'hourglass'}`} />
+                <Icon color={reordering ? colors.onPrimary : exerciseCompleted ? colors.primary : colors.muted} name={reordering ? 'move-vertical' : exerciseCompleted ? 'check' : 'hourglass'} size={16} testID={`workout-exercise-${exercise.id}-completion-icon-${reordering ? 'move-vertical' : exerciseCompleted ? 'check' : 'hourglass'}`} />
               </View>
             )}
             summary={summary}
+            summaryEmphasized={reordering}
             testID={`workout-exercise-${exercise.id}`}
             title={exercise.name}
           >
@@ -949,7 +1097,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
       {reorderFailure && <ErrorAlert message="Kunne ikke flytte øvelsen. Prøv igjen." />}
       <Button
         ref={addExerciseRef}
-        disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined || hasUnsavedDraft}
+        disabled={workoutBusy || hasUnsavedDraft}
         title="Legg til øvelse"
         variant={state.workout.exercises.length === 0 ? 'primary' : 'secondary'}
         onPress={() => void flushDrafts().then((saved) => { if (saved) {
@@ -972,12 +1120,12 @@ export function WorkoutScreen({ navigation, route }: Props) {
         </View>
       )}
       {state.workout.exercises.length === 0 ? (
-        <Button ref={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} title="Avbryt" variant="text" testID="cancel-active-workout" onPress={() => {
+        <Button ref={cancelRef} disabled={workoutBusy} title="Avbryt" variant="text" testID="cancel-active-workout" onPress={() => {
           setCancelFailed(false);
           setCancelDialogOpen(true);
         }} />
       ) : (
-        <Button ref={cancelRef} disabled={pendingSetId !== undefined || pendingExerciseOperation !== undefined} testID="cancel-active-workout" title="Avbryt" variant="text" onPress={() => {
+        <Button ref={cancelRef} disabled={workoutBusy} testID="cancel-active-workout" title="Avbryt" variant="text" onPress={() => {
           setCancelFailed(false);
           setCancelDialogOpen(true);
         }} />

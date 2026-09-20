@@ -1,0 +1,33 @@
+appId: com.kjetilvalle.trene
+name: Reorder active workout exercises by touch
+tags:
+  - smoke
+  - android
+  - exercise-reordering
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en trening?"
+    timeout: 120000
+- tapOn: "Start trening"
+- tapOn: "Legg til øvelse"
+- tapOn: "Opprett første øvelse"
+- tapOn:
+    id: "exercise-name-input"
+- inputText: "Alpha"
+- tapOn:
+    id: "create-exercise-submit"
+- tapOn: "Alpha, 0 av 1 sett gjennomført, ikke fullført"
+- tapOn: "Legg til øvelse"
+- tapOn: "Opprett øvelse"
+- tapOn:
+    id: "exercise-name-input"
+- inputText: "Bravo"
+- tapOn:
+    id: "create-exercise-submit"
+- tapOn: "Bravo, 0 av 1 sett gjennomført, ikke fullført"
+- longPressOn: "Bravo, 0 av 1 sett gjennomført, ikke fullført"
+- assertNotVisible: "Rediger sett 1 for Bravo"
+- waitForAnimationToEnd
+- tapOn: "Bravo, 0 av 1 sett gjennomført, ikke fullført"
+- assertVisible: "Rediger sett 1 for Bravo"
