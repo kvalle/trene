@@ -108,7 +108,8 @@ it('exposes contextual actions on the interactive header', () => {
   }));
 });
 
-it('starts reorder on long press, forwards movement and drop, and suppresses the ordinary press', () => {
+it('starts reorder on long press, forwards movement and drop, and suppresses the release press', () => {
+  jest.useFakeTimers();
   const onPress = jest.fn();
   const onReorderStart = jest.fn();
   const onReorderMove = jest.fn();
@@ -137,6 +138,11 @@ it('starts reorder on long press, forwards movement and drop, and suppresses the
   expect(onReorderMove).toHaveBeenCalledWith(240);
   expect(onReorderEnd).toHaveBeenCalledTimes(1);
   expect(onPress).not.toHaveBeenCalled();
+
+  act(() => jest.runAllTimers());
+  fireEvent.press(header);
+  expect(onPress).toHaveBeenCalledTimes(1);
+  jest.useRealTimers();
 });
 
 it('forwards reorder cancellation and does not start while disabled', () => {

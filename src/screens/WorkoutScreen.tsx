@@ -711,6 +711,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
     const from = previousExercises.findIndex((exercise) => exercise.id === workoutExerciseId);
     const to = from + offset;
     if (from < 0 || to < 0 || to >= previousExercises.length) return;
+    setExpandedIds(new Set());
     const exercises = [...previousExercises];
     const [moved] = exercises.splice(from, 1);
     exercises.splice(to, 0, moved);

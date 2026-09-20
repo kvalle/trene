@@ -764,6 +764,25 @@ test('moves exercises in both directions immediately, persists each complete ord
   expect(announce).toHaveBeenCalledWith('Markløft flyttet til plass 2 av 3.');
 });
 
+test('collapses every card when reordered with an accessibility action', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
+  });
+  renderScreen({}, null);
+  fireEvent.press(await screen.findByRole('button', { name: /Knebøy/ }));
+  fireEvent.press(screen.getByRole('button', { name: /Markløft/ }));
+
+  fireEvent(screen.getAllByRole('button', { name: /Markløft/ })[0], 'accessibilityAction', {
+    nativeEvent: { actionName: 'moveUp' },
+  });
+
+  await waitFor(() => expect(mockedReorderExercises).toHaveBeenCalled());
+  expect(screen.getByRole('button', { name: /Knebøy/ })).toHaveProp('accessibilityState', { expanded: false });
+  expect(screen.getByRole('button', { name: /Markløft/ })).toHaveProp('accessibilityState', { expanded: false });
+});
+
 test('drags an exercise across positions, collapses every card, and persists once on drop', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
@@ -914,6 +933,7 @@ test('rolls a failed reorder back without losing exercise data or draft values',
   expect(await screen.findByRole('alert')).toHaveTextContent(/Kunne ikke flytte øvelsen\. Prøv igjen\./);
   expect(screen.getAllByText(/^(Knebøy|Markløft)$/).map((node) => node.props.children))
     .toEqual(['Knebøy', 'Markløft']);
+  fireEvent.press(screen.getByRole('button', { name: /Knebøy/ }));
   expect(screen.getByLabelText('Belastning for Knebøy')).toHaveProp('value', '82,5');
   expect(screen.getByLabelText('Sett 1, 80 kilogram, 5 repetisjoner, Gjennomført')).toBeOnTheScreen();
   expect(announce).toHaveBeenCalledWith('Kunne ikke flytte øvelsen. Prøv igjen.');
