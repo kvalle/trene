@@ -794,6 +794,7 @@ test('drags an exercise across positions, collapses every card, and persists onc
     ],
   });
   renderScreen({}, null);
+  const cardBeforeDrag = await screen.findByTestId('workout-exercise-9');
   fireEvent.press(await screen.findByRole('button', { name: 'Knebøy' }));
   fireEvent.press(screen.getByRole('button', { name: 'Markløft' }));
   fireEvent(screen.getByTestId('workout-exercise-4'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 40 } } });
@@ -817,6 +818,9 @@ test('drags an exercise across positions, collapses every card, and persists onc
   fireEvent(screen.getByRole('button', { name: /Markløft/ }), 'touchEnd');
   await waitFor(() => expect(mockedReorderExercises).toHaveBeenCalledTimes(1));
   expect(mockedReorderExercises).toHaveBeenCalledWith(database, 3, [4, 11, 9]);
+  expect(screen.getByTestId('workout-exercise-9')).not.toBe(cardBeforeDrag);
+  fireEvent.press(screen.getByRole('button', { name: /Markløft/ }));
+  expect(screen.getByRole('button', { name: 'Legg til sett' })).toBeOnTheScreen();
 });
 
 test('does not persist an unchanged drag and keeps cards collapsed', async () => {
@@ -885,13 +889,17 @@ test('cancels a drag without persistence and restores the saved order collapsed'
     exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
   });
   renderScreen({}, null);
-  fireEvent(await screen.findByTestId('workout-exercise-4'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 40 } } });
+  const cardBeforeDrag = await screen.findByTestId('workout-exercise-4');
+  fireEvent(cardBeforeDrag, 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 40 } } });
   fireEvent(screen.getByTestId('workout-exercise-9'), 'layout', { nativeEvent: { layout: { height: 70, width: 300, x: 0, y: 126 } } });
   fireEvent(await screen.findByRole('button', { name: /Knebøy/ }), 'longPress');
   fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'touchMove', { nativeEvent: { pageY: 180 } });
   fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'touchCancel');
 
   expect(screen.getAllByText(/^(Knebøy|Markløft)$/).map((node) => node.props.children)).toEqual(['Knebøy', 'Markløft']);
+  expect(screen.getByTestId('workout-exercise-4')).not.toBe(cardBeforeDrag);
+  fireEvent.press(screen.getByRole('button', { name: /Knebøy/ }));
+  expect(screen.getByLabelText('Sett 1, 80 kilogram, 5 repetisjoner, Gjennomført')).toBeOnTheScreen();
   expect(mockedReorderExercises).not.toHaveBeenCalled();
 });
 

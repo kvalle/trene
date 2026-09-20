@@ -92,6 +92,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
   const [reorderFailure, setReorderFailure] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(true);
   const [dragSession, setDragSession] = useState<DragSession>();
+  const [cardVersions, setCardVersions] = useState<Record<number, number>>({});
   const dragSessionRef = useRef<DragSession | undefined>(undefined);
   const dragExercisesRef = useRef<WorkoutExercise[]>([]);
   const addExerciseRef = useRef<View>(null);
@@ -803,6 +804,15 @@ export function WorkoutScreen({ navigation, route }: Props) {
       : current);
     dragSessionRef.current = undefined;
     setDragSession(undefined);
+    remountDraggedCard(session.workoutExerciseId);
+  }
+
+  function remountDraggedCard(workoutExerciseId: number) {
+    // Android can retain a stale layout on the native view that owned a completed gesture.
+    setCardVersions((current) => ({
+      ...current,
+      [workoutExerciseId]: (current[workoutExerciseId] ?? 0) + 1,
+    }));
   }
 
   function dropDrag() {
@@ -813,6 +823,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
     const moved = exercises.find((exercise) => exercise.id === session.workoutExerciseId);
     dragSessionRef.current = undefined;
     setDragSession(undefined);
+    remountDraggedCard(session.workoutExerciseId);
     if (moved) void persistExerciseOrder(session.previousExercises, exercises, moved);
   }
 
@@ -862,7 +873,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
           : `${completed} av ${exercise.sets.length} sett gjennomført`;
         return (
           <DisclosureCard
-            key={exercise.id}
+            key={`${exercise.id}-${cardVersions[exercise.id] ?? 0}`}
             accessibilityActions={workoutBusy ? [] : [
               ...(exerciseIndex > 0 ? [{ name: 'moveUp', label: 'Flytt opp' }] : []),
               ...(exerciseIndex < state.workout.exercises.length - 1 ? [{ name: 'moveDown', label: 'Flytt ned' }] : []),
