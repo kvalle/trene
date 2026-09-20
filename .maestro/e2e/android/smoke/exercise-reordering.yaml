@@ -26,8 +26,12 @@ tags:
 - tapOn:
     id: "create-exercise-submit"
 - tapOn: "Bravo, 0 av 1 sett gjennomført, ikke fullført"
-- longPressOn: "Bravo, 0 av 1 sett gjennomført, ikke fullført"
+- swipe:
+    start: 50%, 37%
+    end: 50%, 25%
+    duration: 1500
 - assertNotVisible: "Rediger sett 1 for Bravo"
 - waitForAnimationToEnd
-- tapOn: "Bravo, 0 av 1 sett gjennomført, ikke fullført"
+- tapOn:
+    point: 50%, 25%
 - assertVisible: "Rediger sett 1 for Bravo"
