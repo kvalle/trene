@@ -35,5 +35,5 @@ tags:
 - assertVisible: "Alpha, 0 av 1 sett gjennomført, ikke fullført"
 - assertVisible: "Bravo, 0 av 1 sett gjennomført, ikke fullført"
 - tapOn:
-    point: 50%, 20%
+    point: "50%,20%"
 - assertVisible: "Rediger sett 1 for Bravo"
