@@ -734,7 +734,10 @@ export function WorkoutScreen({ navigation, route }: Props) {
     });
     if (nextIndex < 0) nextIndex = withoutMoved.length;
     if (nextIndex === session.targetIndex) return;
-    if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.create(180, 'easeInEaseOut', 'opacity'));
+    if (!reduceMotion) LayoutAnimation.configureNext({
+      duration: 180,
+      update: { duration: 180, type: LayoutAnimation.Types.easeInEaseOut },
+    });
     const moved = dragExercisesRef.current.find((exercise) => exercise.id === session.workoutExerciseId);
     if (!moved) return;
     const exercises = dragExercisesRef.current.filter((exercise) => exercise.id !== moved.id);
