@@ -25,15 +25,8 @@ tags:
 - tapOn:
     id: "create-exercise-submit"
 - tapOn: "Bravo, 0 av 1 sett gjennomført, ikke fullført"
-- swipe:
-    start: 50%, 31%
-    end: 50%, 20%
-    duration: 1600
-- stopApp
-- launchApp
-- tapOn: "Fortsett trening"
-- assertVisible: "Alpha, 0 av 1 sett gjennomført, ikke fullført"
-- assertVisible: "Bravo, 0 av 1 sett gjennomført, ikke fullført"
-- tapOn:
-    point: "50%,20%"
+- longPressOn: "Bravo, 0 av 1 sett gjennomført, ikke fullført"
+- assertNotVisible: "Rediger sett 1 for Bravo"
+- waitForAnimationToEnd
+- tapOn: "Bravo, 0 av 1 sett gjennomført, ikke fullført"
 - assertVisible: "Rediger sett 1 for Bravo"

@@ -83,7 +83,7 @@ export function DisclosureCard({ title, summary, summaryEmphasized = false, expa
     longPressStarted.current = false;
     suppressPress.current = true;
     onReorderEnd?.();
-    setTimeout(() => { suppressPress.current = false; }, 0);
+    setTimeout(() => { suppressPress.current = false; }, 250);
   }
 
   function cancel() {
