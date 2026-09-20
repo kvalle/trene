@@ -132,6 +132,7 @@ it('starts reorder on long press, forwards movement and drop, and suppresses the
   fireEvent(header, 'longPress');
   fireEvent(header, 'touchMove', { nativeEvent: { pageY: 240 } });
   fireEvent(header, 'pressOut');
+  fireEvent(header, 'touchEnd');
   fireEvent.press(header);
 
   expect(onReorderStart).toHaveBeenCalledTimes(1);
@@ -166,6 +167,22 @@ it('forwards reorder cancellation and does not start while disabled', () => {
   expect(onReorderStart).toHaveBeenCalledTimes(1);
 });
 
+it('does not drop when the active press leaves the header before touch release', () => {
+  const onReorderEnd = jest.fn();
+  render(
+    <AppThemeProvider>
+      <DisclosureCard expanded={false} onPress={() => {}} onReorderEnd={onReorderEnd} onReorderStart={() => true} reorderEnabled title="Detaljer" />
+    </AppThemeProvider>,
+  );
+  const header = screen.getByRole('button', { name: 'Detaljer' });
+
+  fireEvent(header, 'longPress');
+  fireEvent(header, 'pressOut');
+  expect(onReorderEnd).not.toHaveBeenCalled();
+  fireEvent(header, 'touchEnd');
+  expect(onReorderEnd).toHaveBeenCalledTimes(1);
+});
+
 it('keeps the next ordinary press when the reorder start is rejected', () => {
   const onPress = jest.fn();
   render(
@@ -177,6 +194,7 @@ it('keeps the next ordinary press when the reorder start is rejected', () => {
 
   fireEvent(header, 'longPress');
   fireEvent(header, 'pressOut');
+  fireEvent(header, 'touchEnd');
   fireEvent.press(header);
 
   expect(onPress).toHaveBeenCalledTimes(1);

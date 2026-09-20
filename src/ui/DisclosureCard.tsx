@@ -78,6 +78,10 @@ export function DisclosureCard({ title, summary, summaryEmphasized = false, expa
     if (longPressStarted.current) onReorderMove?.(event.nativeEvent.pageY);
   }
 
+  function prepareEnd() {
+    if (longPressStarted.current) suppressPress.current = true;
+  }
+
   function end() {
     if (!longPressStarted.current) return;
     longPressStarted.current = false;
@@ -110,8 +114,9 @@ export function DisclosureCard({ title, summary, summaryEmphasized = false, expa
           longPressStarted.current = onReorderStart?.() !== false;
         } : undefined}
         onPress={toggle}
-        onPressOut={end}
+        onPressOut={prepareEnd}
         onTouchCancel={cancel}
+        onTouchEnd={end}
         onTouchMove={move}
         ref={headerRef}
         style={({ pressed }) => [styles.header, pressed && styles.pressed]}

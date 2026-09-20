@@ -814,6 +814,7 @@ test('drags an exercise across positions, collapses every card, and persists onc
   expect(mockedReorderExercises).not.toHaveBeenCalled();
 
   fireEvent(screen.getByRole('button', { name: /Markløft/ }), 'pressOut');
+  fireEvent(screen.getByRole('button', { name: /Markløft/ }), 'touchEnd');
   await waitFor(() => expect(mockedReorderExercises).toHaveBeenCalledTimes(1));
   expect(mockedReorderExercises).toHaveBeenCalledWith(database, 3, [4, 11, 9]);
 });
@@ -829,6 +830,7 @@ test('does not persist an unchanged drag and keeps cards collapsed', async () =>
   fireEvent.press(squat);
   fireEvent(squat, 'longPress');
   fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'pressOut');
+  fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'touchEnd');
 
   expect(mockedReorderExercises).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: /Knebøy/ })).toHaveProp('accessibilityState', { expanded: false });
@@ -867,6 +869,7 @@ test('keeps a dirty set draft attached while dragging and does not save it on co
 
   fireEvent(deadlift, 'longPress');
   fireEvent(deadlift, 'pressOut');
+  fireEvent(deadlift, 'touchEnd');
 
   expect(screen.getByRole('button', { name: /Knebøy/ })).toHaveProp('accessibilityState', { expanded: false });
   fireEvent.press(screen.getByRole('button', { name: /Knebøy/ }));
@@ -957,6 +960,7 @@ test('rolls a failed drag reorder back and keeps every card collapsed', async ()
   fireEvent(screen.getAllByRole('button', { name: /Knebøy/ })[0], 'longPress');
   fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'touchMove', { nativeEvent: { pageY: 180 } });
   fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'pressOut');
+  fireEvent(screen.getByRole('button', { name: /Knebøy/ }), 'touchEnd');
 
   expect(await screen.findByRole('alert')).toHaveTextContent(/Kunne ikke flytte øvelsen\. Prøv igjen\./);
   expect(screen.getAllByText(/^(Knebøy|Markløft)$/).map((node) => node.props.children)).toEqual(['Knebøy', 'Markløft']);
