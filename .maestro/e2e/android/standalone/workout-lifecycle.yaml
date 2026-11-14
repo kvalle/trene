@@ -106,7 +106,7 @@ tags:
     timeout: 30000
 - tapOn: "Tidligere treninger"
 - extendedWaitUntil:
-    visible: "1 øvelse"
+    visible: ".*, 1 trening"
     timeout: 30000
 - back
 - extendedWaitUntil:

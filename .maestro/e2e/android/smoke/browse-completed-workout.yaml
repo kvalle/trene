@@ -93,9 +93,9 @@ tags:
 
 - tapOn: "Tidligere treninger"
 - extendedWaitUntil:
-    visible: "1 øvelse"
+    visible: ".*, 1 trening"
     timeout: 30000
-- tapOn: "1 øvelse"
+- tapOn: ".*, 1 trening"
 - extendedWaitUntil:
     visible: "Fullført trening"
     timeout: 30000
@@ -109,5 +109,5 @@ tags:
     timeout: 120000
 - tapOn: "Tidligere treninger"
 - extendedWaitUntil:
-    visible: "1 øvelse"
+    visible: ".*, 1 trening"
     timeout: 30000

@@ -1,6 +1,7 @@
 import { NavigationContainer, usePreventRemove } from '@react-navigation/native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { AccessibilityInfo } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { AccessibilityInfo, Text } from 'react-native';
 
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
@@ -40,27 +41,107 @@ test('announces that completed workouts are loading', () => {
   expect(screen.getByLabelText('Laster tidligere treninger')).toBeOnTheScreen();
 });
 
-test('shows accessible whole rows with completion time and saved exercise count', async () => {
+const TODAY = new Date(2026, 10, 8, 12, 0); // Sunday 8 November 2026
+const local = (month: number, day: number, hour = 10) => new Date(2026, month - 1, day, hour).toISOString();
+
+function useClock() {
+  jest.useFakeTimers({ now: TODAY, doNotFake: [
+    'nextTick', 'setImmediate', 'clearImmediate', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
+    'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback',
+    'hrtime', 'performance',
+  ] });
+}
+
+afterEach(() => jest.useRealTimers());
+
+test('shows one card per month from the current month back to the first workout, with summaries', async () => {
+  useClock();
+  mockedList.mockResolvedValue([
+    { id: 3, completedAt: local(9, 20), exerciseCount: 1 },
+    { id: 2, completedAt: local(9, 10), exerciseCount: 2 },
+    { id: 1, completedAt: local(8, 25), exerciseCount: 2 },
+  ]);
+  renderScreen();
+
+  const headers = await screen.findAllByRole('button', { name: /^\w+ 2026, / });
+  expect(headers.map((header) => header.props.accessibilityLabel)).toEqual([
+    'November 2026, Ingen treninger så langt.',
+    'Oktober 2026, Ingen treninger.',
+    'September 2026, 2 treninger. I snitt 0,5 per uke.',
+    'August 2026, 1 trening. I snitt 1,0 per uke.',
+  ]);
+  expect(screen.getByText('2 treninger. I snitt 0,5 per uke.')).toBeOnTheScreen();
+  expect(headers.map((header) => header.props.accessibilityState.expanded)).toEqual([false, false, true, false]);
+  expect(screen.getByTestId('history-calendar-2026-09')).toBeOnTheScreen();
+  expect(screen.queryByTestId('history-calendar-2026-08')).not.toBeOnTheScreen();
+});
+
+test('expands and collapses months independently', async () => {
+  useClock();
+  mockedList.mockResolvedValue([
+    { id: 2, completedAt: local(11, 2), exerciseCount: 1 },
+    { id: 1, completedAt: local(10, 5), exerciseCount: 1 },
+  ]);
+  renderScreen();
+
+  const october = await screen.findByRole('button', { name: /^Oktober 2026/ });
+  const november = screen.getByRole('button', { name: /^November 2026/ });
+  expect(november).toHaveProp('accessibilityState', { expanded: true });
+  fireEvent.press(october);
+  expect(screen.getByRole('button', { name: /^Oktober 2026/ })).toHaveProp('accessibilityState', { expanded: true });
+  expect(screen.getByRole('button', { name: /^November 2026/ })).toHaveProp('accessibilityState', { expanded: true });
+  fireEvent.press(screen.getByRole('button', { name: /^November 2026/ }));
+  expect(screen.getByRole('button', { name: /^November 2026/ })).toHaveProp('accessibilityState', { expanded: false });
+  expect(screen.queryByTestId('history-calendar-2026-11')).not.toBeOnTheScreen();
+  expect(screen.getByTestId('history-calendar-2026-10')).toBeOnTheScreen();
+});
+
+test('opens the completed workout from its highlighted day', async () => {
+  useClock();
   const navigate = jest.fn();
   mockedList.mockResolvedValue([
-    { id: 3, completedAt: '2026-08-05T10:30:00Z', exerciseCount: 1 },
-    { id: 4, completedAt: '2026-08-04T10:30:00Z', exerciseCount: 2 },
+    { id: 5, completedAt: local(11, 3, 18), exerciseCount: 1 },
+    { id: 4, completedAt: local(11, 2), exerciseCount: 2 },
   ]);
   renderScreen({ navigate });
 
-  await screen.findByText(/5. august 2026/);
-  const rows = [
-    screen.getByLabelText(/5. august 2026.*1 øvelse/),
-    screen.getByLabelText(/4. august 2026.*2 øvelser/),
-  ];
-  expect(rows).toHaveLength(2);
-  expect(rows[0]).toHaveProp('accessibilityRole', 'button');
-  expect(rows[0]).toHaveProp('accessibilityHint', 'Åpner den fullførte treningen');
-  expect(rows[0].props.accessibilityLabel).toMatch(/5. august 2026.*1 øvelse/);
-  expect(rows[1].props.accessibilityLabel).toMatch(/4. august 2026.*2 øvelser/);
-  fireEvent.press(rows[0]);
-  expect(navigate).toHaveBeenCalledWith('CompletedWorkout', { workoutId: 3 });
+  const day = await screen.findByRole('button', { name: 'tirsdag 3. november 2026, 1 trening' });
+  expect(screen.getByLabelText('onsdag 4. november 2026')).not.toHaveProp('accessibilityRole', 'button');
+  fireEvent.press(day);
+  expect(navigate).toHaveBeenCalledWith('CompletedWorkout', { workoutId: 5 });
   expect(mockedActiveWorkout).not.toHaveBeenCalled();
+});
+
+test('keeps expanded months after returning from a completed workout', async () => {
+  useClock();
+  const workouts = [
+    { id: 2, completedAt: local(11, 2), exerciseCount: 1 },
+    { id: 1, completedAt: local(10, 5), exerciseCount: 1 },
+  ];
+  mockedList.mockResolvedValue(workouts);
+  const Stack = createNativeStackNavigator();
+  render(
+    <DatabaseProvider database={database}>
+      <AppThemeProvider scheme="light">
+        <NavigationContainer>
+          <Stack.Navigator>
+            <Stack.Screen name="History" component={HistoryScreen as never} />
+            <Stack.Screen name="CompletedWorkout">
+              {({ navigation }) => <Text onPress={() => navigation.goBack()}>Tilbake</Text>}
+            </Stack.Screen>
+          </Stack.Navigator>
+        </NavigationContainer>
+      </AppThemeProvider>
+    </DatabaseProvider>,
+  );
+
+  fireEvent.press(await screen.findByRole('button', { name: /^Oktober 2026/ }));
+  fireEvent.press(screen.getByRole('button', { name: /^mandag 5. oktober 2026/ }));
+  fireEvent.press(await screen.findByText('Tilbake'));
+  await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(2));
+
+  expect(screen.getByRole('button', { name: /^Oktober 2026/ })).toHaveProp('accessibilityState', { expanded: true });
+  expect(screen.getByRole('button', { name: /^November 2026/ })).toHaveProp('accessibilityState', { expanded: true });
 });
 
 test.each([

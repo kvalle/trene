@@ -41,7 +41,10 @@ name: Restore a synthetic backup on Android
 - back
 - back
 - tapOn: "Tidligere treninger"
-- assertVisible: "2 øvelser"
+- tapOn: ".*, 1 trening"
+- assertVisible: "Fullført trening"
+- assertVisible: "Knebøy"
+- back
 - stopApp
 - launchApp
 - extendedWaitUntil: { visible: "Klar for en trening?", timeout: 30000 }

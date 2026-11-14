@@ -103,5 +103,5 @@ tags:
     visible: "Klar for en trening?"
     timeout: 60000
 - tapOn: "Tidligere treninger"
-- tapOn: ".*, 1 øvelse"
+- tapOn: ".*, 1 trening"
 - assertVisible: "Sett 1, 6 repetisjoner med 42,5 kilogram"
