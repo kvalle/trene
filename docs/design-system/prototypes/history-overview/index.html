@@ -1,0 +1,65 @@
+<!doctype html>
+<!--
+  PROTOTYPE – kastes etter beslutning.
+  Spørsmål: Hvordan bør «Tidligere treninger» gi oversikt over når jeg har trent?
+  Tre varianter på samme skjerm, byttes med ?variant=A|B|C, pilknapper nederst eller ←/→.
+-->
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prototype: Tidligere treninger</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="prototype-shell">
+    <aside class="control-panel">
+      <p class="eyebrow">Prototype</p>
+      <h1>Tidligere treninger</h1>
+      <p class="prototype-question">Hvordan bør skjermen gi oversikt over <em>når</em> jeg har trent, og fortsatt la meg åpne en enkelt trening?</p>
+
+      <fieldset>
+        <legend>Treningsdata</legend>
+        <div class="control-grid" id="scenario-controls"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Utseende</legend>
+        <div class="control-grid two-column">
+          <button class="control" data-theme-choice="light">Lyst</button>
+          <button class="control" data-theme-choice="dark">Mørkt</button>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Månedsvurdering (B)</legend>
+        <p class="hint">Variant B bruker fortsatt god (≥ 10/mnd), OK (5–9) og lav (&lt; 5). Variant C viser i stedet antall og snitt per uke.</p>
+      </fieldset>
+      <div class="review-prompt">
+        <h2>Se etter</h2>
+        <p>Får du raskt svar på «trener jeg jevnt?» Er det lett å finne en bestemt trening? Hvordan oppleves en dårlig måned? Hvor lang blir skjermen etter et år?</p>
+      </div>
+    </aside>
+
+    <main class="preview-panel">
+      <div class="phone-wrap">
+        <div class="phone" id="phone">
+          <div class="status-bar"><span>09:41</span><span>●●● ▮</span></div>
+          <header class="app-header">
+            <button class="back-button" id="back" aria-label="Tilbake">‹</button>
+            <h3 id="screen-title">Tidligere treninger</h3>
+            <span></span>
+          </header>
+          <div class="screen" id="screen"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <nav class="switcher" aria-label="Velg variant">
+    <button id="prev" aria-label="Forrige variant">←</button>
+    <span id="variant-label"></span>
+    <button id="next" aria-label="Neste variant">→</button>
+  </nav>
+
+  <script src="prototype.js"></script>
+</body>
+</html>
