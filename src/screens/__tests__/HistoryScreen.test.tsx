@@ -224,15 +224,20 @@ test('keeps the empty state available when starting a workout fails', async () =
   expect(screen.getByRole('button', { name: 'Start trening' })).toBeEnabled();
 });
 
-test('focuses the requested remaining workout after reloading history', async () => {
+test('focuses and expands the month of the requested remaining workout after reloading history', async () => {
+  useClock();
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   const setParams = jest.fn();
   mockedList.mockResolvedValue([
-    { id: 4, completedAt: '2026-08-04T10:30:00Z', exerciseCount: 2 },
+    { id: 5, completedAt: local(10, 4), exerciseCount: 2 },
+    { id: 4, completedAt: local(8, 4), exerciseCount: 2 },
   ]);
   renderScreen({ setParams }, { focusWorkoutId: 4 });
 
   await waitFor(() => expect(focus).toHaveBeenCalled());
+  expect(screen.getByRole('button', { name: /^August 2026/ })).toHaveProp('accessibilityState', { expanded: true });
+  expect(screen.getByRole('button', { name: /^Oktober 2026/ })).toHaveProp('accessibilityState', { expanded: true });
+  expect(screen.getByRole('button', { name: 'tirsdag 4. august 2026, 1 trening' })).toBeOnTheScreen();
   expect(setParams).toHaveBeenCalledWith({ focusWorkoutId: undefined, focusEmptyAction: undefined });
 });
 

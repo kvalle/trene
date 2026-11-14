@@ -68,7 +68,16 @@ export function HistoryScreen({ navigation, route }: Props) {
     if (state.status !== 'ready') return;
     const focusWorkoutId = route.params?.focusWorkoutId;
     const focusWorkout = state.workouts.find((workout) => workout.id === focusWorkoutId);
-    const target = focusWorkout ? monthRefs.current.get(monthKey(new Date(focusWorkout.completedAt))) : null;
+    const focusMonth = focusWorkout ? monthKey(new Date(focusWorkout.completedAt)) : null;
+    if (focusMonth) {
+      // Keep the remaining workout's calendar visible next to the focused month header.
+      setExpandedMonths((current) => {
+        const initial = buildMonthOverview(state.workouts, state.today).initiallyExpanded;
+        const expanded = current ?? new Set(initial ? [initial] : []);
+        return expanded.has(focusMonth) ? current : new Set([...expanded, focusMonth]);
+      });
+    }
+    const target = focusMonth ? monthRefs.current.get(focusMonth) : null;
     const handle = findNodeHandle(target ?? (route.params?.focusEmptyAction ? emptyActionRef.current : null));
     if (!handle) return;
     AccessibilityInfo.setAccessibilityFocus(handle);
