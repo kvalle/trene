@@ -19,6 +19,7 @@ import { FormSection } from '../ui/FormSection';
 import { Hero } from '../ui/Hero';
 import { Icon, iconNames, type IconName, type IconSize } from '../ui/Icon';
 import { Loader } from '../ui/Loader';
+import { MonthCalendar, type MonthCalendarDay } from '../ui/MonthCalendar';
 import { ListContainer } from '../ui/ListContainer';
 import { NavigationRow } from '../ui/NavigationRow';
 import { Notice } from '../ui/Notice';
@@ -52,6 +53,7 @@ type CatalogStackParamList = {
   PageStatusDetail: undefined;
   PositiveStatusDetail: undefined;
   ListContainerDetail: undefined;
+  MonthCalendarDetail: undefined;
   NavigationRowDetail: undefined;
   SearchFieldDetail: undefined;
   SelectionRowDetail: undefined;
@@ -156,6 +158,14 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         usage: 'Bruk når lesbart, ikke-redigerbart data skal oppsummeres i en gruppe.',
         route: 'DataRowDetail',
         testID: 'catalog-item-datarow',
+      },
+      {
+        id: 'monthcalendar',
+        name: 'MonthCalendar',
+        description: 'Månedsrutenett med ukedager fra mandag og én celle per dag.',
+        usage: 'Bruk når enkeltdager i én måned skal kunne markeres og eventuelt åpnes fra en kalenderoversikt.',
+        route: 'MonthCalendarDetail',
+        testID: 'catalog-item-monthcalendar',
       },
     ],
   },
@@ -363,6 +373,7 @@ function CatalogNavigator({
         <Stack.Screen name="ListContainerDetail" component={ListContainerDetailScreen} options={{ title: 'ListContainer' }} />
         <Stack.Screen name="NavigationRowDetail" component={NavigationRowDetailScreen} options={{ title: 'NavigationRow' }} />
         <Stack.Screen name="SearchFieldDetail" component={SearchFieldDetailScreen} options={{ title: 'SearchField' }} />
+        <Stack.Screen name="MonthCalendarDetail" component={MonthCalendarDetailScreen} options={{ title: 'MonthCalendar' }} />
         <Stack.Screen name="SelectionRowDetail" component={SelectionRowDetailScreen} options={{ title: 'SelectionRow' }} />
         <Stack.Screen name="SingleSelectionGroupDetail" component={SingleSelectionGroupDetailScreen} options={{ title: 'SingleSelectionGroup' }} />
         <Stack.Screen name="SectionedDetailDetail" component={SectionedDetailDetailScreen} options={{ title: 'Seksjonert detalj' }} />
@@ -1279,6 +1290,59 @@ function SearchFieldDetailScreen() {
           <Text style={[typography.metadata, styles.variantLabel, { color: colors.muted }]}>Fokus (trykk for å se)</Text>
           <SearchField autoFocus label="Søk i liste" value="" onChangeText={() => {}} testID="catalog-searchfield-focus" />
         </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+// February 2027 starts on a Monday, so the first week shows one state per weekday side by side.
+const CATALOG_CALENDAR_STATES: { label: string; day: Omit<MonthCalendarDay, 'accessibilityLabel'> }[] = [
+  { label: 'Standard', day: {} },
+  { label: 'Markert', day: { highlighted: true } },
+  { label: 'I dag', day: { today: true } },
+  { label: 'Markert i dag', day: { highlighted: true, today: true } },
+  { label: 'Trykkbar', day: { onPress: () => {} } },
+  { label: 'Trykkbar markert', day: { highlighted: true, onPress: () => {} } },
+  { label: 'Inaktiv', day: { inactive: true } },
+];
+
+function catalogStateDay(day: number): MonthCalendarDay {
+  const state = CATALOG_CALENDAR_STATES[day - 1];
+  return state ? { ...state.day, accessibilityLabel: `${day}. februar, ${state.label.toLowerCase()}` } : { accessibilityLabel: `${day}. februar` };
+}
+
+const CATALOG_HIGHLIGHTED_DAYS = [3, 4, 10, 12, 17];
+
+function catalogMonthDay(day: number): MonthCalendarDay {
+  const highlighted = CATALOG_HIGHLIGHTED_DAYS.includes(day);
+  return {
+    accessibilityLabel: `${day}. mars${highlighted ? ', markert' : ''}`,
+    highlighted,
+    today: day === 18,
+    inactive: day > 18,
+    onPress: highlighted ? () => {} : undefined,
+  };
+}
+
+export function MonthCalendarDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-monthcalendar">
+      <DetailHeader
+        name="MonthCalendar"
+        description="Månedsrutenett med ukedager fra mandag og én celle per dag. Dager kan være markert, i dag, inaktive og trykkbare. Kalleren eier tilgjengelighetsetikett og trykkhandling for hver dag."
+        usage="Bruk når enkeltdager i én måned skal kunne markeres og eventuelt åpnes fra en kalenderoversikt. Bruk ikke som datovelger i skjema."
+      />
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Tilstander (første uke)</Text>
+        <Text style={[typography.metadata, { color: colors.muted }]}>
+          {CATALOG_CALENDAR_STATES.map((state, index) => `${index + 1}: ${state.label}`).join(' · ')}
+        </Text>
+        <MonthCalendar year={2027} month={2} getDay={catalogStateDay} testID="catalog-monthcalendar-states" />
+      </View>
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Måned med inaktive fremtidige dager</Text>
+        <MonthCalendar year={2027} month={3} getDay={catalogMonthDay} testID="catalog-monthcalendar-month" />
       </View>
     </ScrollView>
   );

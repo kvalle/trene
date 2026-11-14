@@ -186,6 +186,19 @@ Endret slipp lagrer komplett rekkefølge én gang; uendret slipp og avbrudd lagr
 ikke. Mens listen eller en annen mutasjon er opptatt, er både drag og
 tilgjengelighetshandlingene utilgjengelige.
 
+`MonthCalendar` viser én måned som et rutenett med ukedagsrad fra mandag og én
+celle per dag. Tomme celler før dag 1 plasserer dagen på riktig ukedag.
+Komponenten er domenenøytral: kalleren angir per dag om den er markert, i dag,
+inaktiv eller trykkbar, og eier tilgjengelighetsetiketten og trykkhandlingen.
+Standarddager bruker `surfaceAlt` og `text`, markerte dager `primary` og
+`onPrimary` med fet tekst, dagens dato får en `2` punkters kant i `text`, og
+inaktive dager, som fremtidige dager eller dager utenfor et valgt område, har
+ingen flate og `muted` tekst. Bare aktive dager med trykkhandling er knapper;
+andre dager leses som tekst og er ikke handlingsmål. Celler er minst `48`
+punkter høye, bruker metadatastørrelse og vokser med stor tekst. Fordi markering
+formidles med farge, skal kallerens tilgjengelighetsetikett beskrive hva
+markeringen betyr.
+
 Feedback og sidevisninger holdes adskilt. Loader, informasjonsvarsel og
 feilvarsel er komponenter som kan plasseres i ulike kontekster. `PositiveStatus`
 bekrefter en vellykket handling uten å avbryte videre arbeid. Den ligger fast
