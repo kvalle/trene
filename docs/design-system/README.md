@@ -111,7 +111,7 @@ komponenter uten å endre dagens tilgjengelighetsatferd eller skjermflyter.
 
 Runtime-katalogen dokumenterer komponentmønstrene og viser hvert mønster på en
 representativ skjerm. Katalogen dekker navigasjon og struktur,
-handlinger, skjema, lister og beholdere, feedback, sidevisninger og dialoger.
+handlinger, skjema, lister og beholdere, datavisning, feedback, sidevisninger og dialoger.
 Den inkluderer relevante normal-, tom-, laste-, feil-, deaktivert-, opptatt- og
 destruktive tilstander.
 

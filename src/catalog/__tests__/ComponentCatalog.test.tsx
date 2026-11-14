@@ -58,6 +58,7 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('DataRow')).toBeOnTheScreen();
   expect(screen.getByText('DisclosureCard')).toBeOnTheScreen();
   expect(screen.getByText('PageStatus')).toBeOnTheScreen();
+  expect(screen.getByText('DATAVISNING')).toBeOnTheScreen();
   expect(screen.getByText('MonthCalendar')).toBeOnTheScreen();
   expect(screen.getByText('MonthCalendarDetail')).toBeOnTheScreen();
   // detail screens are mounted via mock as text fallbacks

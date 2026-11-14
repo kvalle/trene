@@ -159,6 +159,11 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         route: 'DataRowDetail',
         testID: 'catalog-item-datarow',
       },
+    ],
+  },
+  {
+    title: 'Datavisning',
+    items: [
       {
         id: 'monthcalendar',
         name: 'MonthCalendar',
