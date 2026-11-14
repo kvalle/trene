@@ -1,6 +1,6 @@
 import { AccessibilityInfo } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import ComponentCatalog, { AppShellDetailScreen, ButtonDetailScreen, CompactActionDetailScreen, DisclosureCardDetailScreen, IconDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen, TypographyDetailScreen } from '../ComponentCatalog';
+import ComponentCatalog, { AppShellDetailScreen, ButtonDetailScreen, CompactActionDetailScreen, DisclosureCardDetailScreen, IconDetailScreen, MonthCalendarDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen, TypographyDetailScreen } from '../ComponentCatalog';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 
 jest.mock('@react-navigation/native', () => ({
@@ -58,6 +58,9 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('DataRow')).toBeOnTheScreen();
   expect(screen.getByText('DisclosureCard')).toBeOnTheScreen();
   expect(screen.getByText('PageStatus')).toBeOnTheScreen();
+  expect(screen.getByText('DATAVISNING')).toBeOnTheScreen();
+  expect(screen.getByText('MonthCalendar')).toBeOnTheScreen();
+  expect(screen.getByText('MonthCalendarDetail')).toBeOnTheScreen();
   // detail screens are mounted via mock as text fallbacks
   expect(screen.getByText('ButtonDetail')).toBeOnTheScreen();
   expect(screen.getByText('CompactActionDetail')).toBeOnTheScreen();
@@ -110,6 +113,17 @@ it('documents that native screen titles are not repeated in content', () => {
   );
   expect(screen.getByText(/Når den native headeren viser skjermtittelen/)).toBeOnTheScreen();
   expect(screen.getByText(/Oppgaveheroer, ressursidentiteter, seksjoner, dialoger og sidetilstander/)).toBeOnTheScreen();
+});
+
+it.each(['light', 'dark'] as const)('shows every MonthCalendar day state in the %s theme', (scheme) => {
+  render(<AppThemeProvider scheme={scheme}><MonthCalendarDetailScreen /></AppThemeProvider>);
+  expect(screen.getByText('Bruk når')).toBeOnTheScreen();
+  for (const state of ['standard', 'markert', 'i dag', 'markert i dag', 'trykkbar', 'trykkbar markert', 'inaktiv']) {
+    expect(screen.getByLabelText(new RegExp(`februar, ${state}$`))).toBeOnTheScreen();
+  }
+  expect(screen.getByRole('button', { name: '5. februar, trykkbar' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: '6. februar, trykkbar markert' })).toBeOnTheScreen();
+  expect(screen.getByTestId('catalog-monthcalendar-month')).toBeOnTheScreen();
 });
 
 it('shows and operates every SingleSelectionGroup state', () => {
