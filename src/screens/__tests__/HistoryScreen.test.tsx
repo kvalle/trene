@@ -112,6 +112,41 @@ test('opens the completed workout from its highlighted day', async () => {
   expect(mockedActiveWorkout).not.toHaveBeenCalled();
 });
 
+test('lets the user choose between several workouts on the same day', async () => {
+  useClock();
+  const navigate = jest.fn();
+  mockedList.mockResolvedValue([
+    { id: 7, completedAt: local(11, 3, 18), exerciseCount: 1 },
+    { id: 6, completedAt: local(11, 3, 7), exerciseCount: 3 },
+  ]);
+  renderScreen({ navigate });
+
+  fireEvent.press(await screen.findByRole('button', { name: 'tirsdag 3. november 2026, 2 treninger' }));
+  expect(navigate).not.toHaveBeenCalled();
+  expect(screen.getByRole('header', { name: 'Tirsdag 3. november 2026' })).toBeOnTheScreen();
+  const rows = screen.getAllByRole('button', { name: /^Kl\. / });
+  expect(rows.map((row) => row.props.accessibilityLabel)).toEqual(['Kl. 07:00, 3 øvelser', 'Kl. 18:00, 1 øvelse']);
+
+  fireEvent.press(rows[1]);
+  expect(navigate).toHaveBeenCalledWith('CompletedWorkout', { workoutId: 7 });
+  expect(screen.queryByTestId('history-day-choice')).not.toBeOnTheScreen();
+});
+
+test('dismisses the workout choice without navigating', async () => {
+  useClock();
+  const navigate = jest.fn();
+  mockedList.mockResolvedValue([
+    { id: 7, completedAt: local(11, 3, 18), exerciseCount: 1 },
+    { id: 6, completedAt: local(11, 3, 7), exerciseCount: 3 },
+  ]);
+  renderScreen({ navigate });
+
+  fireEvent.press(await screen.findByRole('button', { name: 'tirsdag 3. november 2026, 2 treninger' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Avbryt' }));
+  expect(screen.queryByTestId('history-day-choice')).not.toBeOnTheScreen();
+  expect(navigate).not.toHaveBeenCalled();
+});
+
 test('keeps expanded months after returning from a completed workout', async () => {
   useClock();
   const workouts = [
