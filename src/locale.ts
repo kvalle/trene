@@ -26,3 +26,7 @@ export function formatLoad(value: number): string {
     minimumFractionDigits: value % 1 === 0 ? 0 : 1,
   }).format(value);
 }
+
+export function formatTime(value: Date): string {
+  return new Intl.DateTimeFormat(APP_LOCALE, { timeStyle: 'short' }).format(value);
+}

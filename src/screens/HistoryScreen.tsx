@@ -12,12 +12,16 @@ import {
   type CompletedWorkoutListItem,
 } from '../database/workouts';
 import { buildMonthOverview, monthKey } from '../domain/monthOverview';
+import { formatTime } from '../locale';
 import { typography } from '../theme';
 import { useAppTheme } from '../ui/AppThemeProvider';
 import { Button } from '../ui/Button';
 import { ErrorAlert } from '../ui/ErrorAlert';
+import { Dialog } from '../ui/Dialog';
 import { DisclosureCard } from '../ui/DisclosureCard';
+import { ListContainer } from '../ui/ListContainer';
 import { MonthCalendar } from '../ui/MonthCalendar';
+import { NavigationRow } from '../ui/NavigationRow';
 import { PageStatus } from '../ui/PageStatus';
 import { useActiveWorkoutVisibility } from '../activeWorkoutVisibility/ActiveWorkoutVisibilityContext';
 
@@ -39,6 +43,8 @@ export function HistoryScreen({ navigation, route }: Props) {
   const emptyActionRef = useRef<View>(null);
   const monthRefs = useRef(new Map<string, View>());
   const [expandedMonths, setExpandedMonths] = useState<Set<string> | null>(null);
+  const [dayChoice, setDayChoice] = useState<{ title: string; workouts: CompletedWorkoutListItem[] } | null>(null);
+  const dayChoiceTitleRef = useRef<Text>(null);
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -166,7 +172,16 @@ export function HistoryScreen({ navigation, route }: Props) {
                   inactive: month.isInactive(day),
                   today: month.isToday(day),
                   onPress: workouts
-                    ? () => navigation.navigate('CompletedWorkout', { workoutId: workouts[0].id })
+                    ? () => {
+                      if (workouts.length === 1) {
+                        navigation.navigate('CompletedWorkout', { workoutId: workouts[0].id });
+                        return;
+                      }
+                      setDayChoice({
+                        title: capitalize(month.dayLabel(day).split(', ')[0]),
+                        workouts: [...workouts].sort((a, b) => a.completedAt.localeCompare(b.completedAt)),
+                      });
+                    }
                     : undefined,
                 };
               }}
@@ -174,8 +189,41 @@ export function HistoryScreen({ navigation, route }: Props) {
           </DisclosureCard>
         );
       })}
+      <Dialog
+        initialFocusRef={dayChoiceTitleRef}
+        onRequestClose={() => setDayChoice(null)}
+        testID="history-day-choice"
+        title={dayChoice?.title ?? ''}
+        titleRef={dayChoiceTitleRef}
+        visible={dayChoice !== null}
+      >
+        <ListContainer>
+          {dayChoice?.workouts.map((workout, index) => {
+            const time = formatTime(new Date(workout.completedAt));
+            const count = `${workout.exerciseCount} ${workout.exerciseCount === 1 ? 'øvelse' : 'øvelser'}`;
+            return (
+              <NavigationRow
+                accessibilityHint="Åpner den fullførte treningen"
+                description={count}
+                key={workout.id}
+                onPress={() => {
+                  setDayChoice(null);
+                  navigation.navigate('CompletedWorkout', { workoutId: workout.id });
+                }}
+                showSeparator={index < dayChoice.workouts.length - 1}
+                title={`Kl. ${time}`}
+              />
+            );
+          })}
+        </ListContainer>
+        <Button title="Avbryt" variant="secondary" onPress={() => setDayChoice(null)} />
+      </Dialog>
     </ScrollView>
   );
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function HistoryStatus({
