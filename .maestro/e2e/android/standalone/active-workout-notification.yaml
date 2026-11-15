@@ -78,3 +78,4 @@ tags:
     end: 50%, 70%
     duration: 500
 - assertNotVisible: "Trening pågår"
+- pressKey: BACK
