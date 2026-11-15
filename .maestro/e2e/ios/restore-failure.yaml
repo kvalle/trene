@@ -14,10 +14,11 @@ tags:
     timeout: 30000
 - tapOn: "Opprett første øvelse"
 - extendedWaitUntil:
-    visible: "Opprett øvelse"
+    visible:
+      id: "exercise-name-input"
     timeout: 30000
 - tapOn:
-    point: "50%,31%"
+    id: "exercise-name-input"
 - inputText: "B"
 - assertVisible: "^B$"
 - tapOn:
@@ -40,30 +41,22 @@ tags:
 - tapOn: "Repetisjoner for B"
 - inputText: "6"
 - assertVisible: "^6$"
+- tapOn: "Lukk redigering av sett 1 for B"
 - extendedWaitUntil:
     visible: "Marker sett 1 som gjennomført for B"
     timeout: 30000
 - tapOn: "Marker sett 1 som gjennomført for B"
 - extendedWaitUntil:
-    visible: "Sett 1, 42,5 kilogram, 6 repetisjoner, Gjennomført"
-    timeout: 30000
-- extendedWaitUntil:
-    visible: "Ferdig"
+    visible: ".*1 av 1 sett gjennomført.*"
     timeout: 30000
 - tapOn: "Ferdig"
-- runFlow:
-    when:
-      notVisible: "Fullfør trening"
-    commands:
-      - runFlow:
-          when:
-            visible: "Ferdig"
-          commands:
-            - tapOn: "Ferdig"
 - extendedWaitUntil:
-    visible: "Fullfør trening"
+    visible: "Fullfør treningen?"
     timeout: 30000
 - tapOn: "Fullfør trening"
+- extendedWaitUntil:
+    visible: "Fullført trening"
+    timeout: 30000
 - tapOn: "Tilbake til forsiden"
 - tapOn: "Innstillinger"
 - tapOn:
@@ -103,5 +96,5 @@ tags:
     visible: "Klar for en trening?"
     timeout: 60000
 - tapOn: "Tidligere treninger"
-- tapOn: ".*, 1 øvelse"
+- tapOn: ".*, 1 trening"
 - assertVisible: "Sett 1, 6 repetisjoner med 42,5 kilogram"

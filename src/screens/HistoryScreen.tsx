@@ -11,13 +11,13 @@ import {
   startWorkout,
   type CompletedWorkoutListItem,
 } from '../database/workouts';
-import { formatDateTime } from '../locale';
+import { buildMonthOverview, monthKey } from '../domain/monthOverview';
 import { typography } from '../theme';
 import { useAppTheme } from '../ui/AppThemeProvider';
 import { Button } from '../ui/Button';
 import { ErrorAlert } from '../ui/ErrorAlert';
-import { ListContainer } from '../ui/ListContainer';
-import { NavigationRow } from '../ui/NavigationRow';
+import { DisclosureCard } from '../ui/DisclosureCard';
+import { MonthCalendar } from '../ui/MonthCalendar';
 import { PageStatus } from '../ui/PageStatus';
 import { useActiveWorkoutVisibility } from '../activeWorkoutVisibility/ActiveWorkoutVisibilityContext';
 
@@ -25,7 +25,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'History'>;
 type State =
   | { status: 'loading' }
   | { status: 'failed' }
-  | { status: 'ready'; activeWorkoutId: number | null; workouts: CompletedWorkoutListItem[] };
+  | { status: 'ready'; activeWorkoutId: number | null; workouts: CompletedWorkoutListItem[]; today: Date };
 
 export function HistoryScreen({ navigation, route }: Props) {
   const database = useDatabase();
@@ -37,14 +37,16 @@ export function HistoryScreen({ navigation, route }: Props) {
   const allowNavigation = useRef(false);
   const retryRef = useRef<View>(null);
   const emptyActionRef = useRef<View>(null);
-  const workoutRefs = useRef(new Map<number, View>());
+  const monthRefs = useRef(new Map<string, View>());
+  const [expandedMonths, setExpandedMonths] = useState<Set<string> | null>(null);
 
   useFocusEffect(useCallback(() => {
     let active = true;
-    setState({ status: 'loading' });
+    // Keep showing the overview while refreshing so expanded months and scroll position survive.
+    setState((current) => (current.status === 'ready' && current.workouts.length > 0 ? current : { status: 'loading' }));
     listCompletedWorkouts(database).then(async (workouts) => {
       const activeWorkoutId = workouts.length === 0 ? await getActiveWorkoutId(database) : null;
-      if (active) setState({ status: 'ready', workouts, activeWorkoutId });
+      if (active) setState({ status: 'ready', workouts, activeWorkoutId, today: new Date() });
     }).catch(
       () => active && setState({ status: 'failed' }),
     );
@@ -65,7 +67,17 @@ export function HistoryScreen({ navigation, route }: Props) {
   useEffect(() => {
     if (state.status !== 'ready') return;
     const focusWorkoutId = route.params?.focusWorkoutId;
-    const target = focusWorkoutId === undefined ? null : workoutRefs.current.get(focusWorkoutId);
+    const focusWorkout = state.workouts.find((workout) => workout.id === focusWorkoutId);
+    const focusMonth = focusWorkout ? monthKey(new Date(focusWorkout.completedAt)) : null;
+    if (focusMonth) {
+      // Keep the remaining workout's calendar visible next to the focused month header.
+      setExpandedMonths((current) => {
+        const initial = buildMonthOverview(state.workouts, state.today).initiallyExpanded;
+        const expanded = current ?? new Set(initial ? [initial] : []);
+        return expanded.has(focusMonth) ? current : new Set([...expanded, focusMonth]);
+      });
+    }
+    const target = focusMonth ? monthRefs.current.get(focusMonth) : null;
     const handle = findNodeHandle(target ?? (route.params?.focusEmptyAction ? emptyActionRef.current : null));
     if (!handle) return;
     AccessibilityInfo.setAccessibilityFocus(handle);
@@ -116,30 +128,52 @@ export function HistoryScreen({ navigation, route }: Props) {
     </HistoryStatus>
   );
 
+  const overview = buildMonthOverview(state.workouts, state.today);
+  const expanded = expandedMonths ?? new Set(overview.initiallyExpanded ? [overview.initiallyExpanded] : []);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <ListContainer>
-        {state.workouts.map((workout, index) => {
-          const completedAt = formatDateTime(new Date(workout.completedAt));
-          const count = `${workout.exerciseCount} ${workout.exerciseCount === 1 ? 'øvelse' : 'øvelser'}`;
-          return (
-            <NavigationRow
-              accessibilityHint="Åpner den fullførte treningen"
-              accessibilityLabel={`${completedAt}, ${count}`}
-              accessibilityRole="button"
-              key={workout.id}
-              onPress={() => navigation.navigate('CompletedWorkout', { workoutId: workout.id })}
-              ref={(node) => {
-                if (node) workoutRefs.current.set(workout.id, node);
-                else workoutRefs.current.delete(workout.id);
+      {overview.months.map((month) => {
+        const open = expanded.has(month.key);
+        return (
+          <DisclosureCard
+            key={month.key}
+            accessibilityLabel={`${month.title}, ${month.summary}`}
+            expanded={open}
+            headerRef={(node) => {
+              if (node) monthRefs.current.set(month.key, node);
+              else monthRefs.current.delete(month.key);
+            }}
+            onPress={() => {
+              const next = new Set(expanded);
+              if (open) next.delete(month.key);
+              else next.add(month.key);
+              setExpandedMonths(next);
+            }}
+            summary={month.summary}
+            testID={`history-month-${month.key}`}
+            title={month.title}
+          >
+            <MonthCalendar
+              year={month.year}
+              month={month.month}
+              testID={`history-calendar-${month.key}`}
+              getDay={(day) => {
+                const workouts = month.days.get(day);
+                return {
+                  accessibilityLabel: month.dayLabel(day),
+                  highlighted: workouts !== undefined,
+                  inactive: month.isInactive(day),
+                  today: month.isToday(day),
+                  onPress: workouts
+                    ? () => navigation.navigate('CompletedWorkout', { workoutId: workouts[0].id })
+                    : undefined,
+                };
               }}
-              title={completedAt}
-              description={count}
-              showSeparator={index < state.workouts.length - 1}
             />
-          );
-        })}
-      </ListContainer>
+          </DisclosureCard>
+        );
+      })}
     </ScrollView>
   );
 }
@@ -166,7 +200,7 @@ function HistoryStatus({
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 20 },
+  container: { flexGrow: 1, gap: 12, padding: 20 },
   center: { alignItems: 'center', flex: 1, gap: 20, justifyContent: 'center', padding: 24 },
   heading: { textAlign: 'center' },
   explanation: { textAlign: 'center' },
