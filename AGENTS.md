@@ -1,5 +1,37 @@
 # Project Instructions
 
+## About the app
+
+Trene is an offline Expo/React Native app (Android and iOS) for logging
+strength training. There are no accounts, servers, or networking; all data lives
+in a local SQLite database. The UI is in Norwegian (Bokmål) with hard-coded
+strings and `nb-NO` formatting from `src/locale.ts`.
+
+Read `CONTEXT.md` for the domain language (treningsøkt, øvelse, planlagt and
+gjennomført sett, belastning, and so on) and use its terms in code, UI, and
+issues. The MVP scope is in `docs/specs/mvp-specification.md`.
+
+The app covers logging workouts and sets, workout history, exercise
+management, settings, and manual backup and restore of all training data.
+
+Architectural conventions:
+
+- Database access goes through plain functions wrapped in `databaseOperation(...)`
+  in `src/database/`, not through repository classes. Schema changes use
+  migrations keyed by `PRAGMA user_version`.
+- The database connection is shared and can be swapped at runtime by a restore.
+  Do not hold onto a connection outside the provided runtime and context.
+- Pure domain logic without I/O belongs in `src/domain/`.
+- State lives in React Context and local component state. Do not introduce a
+  global store.
+- Backup and restore are implemented in TypeScript and follow
+  `docs/specs/manual-backup-and-restore-specification.md`.
+- Native code is limited to the local module in `modules/`, which shows the
+  active workout as an Android notification and an iOS Live Activity. Prefer
+  Expo libraries over new native code.
+- Tests live in `__tests__/` folders next to the code, and end-to-end flows are
+  in `.maestro/e2e/`.
+
 ## Git commits in the sandbox
 
 The sandbox cannot access the 1Password signing agent. If a commit fails because
