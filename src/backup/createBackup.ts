@@ -5,7 +5,7 @@ import type {
   BackupArchiveReader,
   BackupByteSink,
   BackupByteSource,
-  BackupManifestV1,
+  BackupManifest,
 } from './types';
 import { createBackupPackage, inspectBackupPackage } from './packageCodec';
 import { atCheckpoint, atCleanupCheckpoint, type FaultCheckpoint } from './faultInjection';
@@ -33,7 +33,7 @@ export async function createAndShareBackup(
   runtime: DatabaseRuntime,
   platform: BackupPlatform,
   options: CreateBackupOptions,
-): Promise<BackupManifestV1> {
+): Promise<BackupManifest> {
   const createdAt = (options.now ?? (() => new Date()))().toISOString();
   const suffix = createdAt.replaceAll(':', '-');
   const artifacts: BackupArtifact[] = [];

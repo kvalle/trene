@@ -29,7 +29,7 @@ test('detects exercises and workouts as training data', async () => {
   await database.runAsync("INSERT INTO exercises (name, name_key, created_at) VALUES ('Knebøy', 'knebøy', 'now')");
   expect(await hasTrainingData(database)).toBe(true);
   await database.runAsync('DELETE FROM exercises');
-  await database.runAsync("INSERT INTO workouts (status, started_at) VALUES ('active', 'now')");
+  await database.runAsync("INSERT INTO workouts (training_context_id, status, started_at) VALUES (1, 'active', 'now')");
   expect(await hasTrainingData(database)).toBe(true);
 });
 
@@ -37,6 +37,10 @@ test('atomically deletes every training record while preserving unrelated data',
   const database = new TestDatabase();
   await migrateDatabase(database);
   await seedTrainingData(database);
+  await database.runAsync(
+    "INSERT INTO training_contexts (name, name_key, created_at) VALUES ('Fysio', 'fysio', 'now')",
+  );
+  await database.runAsync("UPDATE training_contexts SET name = 'Hjemme', name_key = 'hjemme' WHERE id = 1");
   await database.execAsync("CREATE TABLE preferences (name TEXT); INSERT INTO preferences VALUES ('dark');");
   const runtime = new DatabaseRuntime(async () => database);
   const published = jest.fn();
@@ -50,6 +54,8 @@ test('atomically deletes every training record while preserving unrelated data',
     for (const table of ['exercises', 'workouts', 'workout_exercises', 'workout_sets']) {
       expect((await active.getFirstAsync<{ count: number }>(`SELECT COUNT(*) AS count FROM ${table}`))?.count).toBe(0);
     }
+    expect(await active.getAllAsync('SELECT name, archived_at FROM training_contexts'))
+      .toEqual([{ name: 'Standard', archived_at: null }]);
     expect(await active.getFirstAsync('SELECT name FROM preferences')).toEqual({ name: 'dark' });
   });
   expect(published).toHaveBeenCalledTimes(1);
@@ -69,7 +75,9 @@ test('rolls back every deletion when the database rejects the operation', async 
   await expect(deleteAllTrainingData(runtime)).rejects.toThrow('injected deletion failure');
 
   await runtime.runOperation(async (active) => {
-    expect(await counts(active)).toEqual({ exercises: 1, workouts: 2, workout_exercises: 2, workout_sets: 2 });
+    expect(await counts(active)).toEqual({
+      training_contexts: 1, exercises: 1, workouts: 2, workout_exercises: 2, workout_sets: 2,
+    });
   });
   expect(runtime.getGeneration()).toBe(0);
 });
@@ -80,7 +88,7 @@ async function seedTrainingData(database: Database) {
   );
   for (const [status, completedAt] of [['active', null], ['completed', 'later']] as const) {
     const workout = await database.runAsync(
-      'INSERT INTO workouts (status, started_at, completed_at) VALUES (?, ?, ?)',
+      'INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, ?, ?, ?)',
       status, 'now', completedAt,
     );
     const membership = await database.runAsync(
@@ -96,7 +104,7 @@ async function seedTrainingData(database: Database) {
 
 async function counts(database: Database) {
   const result: Record<string, number> = {};
-  for (const table of ['exercises', 'workouts', 'workout_exercises', 'workout_sets']) {
+  for (const table of ['training_contexts', 'exercises', 'workouts', 'workout_exercises', 'workout_sets']) {
     result[table] = (await database.getFirstAsync<{ count: number }>(`SELECT COUNT(*) AS count FROM ${table}`))?.count ?? 0;
   }
   return result;

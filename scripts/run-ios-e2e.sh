@@ -138,7 +138,7 @@ for flow in "${flows[@]}"; do
     node -e '
       const fs=require("node:fs");
       const marker=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
-      const safe={appVersion:"0.1.0",formatVersion:1,schemaVersion:marker.restored.schemaVersion,platform:"iOS Simulator",scenario:"rollback-failure",stage:marker.stage,tableCounts:marker.restored.tableCounts,previewCounts:marker.restored.previewCounts};
+      const safe={appVersion:"0.1.0",formatVersion:2,schemaVersion:marker.restored.schemaVersion,platform:"iOS Simulator",scenario:"rollback-failure",stage:marker.stage,tableCounts:marker.restored.tableCounts,previewCounts:marker.restored.previewCounts};
       fs.writeFileSync(process.argv[2],JSON.stringify(safe,null,2)+"\n");
     ' "$container/Documents/trene-restore-recovery/operation.json" "$ios_artifacts/runtime-metadata.json"
   fi

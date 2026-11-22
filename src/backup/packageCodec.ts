@@ -7,14 +7,14 @@ import {
   BackupInspectionLimits,
   BackupInspectionResult,
   BackupManifestComponent,
-  BackupManifestV1,
+  BackupManifest,
   BackupPackageError,
   BackupPackageInput,
   InspectBackupOptions,
 } from './types';
-import { parseManifestV1, readFormatVersion } from './manifest';
+import { parseManifest, readFormatVersion } from './manifest';
 
-export const BACKUP_FORMAT_VERSION = 1;
+export const BACKUP_FORMAT_VERSION = 2;
 
 export const DEFAULT_BACKUP_INSPECTION_LIMITS: BackupInspectionLimits = {
   maxEntries: 64,
@@ -171,7 +171,7 @@ function validatePath(path: string, limits: BackupInspectionLimits): void {
   }
 }
 
-function stableManifest(manifest: BackupManifestV1): Uint8Array {
+function stableManifest(manifest: BackupManifest): Uint8Array {
   return strToU8(`${JSON.stringify(manifest)}\n`);
 }
 
@@ -237,7 +237,7 @@ function centralHeader(path: Uint8Array, metadata: SourceMetadata, offset: numbe
 export async function createBackupPackage(
   input: BackupPackageInput,
   sink: BackupByteSink,
-): Promise<BackupManifestV1> {
+): Promise<BackupManifest> {
   const components = [
     { path: 'database.sqlite', type: 'sqlite-database', source: input.database },
     ...(input.optionalComponents ?? []),
@@ -255,7 +255,7 @@ export async function createBackupPackage(
         fail('malformed-manifest', 'Optional components require a namespaced extension path');
       }
     } else if (component.path !== 'database.sqlite') {
-      fail('unsupported-component', 'Format 1 only supports the mandatory database component');
+      fail('unsupported-component', 'Backups only support the mandatory database component');
     }
     metadata.push(await inspectSource(component.source));
   }
@@ -267,15 +267,15 @@ export async function createBackupPackage(
     sha256: metadata[index]!.sha256,
     ...(component.optional ? { optional: true as const, namespace: component.namespace } : {}),
   }));
-  const manifest: BackupManifestV1 = {
-    formatVersion: 1,
+  const manifest: BackupManifest = {
+    formatVersion: BACKUP_FORMAT_VERSION,
     schemaVersion: input.schemaVersion,
     appVersion: input.appVersion,
     createdAt: input.createdAt,
     components: manifestComponents,
     tableCounts: input.tableCounts,
   };
-  parseManifestV1(manifest);
+  parseManifest(manifest);
 
   const manifestBytes = stableManifest(manifest);
   const manifestMetadata: SourceMetadata = {
@@ -288,7 +288,7 @@ export async function createBackupPackage(
     ...components.map((component, index) => ({ path: component.path, source: component.source, metadata: metadata[index]! })),
   ];
   if (manifestBytes.length > createLimits.maxManifestBytes) {
-    fail('resource-limit', 'Manifest exceeds format-1 creation limits');
+    fail('resource-limit', 'Manifest exceeds creation limits');
   }
 
   try {
@@ -647,7 +647,7 @@ export async function inspectBackupPackage(
   }
   const formatVersion = readFormatVersion(rawManifest);
   if (formatVersion > BACKUP_FORMAT_VERSION) return { status: 'update-required', formatVersion };
-  const manifest = parseManifestV1(rawManifest);
+  const manifest = parseManifest(rawManifest);
   const declared = new Map(manifest.components.map((component) => [component.path, component]));
   for (const entry of entries) {
     if (entry.path !== 'manifest.json' && !declared.has(entry.path)) fail('unsafe-archive', `Undeclared archive entry: ${entry.path}`);

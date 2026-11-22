@@ -1,11 +1,14 @@
+import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { strToU8, zipSync } from 'fflate';
 
 import { DatabaseRuntime } from '../../database/DatabaseRuntime';
 import { inspectDatabase, type DatabaseInspection } from '../../database/inspectDatabase';
-import { migrateDatabase } from '../../database/migrate';
+import { migrateDatabase, SCHEMA_VERSION } from '../../database/migrate';
+import { VERSION_ONE_SQL } from '../../database/schema';
 import type { Database, DatabaseValue } from '../../database/types';
 import { exerciseNameKey } from '../../domain/exerciseName';
 import { digestBytes, type RestoreMarkerStage, type RollbackSnapshot } from '../commitRestore';
@@ -15,7 +18,67 @@ import { prepareRestore, type RestorePlatform } from '../prepareRestore';
 import type { BackupByteSink, BackupByteSource } from '../types';
 
 type Dataset = 'empty' | 'representative' | 'rich' | 'large';
-type SemanticRows = Record<'exercises' | 'workouts' | 'workout_exercises' | 'workout_sets', unknown[]>;
+type SemanticRows = Record<
+  'training_contexts' | 'exercises' | 'workouts' | 'workout_exercises' | 'workout_sets',
+  unknown[]
+>;
+
+describe('restoring a format-1 / schema-1 backup', () => {
+  test.each(['representative', 'rich'] as const)(
+    'migrates the %s dataset into the kontekst "Standard" without losing data',
+    async (dataset) => withDirectory(async (directory) => {
+      const sourcePath = join(directory, 'schema-1.sqlite');
+      await createSchemaOneDataset(sourcePath, dataset);
+      const source = await schemaOneRows(sourcePath);
+      const packageArtifact = formatOnePackage(Uint8Array.from(readFileSync(sourcePath)), {
+        exercises: source.exercises.length,
+        workouts: source.workouts.length,
+        workout_exercises: source.workout_exercises.length,
+        workout_sets: source.workout_sets.length,
+      });
+      const livePath = join(directory, 'live.sqlite');
+      await createDataset(livePath, 'representative', 1000);
+
+      await restoreArtifact(directory, packageArtifact, livePath);
+
+      const restored = await semanticRows(livePath);
+      expect(restored.training_contexts).toEqual([
+        expect.objectContaining({ name: 'Standard', name_key: 'standard', archived_at: null }),
+      ]);
+      const standardId = (restored.training_contexts[0] as { id: number }).id;
+      expect(restored.workouts).toEqual(
+        source.workouts.map((workout) => ({ ...(workout as object), training_context_id: standardId })),
+      );
+      expect(restored.exercises).toEqual(source.exercises);
+      expect(restored.workout_exercises).toEqual(source.workout_exercises);
+      expect(restored.workout_sets).toEqual(source.workout_sets);
+      expect((await inspectPath(livePath)).schemaVersion).toBe(SCHEMA_VERSION);
+    }),
+  );
+});
+
+describe('restoring immutable format-2 fixtures', () => {
+  test.each(['representative.trene-backup.base64', 'rich-edge-case.trene-backup.base64'])(
+    'restores %s with every kontekst and treningsøkt',
+    async (name) => withDirectory(async (directory) => {
+      const encoded = readFileSync(join(__dirname, '..', '__fixtures__', 'format-2', name), 'utf8').trim();
+      const packageArtifact = new MemoryArtifact(
+        'private://selected.trene-backup',
+        Uint8Array.from(Buffer.from(encoded, 'base64')),
+      );
+      const livePath = join(directory, 'live.sqlite');
+      await createDataset(livePath, 'representative', 1000);
+
+      await restoreArtifact(directory, packageArtifact, livePath);
+
+      const restored = await semanticRows(livePath);
+      expect(restored.training_contexts.length).toBeGreaterThan(0);
+      expect(new Set(restored.workouts.map((workout) => (workout as { training_context_id: number }).training_context_id)))
+        .toEqual(new Set(restored.workouts.length === 1 ? [1] : [1, 2, 3]));
+      await expect(inspectPath(livePath)).resolves.toMatchObject({ schemaVersion: 2 });
+    }),
+  );
+});
 
 describe('backup and restore semantic round trips', () => {
   test.each<Dataset>(['empty', 'representative', 'rich', 'large'])(
@@ -61,7 +124,14 @@ async function restorePackage(directory: string, sourcePath: string, livePath: s
     schemaVersion: sourceInspection.schemaVersion,
     tableCounts: sourceInspection.tableCounts,
   }, packageArtifact.sink());
+  await restoreArtifact(directory, packageArtifact, livePath);
+}
 
+async function restoreArtifact(
+  directory: string,
+  packageArtifact: MemoryArtifact,
+  livePath: string,
+): Promise<void> {
   let rollbackBytes: Uint8Array<ArrayBufferLike> = new Uint8Array();
   const platform: RestorePlatform = {
     pickAndStagePackage: async () => packageArtifact,
@@ -69,7 +139,10 @@ async function restorePackage(directory: string, sourcePath: string, livePath: s
     openDatabase: async (artifact) => {
       const path = join(directory, `inspect-${Math.random().toString(36).slice(2)}.sqlite`);
       writeFileSync(path, (artifact as MemoryArtifact).bytes);
-      return new TestDatabase(path);
+      // Like the native platform, operate on the staged artifact in place.
+      return new TestDatabase(path, () => {
+        (artifact as MemoryArtifact).bytes = Uint8Array.from(readFileSync(path));
+      });
     },
     availableBytes: () => Number.MAX_SAFE_INTEGER,
     createRollbackSnapshot: async (database, inspection) => {
@@ -111,6 +184,11 @@ async function createDataset(path: string, dataset: Dataset, idOffset = 0): Prom
   const database = new TestDatabase(path);
   await migrateDatabase(database);
   const size = dataset === 'empty' ? 0 : dataset === 'representative' ? 1 : dataset === 'rich' ? 4 : 40;
+  const standard = (await database.getFirstAsync<{ id: number }>('SELECT id FROM training_contexts'))!.id;
+  const gym = dataset === 'rich' ? (await database.runAsync(
+    'INSERT INTO training_contexts (name, name_key, archived_at, created_at) VALUES (?, ?, ?, ?)',
+    'Treningssenter', exerciseNameKey('Treningssenter'), timestamp(2), timestamp(1),
+  )).lastInsertRowId : standard;
   for (let index = 1; index <= size; index += 1) {
     const id = idOffset + index;
     const name = `Exercise ${id}`;
@@ -121,8 +199,8 @@ async function createDataset(path: string, dataset: Dataset, idOffset = 0): Prom
       id, name, exerciseNameKey(name), timestamp(index),
     );
     await database.runAsync(
-      'INSERT INTO workouts (id, status, started_at, completed_at) VALUES (?, ?, ?, ?)',
-      id, 'completed', startedAt, completedAt,
+      'INSERT INTO workouts (id, training_context_id, status, started_at, completed_at) VALUES (?, ?, ?, ?, ?)',
+      id, index % 2 === 0 ? gym : standard, 'completed', startedAt, completedAt,
     );
     await database.runAsync(
       'INSERT INTO workout_exercises (id, workout_id, exercise_id, position) VALUES (?, ?, ?, ?)',
@@ -137,8 +215,8 @@ async function createDataset(path: string, dataset: Dataset, idOffset = 0): Prom
     const activeId = idOffset + 100;
     const exerciseId = idOffset + 1;
     await database.runAsync(
-      'INSERT INTO workouts (id, status, started_at, completed_at) VALUES (?, ?, ?, NULL)',
-      activeId, 'active', timestamp(30),
+      'INSERT INTO workouts (id, training_context_id, status, started_at, completed_at) VALUES (?, ?, ?, ?, NULL)',
+      activeId, gym, 'active', timestamp(30),
     );
     await database.runAsync(
       'INSERT INTO workout_exercises (id, workout_id, exercise_id, position) VALUES (?, ?, ?, 0)',
@@ -155,6 +233,79 @@ async function createDataset(path: string, dataset: Dataset, idOffset = 0): Prom
 async function semanticRows(path: string): Promise<SemanticRows> {
   const database = new TestDatabase(path);
   try {
+    return {
+      training_contexts: await database.getAllAsync(
+        'SELECT id, name, name_key, archived_at, created_at FROM training_contexts ORDER BY id',
+      ),
+      exercises: await database.getAllAsync('SELECT id, name, name_key, created_at FROM exercises ORDER BY id'),
+      workouts: await database.getAllAsync('SELECT id, training_context_id, status, started_at, completed_at FROM workouts ORDER BY id'),
+      workout_exercises: await database.getAllAsync('SELECT id, workout_id, exercise_id, position FROM workout_exercises ORDER BY id'),
+      workout_sets: await database.getAllAsync('SELECT id, workout_exercise_id, load_kg, repetitions, confirmed_at FROM workout_sets ORDER BY id'),
+    };
+  } finally {
+    await database.closeAsync();
+  }
+}
+
+async function createSchemaOneDataset(path: string, dataset: 'representative' | 'rich'): Promise<void> {
+  const database = new TestDatabase(path);
+  await database.execAsync(VERSION_ONE_SQL);
+  await database.execAsync('PRAGMA user_version = 1;');
+  const size = dataset === 'representative' ? 1 : 4;
+  for (let id = 1; id <= size; id += 1) {
+    const name = `Exercise ${id}`;
+    await database.runAsync(
+      'INSERT INTO exercises (id, name, name_key, created_at) VALUES (?, ?, ?, ?)',
+      id, name, exerciseNameKey(name), timestamp(id),
+    );
+    await database.runAsync(
+      "INSERT INTO workouts (id, status, started_at, completed_at) VALUES (?, 'completed', ?, ?)",
+      id, timestamp(id * 3), timestamp(id * 3 + 2),
+    );
+    await database.runAsync(
+      'INSERT INTO workout_exercises (id, workout_id, exercise_id, position) VALUES (?, ?, ?, 0)',
+      id, id, id,
+    );
+    await database.runAsync(
+      'INSERT INTO workout_sets (id, workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, ?, ?, ?, ?)',
+      id, id, 20 + id / 10, id, timestamp(id * 3 + 1),
+    );
+  }
+  if (dataset === 'rich') {
+    await database.runAsync(
+      "INSERT INTO workouts (id, status, started_at, completed_at) VALUES (100, 'active', ?, NULL)",
+      timestamp(30),
+    );
+    await database.runAsync('INSERT INTO workout_exercises (id, workout_id, exercise_id, position) VALUES (100, 100, 1, 0)');
+    await database.runAsync('INSERT INTO workout_sets (id, workout_exercise_id) VALUES (100, 100)');
+  }
+  await database.closeAsync();
+}
+
+function formatOnePackage(databaseBytes: Uint8Array, tableCounts: Record<string, number>): MemoryArtifact {
+  const manifest = {
+    formatVersion: 1,
+    schemaVersion: 1,
+    appVersion: '0.1.0',
+    createdAt: '2026-08-15T12:00:00.000Z',
+    components: [{
+      path: 'database.sqlite',
+      type: 'sqlite-database',
+      size: databaseBytes.length,
+      sha256: createHash('sha256').update(databaseBytes).digest('hex'),
+    }],
+    tableCounts,
+  };
+  return new MemoryArtifact('private://selected.trene-backup', zipSync({
+    'manifest.json': strToU8(`${JSON.stringify(manifest)}\n`),
+    'database.sqlite': databaseBytes,
+  }));
+}
+
+async function schemaOneRows(path: string): Promise<Omit<SemanticRows, 'training_contexts'>> {
+  const database = new TestDatabase(path);
+  try {
+    expect((await database.getFirstAsync<{ user_version: number }>('PRAGMA user_version'))?.user_version).toBe(1);
     return {
       exercises: await database.getAllAsync('SELECT id, name, name_key, created_at FROM exercises ORDER BY id'),
       workouts: await database.getAllAsync('SELECT id, status, started_at, completed_at FROM workouts ORDER BY id'),
@@ -182,7 +333,9 @@ function timestamp(minutes: number): string {
 
 class TestDatabase implements Database {
   private readonly database: DatabaseSync;
-  constructor(private readonly path: string) { this.database = new DatabaseSync(path); }
+  constructor(private readonly path: string, private readonly onClose?: () => void) {
+    this.database = new DatabaseSync(path);
+  }
   async execAsync(source: string) { this.database.exec(source); }
   async getFirstAsync<T>(source: string, ...params: DatabaseValue[]): Promise<T | null> {
     return (this.database.prepare(source).get(...params) as T | undefined) ?? null;
@@ -195,7 +348,7 @@ class TestDatabase implements Database {
     return { changes: Number(result.changes), lastInsertRowId: Number(result.lastInsertRowid) };
   }
   async serializeAsync() { return Uint8Array.from(readFileSync(this.path)); }
-  async closeAsync() { this.database.close(); }
+  async closeAsync() { this.database.close(); this.onClose?.(); }
 }
 
 class MemoryArtifact implements BackupArtifact {

@@ -1,10 +1,11 @@
-import { SCHEMA_VERSION } from '../database/migrate';
+import { migrateSchema, SCHEMA_VERSION } from '../database/migrate';
 import { inspectDatabase, type DatabaseInspection } from '../database/inspectDatabase';
 import type { Database } from '../database/types';
 import type { BackupArtifact } from './createBackup';
 import {
   commitPreparedRestore,
   inspectCurrentDatabase,
+  sameTableCounts,
   type RestoreCommitPlatform,
 } from './commitRestore';
 import type { DatabaseRuntime } from '../database/DatabaseRuntime';
@@ -82,16 +83,24 @@ export async function prepareRestore(
     }
     const { manifest } = packageInspection;
     if (manifest.schemaVersion > SCHEMA_VERSION) throw new RestorePreparationError('update-required');
-    if (manifest.schemaVersion !== SCHEMA_VERSION) throw new RestorePreparationError('damaged-backup');
 
     database = await platform.openDatabase(databaseArtifact);
-    const inspection = await atCheckpoint(checkpoint, 'restore.source-validation', () => inspectDatabase(database!));
+    const stagedDatabase = database;
+    const source = await atCheckpoint(checkpoint, 'restore.source-validation', () => inspectDatabase(stagedDatabase));
     if (
-      inspection.schemaVersion !== manifest.schemaVersion
-      || Object.entries(inspection.tableCounts).some(([table, count]) => manifest.tableCounts[table] !== count)
+      source.schemaVersion !== manifest.schemaVersion
+      || !sameTableCounts(source.tableCounts, manifest.tableCounts)
     ) {
       throw new RestorePreparationError('damaged-backup');
     }
+    const inspection = source.schemaVersion === SCHEMA_VERSION
+      ? source
+      : await atCheckpoint(checkpoint, 'restore.migration', async () => {
+        await migrateSchema(stagedDatabase);
+        const migrated = await inspectDatabase(stagedDatabase);
+        requireLosslessMigration(source, migrated);
+        return migrated;
+      });
     await database.closeAsync();
     database = null;
     keepDatabase = true;
@@ -123,6 +132,17 @@ export async function prepareRestore(
       removeArtifact(packageArtifact);
       if (!keepDatabase) removeArtifact(databaseArtifact);
     });
+  }
+}
+
+function requireLosslessMigration(source: DatabaseInspection, migrated: DatabaseInspection): void {
+  if (
+    migrated.schemaVersion !== SCHEMA_VERSION
+    || Object.entries(source.tableCounts).some(([table, count]) => migrated.tableCounts[table] !== count)
+    || migrated.previewCounts.workouts !== source.previewCounts.workouts
+    || migrated.previewCounts.exercises !== source.previewCounts.exercises
+  ) {
+    throw new Error('Migration did not preserve the restored data');
   }
 }
 

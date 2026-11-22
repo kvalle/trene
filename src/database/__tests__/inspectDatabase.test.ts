@@ -6,6 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { exerciseNameKey } from '../../domain/exerciseName';
 import { inspectDatabase, DatabaseInspectionError } from '../inspectDatabase';
 import { migrateDatabase } from '../migrate';
+import { VERSION_ONE_SQL } from '../schema';
 import type { Database, DatabaseValue } from '../types';
 
 class TestDatabase implements Database {
@@ -45,7 +46,7 @@ async function createRichDatabase(): Promise<TestDatabase> {
     'Knebøy', exerciseNameKey('Knebøy'), '2026-08-14T10:00:00.000Z',
   );
   const workout = await database.runAsync(
-    "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', ?, ?)",
+    "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', ?, ?)",
     '2026-08-14T11:00:00.000Z', '2026-08-14T12:00:00.000Z',
   );
   const workoutExercise = await database.runAsync(
@@ -75,8 +76,10 @@ describe('inspectDatabase', () => {
     await migrateDatabase(database);
 
     await expect(inspectDatabase(database)).resolves.toEqual({
-      schemaVersion: 1,
-      tableCounts: { exercises: 0, workouts: 0, workout_exercises: 0, workout_sets: 0 },
+      schemaVersion: 2,
+      tableCounts: {
+        training_contexts: 1, exercises: 0, workouts: 0, workout_exercises: 0, workout_sets: 0,
+      },
       previewCounts: { workouts: 0, exercises: 0 },
       semanticDigest: expect.stringMatching(/^[a-f0-9]{64}$/u),
     });
@@ -87,8 +90,10 @@ describe('inspectDatabase', () => {
     const database = await createRichDatabase();
 
     await expect(inspectDatabase(database)).resolves.toEqual({
-      schemaVersion: 1,
-      tableCounts: { exercises: 1, workouts: 1, workout_exercises: 1, workout_sets: 1 },
+      schemaVersion: 2,
+      tableCounts: {
+        training_contexts: 1, exercises: 1, workouts: 1, workout_exercises: 1, workout_sets: 1,
+      },
       previewCounts: { workouts: 1, exercises: 1 },
       semanticDigest: expect.stringMatching(/^[a-f0-9]{64}$/u),
     });
@@ -98,7 +103,7 @@ describe('inspectDatabase', () => {
   test('rejects unsupported versions and exact-schema changes', async () => {
     const unsupported = new TestDatabase();
     await migrateDatabase(unsupported);
-    await unsupported.execAsync('PRAGMA user_version = 2;');
+    await unsupported.execAsync('PRAGMA user_version = 3;');
     await expectInspectionError(unsupported, 'unsupported-schema');
     await unsupported.closeAsync();
 
@@ -107,6 +112,29 @@ describe('inspectDatabase', () => {
     await changed.execAsync('CREATE INDEX unexpected_index ON exercises(name);');
     await expectInspectionError(changed, 'schema-mismatch');
     await changed.closeAsync();
+  });
+
+  test('inspects a schema 1 database as-is so a restore can validate it before migrating', async () => {
+    const database = new TestDatabase();
+    await database.execAsync(VERSION_ONE_SQL);
+    await database.execAsync('PRAGMA user_version = 1;');
+
+    await expect(inspectDatabase(database)).resolves.toEqual({
+      schemaVersion: 1,
+      tableCounts: { exercises: 0, workouts: 0, workout_exercises: 0, workout_sets: 0 },
+      previewCounts: { workouts: 0, exercises: 0 },
+      semanticDigest: expect.stringMatching(/^[a-f0-9]{64}$/u),
+    });
+    await database.closeAsync();
+  });
+
+  test('rejects a schema 2 structure that claims to be schema 1', async () => {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    await database.execAsync('PRAGMA user_version = 1;');
+
+    await expectInspectionError(database, 'schema-mismatch');
+    await database.closeAsync();
   });
 
   test('rejects foreign-key damage even when enforcement was bypassed', async () => {
@@ -127,6 +155,10 @@ describe('inspectDatabase', () => {
     ['incorrect exercise key', "UPDATE exercises SET name_key = 'wrong'"],
     ['reversed workout timestamps', "UPDATE workouts SET completed_at = '2026-08-14T10:30:00.000Z'"],
     ['confirmation before workout', "UPDATE workout_sets SET confirmed_at = '2026-08-14T10:30:00.000Z'"],
+    ['unnormalized kontekst name', "UPDATE training_contexts SET name = ' Standard '"],
+    ['incorrect kontekst key', "UPDATE training_contexts SET name_key = 'wrong'"],
+    ['noncanonical kontekst archive time', "UPDATE training_contexts SET archived_at = 'yesterday'"],
+    ['no active kontekst', "UPDATE training_contexts SET archived_at = '2026-08-14T13:00:00.000Z'"],
   ])('rejects %s', async (_description, mutation) => {
     const database = await createRichDatabase();
     await database.execAsync(mutation);
@@ -159,7 +191,7 @@ describe('inspectDatabase', () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', ?, ?)",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', ?, ?)",
       '2026-08-14T11:00:00.000Z', '2026-08-14T12:00:00.000Z',
     );
 
@@ -186,7 +218,7 @@ describe('inspectDatabase', () => {
       await database.closeAsync();
 
       const reopened = new TestDatabase(path);
-      await expect(inspectDatabase(reopened)).resolves.toMatchObject({ schemaVersion: 1 });
+      await expect(inspectDatabase(reopened)).resolves.toMatchObject({ schemaVersion: 2 });
       await reopened.closeAsync();
     } finally {
       rmSync(directory, { recursive: true, force: true });

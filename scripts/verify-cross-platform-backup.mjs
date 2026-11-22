@@ -34,12 +34,7 @@ try {
     if (integrity.length !== 1 || integrity[0].integrity_check !== 'ok') throw new Error('SQLite integrity check failed');
     if (database.prepare('PRAGMA foreign_key_check').all().length !== 0) throw new Error('SQLite foreign-key check failed');
     schemaVersion = database.prepare('PRAGMA user_version').get().user_version;
-    rows = {
-      exercises: database.prepare('SELECT id, name, name_key, created_at FROM exercises ORDER BY id').all(),
-      workouts: database.prepare('SELECT id, status, started_at, completed_at FROM workouts ORDER BY id').all(),
-      memberships: database.prepare('SELECT id, workout_id, exercise_id, position FROM workout_exercises ORDER BY workout_id, position').all(),
-      sets: database.prepare('SELECT id, workout_exercise_id, load_kg, repetitions, confirmed_at FROM workout_sets ORDER BY id').all(),
-    };
+    rows = readRows(database, schemaVersion);
   } finally {
     database.close();
   }
@@ -47,14 +42,9 @@ try {
   rmSync(temporaryDirectory, { recursive: true, force: true });
 }
 
-const tableCounts = {
-  exercises: rows.exercises.length,
-  workouts: rows.workouts.length,
-  workout_exercises: rows.memberships.length,
-  workout_sets: rows.sets.length,
-};
+const tableCounts = countRows(rows);
 if (schemaVersion !== manifest.schemaVersion
-  || JSON.stringify(tableCounts) !== JSON.stringify(manifest.tableCounts)) {
+  || !sameCounts(tableCounts, manifest.tableCounts)) {
   throw new Error('Database schema or authoritative table counts do not match the manifest');
 }
 const metadata = {
@@ -67,17 +57,25 @@ const metadata = {
   stage: process.env.QUALIFICATION_STAGE ?? 'verified-runtime-export',
   tableCounts,
   semanticDigest: digest(Buffer.from(JSON.stringify(rows))),
+  // Schema 1 projection, so that a restore that migrated an older backup can
+  // be compared with its source.
+  schemaOneSemanticDigest: digest(Buffer.from(JSON.stringify(schemaOneProjection(rows)))),
 };
 if (expectedMetadataPath) {
   const expected = comparisonMode === '--expected-package'
     ? inspectExpectedPackage(expectedMetadataPath)
     : JSON.parse(readFileSync(expectedMetadataPath, 'utf8'));
+  const migrated = metadata.schemaVersion > expected.schemaVersion;
   if ((!['--semantic-only', '--expected-package'].includes(comparisonMode)
       && metadata.packageSha256 !== expected.packageSha256)
-    || metadata.formatVersion !== expected.formatVersion
-    || metadata.schemaVersion !== expected.schemaVersion
-    || JSON.stringify(metadata.tableCounts) !== JSON.stringify(expected.tableCounts)
-    || metadata.semanticDigest !== expected.semanticDigest) {
+    || (migrated
+      ? !(metadata.formatVersion >= expected.formatVersion)
+        || Object.entries(expected.tableCounts).some(([table, count]) => metadata.tableCounts[table] !== count)
+        || metadata.schemaOneSemanticDigest !== expected.schemaOneSemanticDigest
+      : metadata.formatVersion !== expected.formatVersion
+        || metadata.schemaVersion !== expected.schemaVersion
+        || !sameCounts(metadata.tableCounts, expected.tableCounts)
+        || metadata.semanticDigest !== expected.semanticDigest)) {
     throw new Error('Cross-platform restore changed authoritative data semantics');
   }
 }
@@ -97,17 +95,13 @@ function inspectExpectedPackage(path) {
   try {
     const expectedDatabase = new DatabaseSync(expectedDatabasePath, { readOnly: true });
     try {
-      const expectedRows = {
-        exercises: expectedDatabase.prepare('SELECT id, name, name_key, created_at FROM exercises ORDER BY id').all(),
-        workouts: expectedDatabase.prepare('SELECT id, status, started_at, completed_at FROM workouts ORDER BY id').all(),
-        memberships: expectedDatabase.prepare('SELECT id, workout_id, exercise_id, position FROM workout_exercises ORDER BY workout_id, position').all(),
-        sets: expectedDatabase.prepare('SELECT id, workout_exercise_id, load_kg, repetitions, confirmed_at FROM workout_sets ORDER BY id').all(),
-      };
+      const expectedRows = readRows(expectedDatabase, expectedManifest.schemaVersion);
       return {
         formatVersion: expectedManifest.formatVersion,
         schemaVersion: expectedManifest.schemaVersion,
         tableCounts: expectedManifest.tableCounts,
         semanticDigest: digest(Buffer.from(JSON.stringify(expectedRows))),
+        schemaOneSemanticDigest: digest(Buffer.from(JSON.stringify(schemaOneProjection(expectedRows)))),
       };
     } finally {
       expectedDatabase.close();
@@ -115,4 +109,44 @@ function inspectExpectedPackage(path) {
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+}
+
+function readRows(database, version) {
+  const rows = {
+    exercises: database.prepare('SELECT id, name, name_key, created_at FROM exercises ORDER BY id').all(),
+    workouts: database.prepare(version >= 2
+      ? 'SELECT id, training_context_id, status, started_at, completed_at FROM workouts ORDER BY id'
+      : 'SELECT id, status, started_at, completed_at FROM workouts ORDER BY id').all(),
+    memberships: database.prepare('SELECT id, workout_id, exercise_id, position FROM workout_exercises ORDER BY workout_id, position').all(),
+    sets: database.prepare('SELECT id, workout_exercise_id, load_kg, repetitions, confirmed_at FROM workout_sets ORDER BY id').all(),
+  };
+  if (version >= 2) {
+    rows.trainingContexts = database.prepare('SELECT id, name, name_key, archived_at, created_at FROM training_contexts ORDER BY id').all();
+  }
+  return rows;
+}
+
+function countRows(rows) {
+  return {
+    ...(rows.trainingContexts ? { training_contexts: rows.trainingContexts.length } : {}),
+    exercises: rows.exercises.length,
+    workouts: rows.workouts.length,
+    workout_exercises: rows.memberships.length,
+    workout_sets: rows.sets.length,
+  };
+}
+
+function schemaOneProjection(rows) {
+  return {
+    exercises: rows.exercises,
+    workouts: rows.workouts.map(({ id, status, started_at, completed_at }) => ({ id, status, started_at, completed_at })),
+    memberships: rows.memberships,
+    sets: rows.sets,
+  };
+}
+
+function sameCounts(actual, expected) {
+  const tables = Object.keys(expected ?? {});
+  return Object.keys(actual ?? {}).length === tables.length
+    && tables.every((table) => actual[table] === expected[table]);
 }

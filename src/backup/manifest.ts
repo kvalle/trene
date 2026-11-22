@@ -1,6 +1,6 @@
 import {
   BackupManifestComponent,
-  BackupManifestV1,
+  BackupManifest,
   BackupPackageError,
 } from './types';
 import { isCanonicalTimestamp } from '../domain/timestamp';
@@ -16,12 +16,19 @@ const MANIFEST_KEYS = new Set([
   'components',
   'tableCounts',
 ]);
+// The authoritative table list is fixed per format version so that an app
+// which does not know a newer table list asks the user to update.
 const FORMAT_1_TABLES = new Set([
   'exercises',
   'workouts',
   'workout_exercises',
   'workout_sets',
 ]);
+const FORMAT_2_TABLES = new Set([...FORMAT_1_TABLES, 'training_contexts']);
+const TABLES_BY_FORMAT: Readonly<Record<number, ReadonlySet<string>>> = {
+  1: FORMAT_1_TABLES,
+  2: FORMAT_2_TABLES,
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -83,30 +90,36 @@ export function readFormatVersion(value: unknown): number {
   return value.formatVersion;
 }
 
-export function parseManifestV1(value: unknown): BackupManifestV1 {
-  if (!isRecord(value) || !exactKeys(value, MANIFEST_KEYS) || readFormatVersion(value) !== 1) {
-    throw new BackupPackageError('malformed-manifest', 'Invalid format-1 manifest');
+export function parseManifest(value: unknown): BackupManifest {
+  if (!isRecord(value) || !exactKeys(value, MANIFEST_KEYS)) {
+    throw new BackupPackageError('malformed-manifest', 'Invalid manifest');
+  }
+  const formatVersion = readFormatVersion(value);
+  const formatTables = TABLES_BY_FORMAT[formatVersion];
+  if ((formatVersion !== 1 && formatVersion !== 2) || !formatTables) {
+    throw new BackupPackageError('malformed-manifest', `Unsupported format ${formatVersion} manifest`);
   }
   if (
     !isNaturalNumber(value.schemaVersion) ||
-    value.schemaVersion < 1 ||
+    // Format 1 only carried schema 1; format 2 starts with schema 2.
+    (formatVersion === 1 ? value.schemaVersion !== 1 : value.schemaVersion < 2) ||
     typeof value.appVersion !== 'string' ||
     value.appVersion.length === 0 ||
     !isCanonicalTimestamp(value.createdAt) ||
     !Array.isArray(value.components) ||
     !isRecord(value.tableCounts)
   ) {
-    throw new BackupPackageError('malformed-manifest', 'Invalid format-1 manifest metadata');
+    throw new BackupPackageError('malformed-manifest', 'Invalid manifest metadata');
   }
 
   const tableCounts: Record<string, number> = {};
   if (
-    Object.keys(value.tableCounts).length !== FORMAT_1_TABLES.size ||
-    !Object.keys(value.tableCounts).every((table) => FORMAT_1_TABLES.has(table))
+    Object.keys(value.tableCounts).length !== formatTables.size ||
+    !Object.keys(value.tableCounts).every((table) => formatTables.has(table))
   ) {
     throw new BackupPackageError(
       'malformed-manifest',
-      'Format 1 requires counts for every authoritative table',
+      `Format ${formatVersion} requires counts for every authoritative table`,
     );
   }
   for (const [table, count] of Object.entries(value.tableCounts)) {
@@ -132,7 +145,7 @@ export function parseManifestV1(value: unknown): BackupManifestV1 {
   }
 
   return {
-    formatVersion: 1,
+    formatVersion,
     schemaVersion: value.schemaVersion,
     appVersion: value.appVersion,
     createdAt: value.createdAt,
