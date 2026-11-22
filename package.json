@@ -12,6 +12,8 @@
     "prototype:current-workout": "printf 'Gjeldende treningsokt-prototype kjorer pa http://localhost:4180\n' && python3 -m http.server 4180 --directory docs/design-system/prototypes/current-workout",
     "prototype:appearance": "printf 'Appearance-prototypen kjorer pa http://localhost:4176\n' && python3 -m http.server 4176 --directory docs/design-system/prototypes/appearance",
     "prototype:exercise-completion": "printf 'Exercise completion-prototypen kjorer pa http://localhost:4177\n' && python3 -m http.server 4177 --directory docs/design-system/prototypes/exercise-completion",
+    "prototype:training-contexts": "printf 'Kontekst-prototypen kjorer pa http://localhost:4182\n' && python3 -m http.server 4182 --directory docs/design-system/prototypes/training-contexts",
+    "prototype:context-naming": "printf 'Navneprototypen kjorer pa http://localhost:4183\n' && python3 -m http.server 4183 --directory docs/design-system/prototypes/context-naming",
     "prototype:exercise-reordering": "printf 'Exercise reordering-prototypen kjorer pa http://localhost:4178\n' && python3 -m http.server 4178 --directory docs/design-system/prototypes/exercise-reordering",
     "start:android": "sh scripts/start-android-metro.sh",
     "android": "expo run:android",

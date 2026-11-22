@@ -1,0 +1,42 @@
+<!doctype html>
+<!--
+  PROTOTYPE – kastes etter beslutning.
+  Spørsmål: Hva skal begrepet for «rutine» hete?
+  Hvert begrep er en variant (?variant=rutine|logg|...), byttes med pilene nederst eller ←/→.
+  Alle skjermbilder der begrepet brukes, vises side om side med ekte tekst.
+-->
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prototype: Navn på rutiner</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .gallery { display: flex; gap: 20px; flex-wrap: wrap; padding: 0 24px 110px; }
+    .shot { display: flex; flex-direction: column; gap: 6px; }
+    .shot > .caption { font-size: 13px; font-weight: 700; color: #33463b; }
+    .gallery .phone { width: 320px; height: 560px; border-width: 8px; border-radius: 28px; }
+    .gallery .screen { padding: 16px; }
+    .top { padding: 24px 24px 8px; max-width: 1100px; }
+    .top h1 { margin: 0 0 4px; font-size: 24px; }
+    .term-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .term-list .control { width: auto; }
+    .scrim.inline { position: absolute; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <p class="eyebrow">Prototype · navnevalg</p>
+    <h1 id="headline"></h1>
+    <p class="prototype-question" id="note"></p>
+    <div class="term-list" id="terms"></div>
+  </div>
+  <div class="gallery" id="gallery"></div>
+  <nav class="switcher" aria-label="Velg begrep">
+    <button id="prev" aria-label="Forrige begrep">←</button>
+    <span id="variant-label"></span>
+    <button id="next" aria-label="Neste begrep">→</button>
+  </nav>
+  <script src="prototype.js"></script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<!--
+  PROTOTYPE – kastes etter beslutning.
+  Spørsmål: Hvordan bør filteret på «Tidligere treninger» se ut når man kan ha flere kontekster,
+  og stemmer startflyten og kontekstsiden?
+  Tre varianter av historikkfilteret, byttes med ?variant=A|B|C, pilknapper nederst eller ←/→.
+  Resten av flyten (start, ny kontekst, kontekstsiden) er lik i alle varianter.
+-->
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prototype: Kontekster</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="prototype-shell">
+    <aside class="control-panel">
+      <p class="eyebrow">Prototype · begrep: «kontekst»</p>
+      <h1>Kontekster</h1>
+      <p class="prototype-question">Hvordan velger jeg hva jeg skal trene, hvordan administrerer jeg kontekster, og hvordan filtrerer jeg historikken på én eller flere kontekster?</p>
+      <fieldset>
+        <legend>Treningsdata</legend>
+        <div class="control-grid" id="scenario-controls"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Utseende</legend>
+        <div class="control-grid two-column">
+          <button class="control" data-theme-choice="light">Lyst</button>
+          <button class="control" data-theme-choice="dark">Mørkt</button>
+        </div>
+      </fieldset>
+      <div class="review-prompt">
+        <h2>Historikkfilteret (variantene)</h2>
+        <p id="variant-description"></p>
+        <h2>Se etter</h2>
+        <p>Er det tydelig når filteret er aktivt og noe er skjult? Hva bør skje hvis man fjerner haken på alle? Føles startdialogen rask? Er «Aktiver» forståelig på en arkivert kontekst?</p>
+      </div>
+      <div class="state" id="state"></div>
+    </aside>
+    <main class="preview-panel">
+      <div class="phone" id="phone">
+        <div class="status-bar"><span>09:41</span><span>●●● ▮</span></div>
+        <header class="app-header">
+          <button class="back-button" id="back" aria-label="Tilbake">‹</button>
+          <h3 id="screen-title"></h3>
+          <span></span>
+        </header>
+        <div class="screen" id="screen"></div>
+        <div id="overlay"></div>
+      </div>
+    </main>
+  </div>
+  <nav class="switcher" aria-label="Velg variant">
+    <button id="prev" aria-label="Forrige variant">←</button>
+    <span id="variant-label"></span>
+    <button id="next" aria-label="Neste variant">→</button>
+  </nav>
+  <script src="prototype.js"></script>
+</body>
+</html>
