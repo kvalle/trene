@@ -9,6 +9,14 @@ En avgrenset treningsperiode der brukeren utfører og registrerer én eller fler
 _Kortform_: Trening, når sammenhengen er tydelig
 _Avoid_: Økt
 
+**Kontekst** (_Training context_):
+En navngitt sammenheng som treningsøkter hører til, for eksempel «Fysio» eller «Treningssenter». Hver treningsøkt hører til nøyaktig én kontekst, valgt når den startes. En ny treningsøkt bygger på den siste fullførte treningsøkten i samme kontekst. Den første konteksten heter «Standard».
+_Kode_: trainingContext (ikke context, som forveksles med React Context)
+_Avoid_: Rutine, treningstype, treningsform, program, mal, økttype
+
+**Arkivert kontekst** (_Archived training context_):
+En kontekst som er skjult fra valget når en treningsøkt startes. Treningshistorikken beholdes, og konteksten kan aktiveres igjen.
+
 **Aktiv treningsøkt** (_Active workout_):
 En treningsøkt som er startet, men ikke fullført eller avbrutt.
 _Avoid_: Pågående treningsøkt
@@ -17,7 +25,7 @@ _Avoid_: Pågående treningsøkt
 En treningsøkt brukeren har avsluttet og lagret i treningshistorikken.
 
 **Øvelse** (_Exercise_):
-En styrkeaktivitet som kan utføres i ett eller flere sett.
+En styrkeaktivitet som kan utføres i ett eller flere sett. Øvelser er felles for alle kontekster.
 
 **Øvelse i treningsøkt** (_Workout exercise_):
 En øvelse som er lagt til i en bestemt treningsøkt, med treningens sett og plassering.
