@@ -40,10 +40,13 @@ test('shows the empty Home actions and opens them hierarchically', async () => {
   expect(await screen.findByRole('button', { name: 'Start trening' })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Tidligere treninger' })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Øvelser' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Kontekster' })).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Innstillinger' })).toBeOnTheScreen();
 
   fireEvent.press(screen.getByRole('button', { name: 'Tidligere treninger' }));
   expect(navigate).toHaveBeenCalledWith('History');
+  fireEvent.press(screen.getByRole('button', { name: 'Kontekster' }));
+  expect(navigate).toHaveBeenCalledWith('TrainingContexts');
 });
 
 test('shows deletion success on empty Home and removes it on onward navigation', async () => {
@@ -176,6 +179,7 @@ test('disables all secondary actions and blocks navigation while starting', asyn
   expect(await screen.findByRole('button', { name: 'Starter trening' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Tidligere treninger' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Øvelser' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Kontekster' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Innstillinger' })).toBeDisabled();
   expect(usePreventRemove).toHaveBeenCalledWith(true, expect.any(Function));
 
