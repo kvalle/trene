@@ -42,7 +42,6 @@ export function TrainingContextsScreen({ navigation, route }: Props) {
       return () => { active = false; };
     }, [database, reload]),
   );
-  useFocusEffect(useCallback(() => () => setCreated(false), []));
 
   useEffect(() => {
     if (createdId === undefined) return;
@@ -94,7 +93,10 @@ export function TrainingContextsScreen({ navigation, route }: Props) {
             <NavigationRow
               accessibilityHint="Åpner detaljer for konteksten"
               key={trainingContext.id}
-              onPress={() => navigation.navigate('TrainingContextDetail', { trainingContextId: trainingContext.id })}
+              onPress={() => {
+                setCreated(false);
+                navigation.navigate('TrainingContextDetail', { trainingContextId: trainingContext.id });
+              }}
               ref={(node) => {
                 if (node) rowRefs.current.set(trainingContext.id, node);
                 else rowRefs.current.delete(trainingContext.id);
