@@ -3,21 +3,19 @@ import { sha256 } from '@noble/hashes/sha256';
 import { exerciseNameKey, validateExerciseName } from '../domain/exerciseName';
 import { isCanonicalTimestamp } from '../domain/timestamp';
 import { isValidLoad, isValidRepetitions } from '../domain/workoutSet';
-import { SCHEMA_VERSION, VERSION_ONE_SQL } from './schema';
+import {
+  AUTHORITATIVE_TABLES_BY_VERSION,
+  SCHEMA_SQL_BY_VERSION,
+  SCHEMA_VERSION,
+} from './schema';
 import { databaseOperation, type Database } from './types';
 
-export const AUTHORITATIVE_TABLES = [
-  'exercises',
-  'workouts',
-  'workout_exercises',
-  'workout_sets',
-] as const;
-
-type AuthoritativeTable = typeof AUTHORITATIVE_TABLES[number];
+export const AUTHORITATIVE_TABLES = AUTHORITATIVE_TABLES_BY_VERSION[SCHEMA_VERSION]!;
 
 export interface DatabaseInspection {
   schemaVersion: number;
-  tableCounts: Record<AuthoritativeTable, number>;
+  /** Row counts for every authoritative table of `schemaVersion`. */
+  tableCounts: Record<string, number>;
   previewCounts: { workouts: number; exercises: number };
   semanticDigest: string;
 }
@@ -41,8 +39,10 @@ export class DatabaseInspectionError extends Error {
 
 type SchemaRow = { type: string; name: string; sql: string | null };
 type ExerciseRow = { id: unknown; name: unknown; name_key: unknown; created_at: unknown };
+type TrainingContextRow = ExerciseRow & { archived_at: unknown };
 type WorkoutRow = {
   id: unknown;
+  training_context_id?: unknown;
   status: unknown;
   started_at: unknown;
   completed_at: unknown;
@@ -60,8 +60,8 @@ function normalizeSql(sql: string): string {
   return sql.replace(/\s+/gu, ' ').replace(/\s*;\s*$/u, '').trim();
 }
 
-function expectedSchemaObjects(): (readonly [string, string, string])[] {
-  return VERSION_ONE_SQL.split(';').map((statement) => normalizeSql(statement)).filter(Boolean)
+function expectedSchemaObjects(version: number): (readonly [string, string, string])[] {
+  return SCHEMA_SQL_BY_VERSION[version]!.split(';').map((statement) => normalizeSql(statement)).filter(Boolean)
     .map((sql) => {
       const match = /^CREATE (?:UNIQUE )?(TABLE|INDEX) ([a-z_]+)/iu.exec(sql);
       if (!match) throw new Error(`Unsupported schema statement: ${sql}`);
@@ -82,7 +82,9 @@ async function inspectDatabaseWithConnection(database: Database): Promise<Databa
   const version = (await database.getFirstAsync<{ user_version: number }>(
     'PRAGMA user_version;',
   ))?.user_version ?? 0;
-  if (version !== SCHEMA_VERSION) {
+  // Older versions are inspected as-is so that restores can validate their
+  // source before migrating, and recovery can verify pre-upgrade snapshots.
+  if (!Number.isSafeInteger(version) || version < 1 || version > SCHEMA_VERSION) {
     throw new DatabaseInspectionError('unsupported-schema', `Unsupported schema version: ${version}`);
   }
 
@@ -104,9 +106,34 @@ async function inspectDatabaseWithConnection(database: Database): Promise<Databa
     WHERE name NOT LIKE 'sqlite_%' AND sql IS NOT NULL
     ORDER BY type, name
   `)).map((row) => [row.type, row.name, normalizeSql(row.sql!)] as const);
-  const expectedSchema = expectedSchemaObjects();
+  const expectedSchema = expectedSchemaObjects(version);
   if (JSON.stringify(actualSchema) !== JSON.stringify(expectedSchema)) {
-    throw new DatabaseInspectionError('schema-mismatch', 'Database structure does not match schema version 1');
+    throw new DatabaseInspectionError(
+      'schema-mismatch',
+      `Database structure does not match schema version ${version}`,
+    );
+  }
+
+  const trainingContexts = version >= 2
+    ? await database.getAllAsync<TrainingContextRow>(
+      'SELECT id, name, name_key, archived_at, created_at FROM training_contexts ORDER BY id',
+    )
+    : [];
+  for (const trainingContext of trainingContexts) {
+    if (!validId(trainingContext.id) || typeof trainingContext.name !== 'string'
+      || typeof trainingContext.name_key !== 'string'
+      || !isCanonicalTimestamp(trainingContext.created_at)
+      || (trainingContext.archived_at !== null && !isCanonicalTimestamp(trainingContext.archived_at))) {
+      invalid('Training context contains invalid values');
+    }
+    const validated = validateExerciseName(trainingContext.name);
+    if ('error' in validated || validated.name !== trainingContext.name
+      || exerciseNameKey(trainingContext.name) !== trainingContext.name_key) {
+      invalid('Training context name is not normalized');
+    }
+  }
+  if (version >= 2 && !trainingContexts.some((trainingContext) => trainingContext.archived_at === null)) {
+    invalid('No active training context exists');
   }
 
   const exercises = await database.getAllAsync<ExerciseRow>(
@@ -124,13 +151,14 @@ async function inspectDatabaseWithConnection(database: Database): Promise<Databa
     }
   }
 
-  const workouts = await database.getAllAsync<WorkoutRow>(
-    'SELECT id, status, started_at, completed_at FROM workouts ORDER BY id',
-  );
+  const workouts = await database.getAllAsync<WorkoutRow>(version >= 2
+    ? 'SELECT id, training_context_id, status, started_at, completed_at FROM workouts ORDER BY id'
+    : 'SELECT id, status, started_at, completed_at FROM workouts ORDER BY id');
   const workoutById = new Map<number, WorkoutRow>();
   for (const workout of workouts) {
     if (!validId(workout.id) || !isCanonicalTimestamp(workout.started_at)
-      || (workout.status !== 'active' && workout.status !== 'completed')) {
+      || (workout.status !== 'active' && workout.status !== 'completed')
+      || (version >= 2 && !validId(workout.training_context_id))) {
       invalid('Workout contains invalid values');
     }
     if (workout.status === 'active' && workout.completed_at !== null) {
@@ -203,11 +231,11 @@ async function inspectDatabaseWithConnection(database: Database): Promise<Databa
     }
   }
 
-  const countRows = await Promise.all(AUTHORITATIVE_TABLES.map(async (table) => [
+  const countRows = await Promise.all(AUTHORITATIVE_TABLES_BY_VERSION[version]!.map(async (table) => [
     table,
     (await database.getFirstAsync<{ count: number }>(`SELECT COUNT(*) AS count FROM ${table}`))?.count ?? 0,
   ] as const));
-  const tableCounts = Object.fromEntries(countRows) as Record<AuthoritativeTable, number>;
+  const tableCounts: Record<string, number> = Object.fromEntries(countRows);
   const previewCounts = await database.getFirstAsync<{ workouts: number; exercises: number }>(`
     SELECT
       (SELECT COUNT(*) FROM workouts) AS workouts,
@@ -219,7 +247,9 @@ async function inspectDatabaseWithConnection(database: Database): Promise<Databa
     tableCounts,
     previewCounts,
     // Keep the serialized key stable because digests are stored in restore markers.
-    semanticDigest: digestSemanticRows({ exercises, workouts, memberships: workoutExercises, sets }),
+    semanticDigest: digestSemanticRows(version >= 2
+      ? { trainingContexts, exercises, workouts, memberships: workoutExercises, sets }
+      : { exercises, workouts, memberships: workoutExercises, sets }),
   };
 }
 

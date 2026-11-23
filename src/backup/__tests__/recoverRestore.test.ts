@@ -7,14 +7,14 @@ import {
 } from '../recoverRestore';
 
 const original: DatabaseInspection = {
-  schemaVersion: 1,
-  tableCounts: { exercises: 2, workouts: 1, workout_exercises: 1, workout_sets: 2 },
+  schemaVersion: 2,
+  tableCounts: { training_contexts: 1, exercises: 2, workouts: 1, workout_exercises: 1, workout_sets: 2 },
   previewCounts: { exercises: 2, workouts: 1 },
   semanticDigest: '1'.repeat(64),
 };
 const restored: DatabaseInspection = {
-  schemaVersion: 1,
-  tableCounts: { exercises: 4, workouts: 3, workout_exercises: 5, workout_sets: 8 },
+  schemaVersion: 2,
+  tableCounts: { training_contexts: 1, exercises: 4, workouts: 3, workout_exercises: 5, workout_sets: 8 },
   previewCounts: { exercises: 4, workouts: 3 },
   semanticDigest: '2'.repeat(64),
 };
@@ -79,6 +79,7 @@ test('accepts equivalent count objects regardless of property order', async () =
       workout_exercises: 1,
       workouts: 1,
       exercises: 2,
+      training_contexts: 1,
     },
     previewCounts: { workouts: 1, exercises: 2 },
   });

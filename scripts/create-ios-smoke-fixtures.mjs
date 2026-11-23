@@ -45,7 +45,8 @@ const manifest = {
   tableCounts: { exercises: 2, workouts: 1, workout_exercises: 2, workout_sets: 2 },
 };
 writePackage('representative.trene-backup', manifest, databaseBytes);
-writePackage('newer.trene-backup', { ...manifest, formatVersion: 2 }, databaseBytes);
+// One format newer than the app supports.
+writePackage('newer.trene-backup', { ...manifest, formatVersion: 3 }, databaseBytes);
 writePackage('damaged.trene-backup', manifest, new Uint8Array(databaseBytes.length));
 writeFileSync(join(output, 'checksums.txt'), [
   'representative.trene-backup', 'newer.trene-backup', 'damaged.trene-backup',

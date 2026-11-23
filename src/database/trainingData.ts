@@ -1,4 +1,5 @@
 import type { DatabaseRuntime } from './DatabaseRuntime';
+import { insertDefaultTrainingContext } from './trainingContexts';
 import { databaseOperation, type Database } from './types';
 
 async function hasTrainingDataWithDatabase(database: Database): Promise<boolean> {
@@ -15,7 +16,10 @@ async function hasTrainingDataWithDatabase(database: Database): Promise<boolean>
 async function deleteTrainingDataWithDatabase(database: Database): Promise<void> {
   await database.execAsync('BEGIN IMMEDIATE;');
   try {
-    await database.execAsync('DELETE FROM workouts; DELETE FROM exercises;');
+    await database.execAsync(
+      'DELETE FROM workouts; DELETE FROM exercises; DELETE FROM training_contexts;',
+    );
+    await insertDefaultTrainingContext(database);
     await database.execAsync('COMMIT;');
   } catch (error) {
     await database.execAsync('ROLLBACK;');

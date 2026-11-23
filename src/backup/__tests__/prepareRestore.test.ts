@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto';
+import { strToU8, zipSync } from 'fflate';
+
 import { inspectDatabase } from '../../database/inspectDatabase';
 import type { Database } from '../../database/types';
 import { createBackupPackage } from '../packageCodec';
@@ -12,9 +15,11 @@ import type { BackupByteSink, BackupByteSource } from '../types';
 jest.mock('../../database/inspectDatabase', () => ({ inspectDatabase: jest.fn() }));
 
 const mockedInspectDatabase = jest.mocked(inspectDatabase);
-const manifestCounts = { exercises: 2, workouts: 1, workout_exercises: 2, workout_sets: 3 };
+const manifestCounts = {
+  training_contexts: 1, exercises: 2, workouts: 1, workout_exercises: 2, workout_sets: 3,
+};
 const databaseInspection = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   tableCounts: manifestCounts,
   previewCounts: { exercises: 7, workouts: 5 },
   semanticDigest: '1'.repeat(64),
@@ -43,8 +48,8 @@ test('validates a privately staged package and returns database-derived preview 
     status: 'ready',
     restore: {
       createdAt: '2026-08-14T12:00:00.000Z',
-      sourceSchemaVersion: 1,
-      schemaVersion: 1,
+      sourceSchemaVersion: 2,
+      schemaVersion: 2,
       previewCounts: { exercises: 7, workouts: 5 },
     },
   });
@@ -72,11 +77,40 @@ test('rejects manifest counts that differ from the validated database and cleans
 });
 
 test('rejects a newer schema with update guidance before opening SQLite', async () => {
-  const packageArtifact = await validPackage(2);
+  const packageArtifact = await validPackage(3);
   const platform = fakePlatform(packageArtifact);
 
   await expect(prepareRestore(platform)).rejects.toEqual(new RestorePreparationError('update-required'));
   expect(platform.openDatabase).not.toHaveBeenCalled();
+});
+
+test('rejects a schema 1 backup whose migrated data differs from the source', async () => {
+  mockedInspectDatabase
+    .mockResolvedValueOnce({
+      schemaVersion: 1,
+      tableCounts: schemaOneCounts,
+      previewCounts: { exercises: 2, workouts: 1 },
+      semanticDigest: '2'.repeat(64),
+    })
+    .mockResolvedValueOnce({ ...databaseInspection, previewCounts: { exercises: 2, workouts: 0 } });
+  const packageArtifact = await formatOnePackage();
+  const platform = fakePlatform(packageArtifact, schemaOneDatabase());
+
+  await expect(prepareRestore(platform)).rejects.toEqual(new RestorePreparationError('damaged-backup'));
+  expect((jest.mocked(platform.createArtifact).mock.results[0]!.value as MemoryArtifact).removed).toBe(true);
+});
+
+test('rejects a format-2 manifest whose table list does not match the schema 1 database', async () => {
+  mockedInspectDatabase.mockResolvedValueOnce({
+    schemaVersion: 2,
+    tableCounts: schemaOneCounts,
+    previewCounts: { exercises: 2, workouts: 1 },
+    semanticDigest: '2'.repeat(64),
+  });
+  const packageArtifact = await validPackage();
+  const platform = fakePlatform(packageArtifact);
+
+  await expect(prepareRestore(platform)).rejects.toEqual(new RestorePreparationError('damaged-backup'));
 });
 
 test('closes SQLite and removes every artifact when inspection fails', async () => {
@@ -114,7 +148,7 @@ test('maps storage exhaustion to actionable guidance and cleans partial staging'
   expect(packageArtifact.removed).toBe(true);
 });
 
-async function validPackage(schemaVersion = 1): Promise<MemoryArtifact> {
+async function validPackage(schemaVersion = 2): Promise<MemoryArtifact> {
   const artifact = new MemoryArtifact('private://selected.trene-backup');
   const database: BackupByteSource = {
     size: 4,
@@ -128,6 +162,39 @@ async function validPackage(schemaVersion = 1): Promise<MemoryArtifact> {
     tableCounts: manifestCounts,
   }, artifact.sink());
   return artifact;
+}
+
+const schemaOneCounts = { exercises: 2, workouts: 1, workout_exercises: 2, workout_sets: 3 };
+
+async function formatOnePackage(): Promise<MemoryArtifact> {
+  const artifact = new MemoryArtifact('private://selected.trene-backup');
+  const bytes = Uint8Array.of(1, 2, 3, 4);
+  const manifest = {
+    formatVersion: 1,
+    schemaVersion: 1,
+    appVersion: '1.0.0',
+    createdAt: '2026-08-14T12:00:00.000Z',
+    components: [{
+      path: 'database.sqlite',
+      type: 'sqlite-database',
+      size: bytes.length,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+    }],
+    tableCounts: schemaOneCounts,
+  };
+  artifact.bytes = zipSync({ 'manifest.json': strToU8(JSON.stringify(manifest)), 'database.sqlite': bytes });
+  return artifact;
+}
+
+/** A schema 1 database that accepts the migration statements. */
+function schemaOneDatabase(): Database {
+  return {
+    ...fakeDatabase(),
+    getFirstAsync: jest.fn(async (source: string) => (
+      source.includes('user_version') ? { user_version: 1 } : null
+    )) as Database['getFirstAsync'],
+    runAsync: jest.fn(async () => ({ changes: 1, lastInsertRowId: 1 })),
+  };
 }
 
 function fakePlatform(packageArtifact: BackupArtifact | null, database: Database = fakeDatabase()): RestorePlatform {

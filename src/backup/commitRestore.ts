@@ -144,14 +144,20 @@ export function digestBytes(bytes: Uint8Array): string {
 export function requireMatchingInspection(actual: DatabaseInspection, expected: DatabaseInspection): void {
   if (
     actual.schemaVersion !== expected.schemaVersion
-    || actual.tableCounts.exercises !== expected.tableCounts.exercises
-    || actual.tableCounts.workouts !== expected.tableCounts.workouts
-    || actual.tableCounts.workout_exercises !== expected.tableCounts.workout_exercises
-    || actual.tableCounts.workout_sets !== expected.tableCounts.workout_sets
+    || !sameTableCounts(actual.tableCounts, expected.tableCounts)
     || actual.previewCounts.exercises !== expected.previewCounts.exercises
     || actual.previewCounts.workouts !== expected.previewCounts.workouts
     || actual.semanticDigest !== expected.semanticDigest
   ) {
     throw new Error('Restored database differs from the validated preparation');
   }
+}
+
+export function sameTableCounts(
+  actual: Readonly<Record<string, number>>,
+  expected: Readonly<Record<string, number>>,
+): boolean {
+  const tables = Object.keys(expected);
+  return Object.keys(actual).length === tables.length
+    && tables.every((table) => Object.hasOwn(actual, table) && actual[table] === expected[table]);
 }

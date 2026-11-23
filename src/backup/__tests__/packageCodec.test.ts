@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import fixtureChecksums from '../__fixtures__/format-1/checksums.json';
+import formatTwoChecksums from '../__fixtures__/format-2/checksums.json';
 import {
   BACKUP_FORMAT_VERSION,
   createBackupPackage,
@@ -13,7 +14,7 @@ import {
   BackupArchiveReader,
   BackupByteSink,
   BackupByteSource,
-  BackupManifestV1,
+  BackupManifest,
   BackupPackageError,
 } from '../types';
 
@@ -76,11 +77,11 @@ function sha256(bytes: Uint8Array): string {
 
 function manifestFor(
   database: Uint8Array,
-  overrides: Partial<BackupManifestV1> = {},
-): BackupManifestV1 {
+  overrides: Partial<BackupManifest> = {},
+): BackupManifest {
   return {
-    formatVersion: 1,
-    schemaVersion: 1,
+    formatVersion: 2,
+    schemaVersion: 2,
     appVersion: '0.1.0',
     createdAt: '2026-08-14T12:00:00.000Z',
     components: [
@@ -92,6 +93,7 @@ function manifestFor(
       },
     ],
     tableCounts: {
+      training_contexts: 1,
       exercises: 1,
       workouts: 1,
       workout_exercises: 1,
@@ -156,11 +158,11 @@ function mutateFirstCentralEntry(bytes: Uint8Array, offset: number, value: numbe
 describe('backup package codec', () => {
   const database = Uint8Array.of(0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0, 1, 2, 3);
 
-  it('creates and streams a deterministic format-1 package', async () => {
+  it('creates and streams a deterministic format-2 package', async () => {
     const output = new MemoryFile();
     const manifest = await createBackupPackage(
       {
-        schemaVersion: 1,
+        schemaVersion: 2,
         appVersion: '0.1.0',
         createdAt: '2026-08-14T12:00:00.000Z',
         tableCounts: manifestFor(database).tableCounts,
@@ -169,7 +171,7 @@ describe('backup package codec', () => {
       output,
     );
 
-    expect(BACKUP_FORMAT_VERSION).toBe(1);
+    expect(BACKUP_FORMAT_VERSION).toBe(2);
     expect(manifest).toEqual(manifestFor(database));
     const extracted = sinks();
     await expect(inspectBackupPackage(output, extracted)).resolves.toEqual({
@@ -186,7 +188,7 @@ describe('backup package codec', () => {
     const output = new MemoryFile();
     const manifest = await createBackupPackage(
       {
-        schemaVersion: 1,
+        schemaVersion: 2,
         appVersion: '0.1.0',
         createdAt: '2026-08-14T12:00:00.000Z',
         tableCounts: manifestFor(database).tableCounts,
@@ -222,10 +224,10 @@ describe('backup package codec', () => {
   });
 
   it('returns update-required without best-effort format parsing', async () => {
-    const file = packageArchive({ formatVersion: 2 }, { 'anything.bin': Uint8Array.of(1) });
+    const file = packageArchive({ formatVersion: 3 }, { 'anything.bin': Uint8Array.of(1) });
     await expect(inspectBackupPackage(file, sinks())).resolves.toEqual({
       status: 'update-required',
-      formatVersion: 2,
+      formatVersion: 3,
     });
   });
 
@@ -364,7 +366,7 @@ describe('backup package codec', () => {
     await expectPackageError(
       createBackupPackage(
         {
-          schemaVersion: 1,
+          schemaVersion: 2,
           appVersion: '0.1.0',
           createdAt: '2026-08-14T12:00:00.000Z',
           tableCounts: manifestFor(database).tableCounts,
@@ -389,14 +391,38 @@ describe('backup package codec', () => {
     expect(output.size).toBe(0);
   });
 
-  it('rejects incomplete format-1 table counts', async () => {
+  it('reads a format-1 manifest with the schema 1 table list', async () => {
+    const { training_contexts: _ignored, ...schemaOneCounts } = manifestFor(database).tableCounts;
+    const manifest = manifestFor(database, { formatVersion: 1, schemaVersion: 1, tableCounts: schemaOneCounts });
+    const file = packageArchive(manifest, { 'database.sqlite': database });
+    await expect(inspectBackupPackage(file, sinks())).resolves.toMatchObject({ status: 'valid', manifest });
+  });
+
+  it.each([
+    ['format 1 with kontekst counts', { formatVersion: 1 as const, schemaVersion: 1 }],
+    ['format 1 claiming schema 2', { formatVersion: 1 as const, schemaVersion: 2 }],
+    ['format 2 claiming schema 1', { formatVersion: 2 as const, schemaVersion: 1 }],
+  ])('rejects %s', async (_name, overrides) => {
+    const file = packageArchive(manifestFor(database, overrides), { 'database.sqlite': database });
+    await expectPackageError(inspectBackupPackage(file, sinks()), 'malformed-manifest');
+  });
+
+  it('rejects format-2 table counts without kontekster', async () => {
+    const { training_contexts: _ignored, ...schemaOneCounts } = manifestFor(database).tableCounts;
+    const file = packageArchive(manifestFor(database, { tableCounts: schemaOneCounts }), {
+      'database.sqlite': database,
+    });
+    await expectPackageError(inspectBackupPackage(file, sinks()), 'malformed-manifest');
+  });
+
+  it('rejects incomplete format-2 table counts', async () => {
     const file = packageArchive(manifestFor(database, { tableCounts: { exercises: 1 } }), {
       'database.sqlite': database,
     });
     await expectPackageError(inspectBackupPackage(file, sinks()), 'malformed-manifest');
   });
 
-  it('rejects unknown format-1 table counts', async () => {
+  it('rejects unknown format-2 table counts', async () => {
     const file = packageArchive(
       manifestFor(database, {
         tableCounts: { ...manifestFor(database).tableCounts, future_table: 1 },
@@ -441,5 +467,19 @@ describe('backup package codec', () => {
     if (result.status === 'valid') {
       expect(result.manifest.tableCounts).toMatchObject({ exercises, workouts });
     }
+  });
+
+  it.each([
+    ['representative.trene-backup.base64', { training_contexts: 1, exercises: 2, workouts: 1 }],
+    ['rich-edge-case.trene-backup.base64', { training_contexts: 4, exercises: 5, workouts: 9 }],
+  ] as const)('preserves immutable format-2 fixture %s', async (name, counts) => {
+    const encoded = readFileSync(join(__dirname, '..', '__fixtures__', 'format-2', name), 'utf8').trim();
+    const bytes = Uint8Array.from(Buffer.from(encoded, 'base64'));
+    expect(sha256(bytes)).toBe(formatTwoChecksums[name]);
+    const fixture = new MemoryFile();
+    fixture.setBytes(bytes);
+    const result = await inspectBackupPackage(fixture, sinks());
+    expect(result).toMatchObject({ status: 'valid', manifest: { formatVersion: 2, schemaVersion: 2 } });
+    if (result.status === 'valid') expect(result.manifest.tableCounts).toMatchObject(counts);
   });
 });

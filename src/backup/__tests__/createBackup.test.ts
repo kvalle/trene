@@ -5,8 +5,8 @@ import type { BackupByteSink } from '../types';
 
 const snapshotBytes = Uint8Array.of(83, 81, 76, 105, 116, 101);
 const inspection = {
-  schemaVersion: 1,
-  tableCounts: { exercises: 2, workouts: 1, workout_exercises: 2, workout_sets: 3 },
+  schemaVersion: 2,
+  tableCounts: { training_contexts: 1, exercises: 2, workouts: 1, workout_exercises: 2, workout_sets: 3 },
   previewCounts: { exercises: 2, workouts: 1 },
   semanticDigest: '1'.repeat(64),
 };

@@ -64,6 +64,10 @@ describe('active workout persistence', () => {
 
     expect(await startWorkout(database)).toBe(workoutId);
     expect(await getActiveWorkoutId(database)).toBe(workoutId);
+    expect(await database.getFirstAsync(
+      'SELECT training_contexts.name FROM workouts JOIN training_contexts ON training_contexts.id = workouts.training_context_id WHERE workouts.id = ?',
+      workoutId,
+    )).toEqual({ name: 'Standard' });
     expect(await loadActiveWorkout(database)).toEqual({
       id: workoutId,
       startedAt: '2026-08-05T09:15:00Z',
@@ -77,7 +81,7 @@ describe('active workout persistence', () => {
     const squatId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const pressId = await createExercise(database, 'Benkpress', exerciseNameKey('Benkpress'));
     const oldWorkout = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'old', '2026-01-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'old', '2026-01-01')",
     );
     const oldExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -88,7 +92,7 @@ describe('active workout persistence', () => {
       oldExercise.lastInsertRowId,
     );
     const latestWorkout = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'latest', '2026-02-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'latest', '2026-02-01')",
     );
     const press = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -142,7 +146,7 @@ describe('active workout persistence', () => {
     const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
     for (const load of [80, 100]) {
       const workout = await database.runAsync(
-        "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'start', '2026-02-01')",
+        "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'start', '2026-02-01')",
       );
       const exercise = await database.runAsync(
         'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -167,7 +171,7 @@ describe('active workout persistence', () => {
     await addExerciseToWorkout(database, activeId, exerciseId);
     const activeBefore = await loadActiveWorkout(database);
     const completed = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'start', '2026-02-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'start', '2026-02-01')",
     );
     const completedExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -196,7 +200,7 @@ describe('active workout persistence', () => {
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const completed = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'start', '2026-02-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'start', '2026-02-01')",
     );
     const completedExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -247,7 +251,7 @@ describe('active workout persistence', () => {
     const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
     const activeId = await startWorkout(database);
     const oldWorkout = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-01-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'a', '2026-01-01')",
     );
     const oldWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -258,7 +262,7 @@ describe('active workout persistence', () => {
       oldWorkoutExercise.lastInsertRowId, '2026-01-01T10:00:00Z',
     );
     const newestWorkout = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'b', '2026-02-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'b', '2026-02-01')",
     );
     const newestWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -289,10 +293,10 @@ describe('active workout persistence', () => {
     const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
     const activeId = await startWorkout(database);
     const firstWorkout = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-02-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'a', '2026-02-01')",
     );
     const secondWorkout = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'b', '2026-02-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'b', '2026-02-01')",
     );
     const firstWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -330,7 +334,7 @@ describe('active workout persistence', () => {
       const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
       const activeId = await startWorkout(database);
       const oldWorkout = await database.runAsync(
-        "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-01-01')",
+        "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'a', '2026-01-01')",
       );
       const oldWorkoutExercise = await database.runAsync(
         'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -341,7 +345,7 @@ describe('active workout persistence', () => {
         oldWorkoutExercise.lastInsertRowId,
       );
       const deletedWorkout = await database.runAsync(
-        "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'b', '2026-02-01')",
+        "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'b', '2026-02-01')",
       );
       const deletedWorkoutExercise = await database.runAsync(
         'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -378,7 +382,7 @@ describe('active workout persistence', () => {
     const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
     const activeId = await startWorkout(database);
     const history = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-01-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'a', '2026-01-01')",
     );
     const historyWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -428,7 +432,7 @@ describe('active workout persistence', () => {
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const completed = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'before', 'after')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'before', 'after')",
     );
     const completedWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -477,7 +481,7 @@ describe('active workout persistence', () => {
     const workouts = [];
     for (const completedAt of ['2026-03-01', '2026-02-01', '2026-01-01']) {
       const workout = await database.runAsync(
-        "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'start', ?)",
+        "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'start', ?)",
         completedAt,
       );
       const workoutExercise = await database.runAsync(
@@ -512,10 +516,10 @@ describe('active workout persistence', () => {
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const older = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-01-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'a', '2026-01-01')",
     );
     const newest = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'b', '2026-02-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'b', '2026-02-01')",
     );
     const workoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -585,13 +589,13 @@ describe('active workout persistence', () => {
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const secondExerciseId = await createExercise(database, 'Benkpress', exerciseNameKey('Benkpress'));
     const oldest = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'a', '2026-01-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'a', '2026-01-01')",
     );
     const firstTie = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'b', '2026-02-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'b', '2026-02-01')",
     );
     const secondTie = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'c', '2026-02-01')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'c', '2026-02-01')",
     );
     await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -827,7 +831,7 @@ describe('active workout persistence', () => {
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const workoutId = await startWorkout(database);
     const history = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'before', 'after')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'before', 'after')",
     );
     const historyWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -856,7 +860,7 @@ describe('active workout persistence', () => {
     await addExerciseToWorkout(database, workoutId, exerciseId);
     const activeExercise = (await loadActiveWorkout(database))!.exercises[0];
     const history = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'before', 'after')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'before', 'after')",
     );
     const historyWorkoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',
@@ -996,7 +1000,7 @@ describe('active workout persistence', () => {
       const { workoutId, exercises } = await createWorkoutWithThreeExercises(database);
       const exerciseId = await createExercise(database, 'Roing', exerciseNameKey('Roing'));
       const completedWorkout = await database.runAsync(
-        "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'start', 'done')",
+        "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'start', 'done')",
       );
       const foreign = await database.runAsync(
         'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',

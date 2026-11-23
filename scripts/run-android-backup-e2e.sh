@@ -260,5 +260,5 @@ if private_test -f "$documents/trene-automation-trace.jsonl"; then
 fi
 node -e '
   const fs=require("node:fs");
-  fs.writeFileSync(process.argv[1], JSON.stringify({appVersion:"0.1.0",formatVersion:1,schemaVersion:1,platform:"Android API 34",scenarios:13,tableCounts:{exercises:2,workouts:1,workout_exercises:2,workout_sets:2}},null,2)+"\n");
+  fs.writeFileSync(process.argv[1], JSON.stringify({appVersion:"0.1.0",formatVersion:2,schemaVersion:2,platform:"Android API 34",scenarios:13,tableCounts:{training_contexts:1,exercises:2,workouts:1,workout_exercises:2,workout_sets:2}},null,2)+"\n");
 ' "$android_artifacts/runtime-metadata.json"

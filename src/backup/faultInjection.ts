@@ -9,6 +9,7 @@ export const BACKUP_RESTORE_STAGES = [
   'restore.package-staging',
   'restore.package-validation',
   'restore.source-validation',
+  'restore.migration',
   'restore.preparation-cleanup',
   'restore.original-validation',
   'restore.rollback-create',

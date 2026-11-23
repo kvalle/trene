@@ -40,8 +40,8 @@ export interface BackupManifestComponent {
   namespace?: string;
 }
 
-export interface BackupManifestV1 {
-  formatVersion: 1;
+export interface BackupManifest {
+  formatVersion: 1 | 2;
   schemaVersion: number;
   appVersion: string;
   createdAt: string;
@@ -70,7 +70,7 @@ export interface InspectBackupOptions {
 export type BackupInspectionResult =
   | {
       status: 'valid';
-      manifest: BackupManifestV1;
+      manifest: BackupManifest;
       extractedPaths: string[];
       ignoredOptionalPaths: string[];
     }

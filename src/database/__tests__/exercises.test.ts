@@ -39,7 +39,7 @@ async function addWorkout(
   completedAt: string | null,
 ) {
   const workout = await database.runAsync(
-    'INSERT INTO workouts (status, started_at, completed_at) VALUES (?, ?, ?)',
+    'INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, ?, ?, ?)',
     status, 'started', completedAt,
   );
   const workoutExercise = await database.runAsync(
@@ -130,7 +130,7 @@ describe('exercise persistence', () => {
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
     const workout = await database.runAsync(
-      "INSERT INTO workouts (status, started_at, completed_at) VALUES ('completed', 'start', 'end')",
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'start', 'end')",
     );
     const workoutExercise = await database.runAsync(
       'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, 0)',

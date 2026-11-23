@@ -110,8 +110,15 @@ async function startWorkoutWithDatabase(database: Database): Promise<number> {
   return transaction(database, async () => {
     const existing = await getActiveWorkoutIdWithDatabase(database);
     if (existing !== null) return existing;
+    // Until kontekster can be chosen, every treningsøkt starts in the default
+    // kontekst "Standard", which is the oldest active one.
+    const trainingContext = await database.getFirstAsync<{ id: number }>(
+      'SELECT id FROM training_contexts WHERE archived_at IS NULL ORDER BY id LIMIT 1',
+    );
+    if (!trainingContext) throw new Error('No active training context exists');
     const workoutId = (await database.runAsync(
-      "INSERT INTO workouts (status, started_at) VALUES ('active', ?)",
+      "INSERT INTO workouts (training_context_id, status, started_at) VALUES (?, 'active', ?)",
+      trainingContext.id,
       new Date().toISOString(),
     )).lastInsertRowId;
     const template = await database.getFirstAsync<WorkoutRow>(`

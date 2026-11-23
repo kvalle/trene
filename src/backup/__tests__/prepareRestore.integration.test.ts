@@ -29,8 +29,8 @@ test('prepares a packaged real SQLite snapshot without touching live data', asyn
       appVersion: '1.0.0',
       createdAt: '2026-08-14T12:00:00.000Z',
       database: source,
-      schemaVersion: 1,
-      tableCounts: { exercises: 1, workouts: 0, workout_exercises: 0, workout_sets: 0 },
+      schemaVersion: 2,
+      tableCounts: { training_contexts: 1, exercises: 1, workouts: 0, workout_exercises: 0, workout_sets: 0 },
     }, packageArtifact.sink());
 
     const platform: RestorePlatform = {
@@ -56,7 +56,7 @@ test('prepares a packaged real SQLite snapshot without touching live data', asyn
       status: 'ready',
       restore: {
         createdAt: '2026-08-14T12:00:00.000Z',
-        schemaVersion: 1,
+        schemaVersion: 2,
         previewCounts: { workouts: 0, exercises: 1 },
       },
     });

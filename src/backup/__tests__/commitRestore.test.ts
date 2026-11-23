@@ -12,21 +12,21 @@ import {
 jest.mock('../../database/inspectDatabase', () => ({ inspectDatabase: jest.fn() }));
 
 const original: DatabaseInspection = {
-  schemaVersion: 1,
-  tableCounts: { exercises: 2, workouts: 1, workout_exercises: 1, workout_sets: 1 },
+  schemaVersion: 2,
+  tableCounts: { training_contexts: 1, exercises: 2, workouts: 1, workout_exercises: 1, workout_sets: 1 },
   previewCounts: { exercises: 2, workouts: 1 },
   semanticDigest: '1'.repeat(64),
 };
 const restored: DatabaseInspection = {
-  schemaVersion: 1,
-  tableCounts: { exercises: 4, workouts: 3, workout_exercises: 5, workout_sets: 8 },
+  schemaVersion: 2,
+  tableCounts: { training_contexts: 1, exercises: 4, workouts: 3, workout_exercises: 5, workout_sets: 8 },
   previewCounts: { exercises: 4, workouts: 3 },
   semanticDigest: '2'.repeat(64),
 };
 const rollback: RollbackSnapshot = {
   size: 1024,
   sha256: 'a'.repeat(64),
-  schemaVersion: 1,
+  schemaVersion: 2,
   tableCounts: original.tableCounts,
   semanticDigest: original.semanticDigest,
 };
