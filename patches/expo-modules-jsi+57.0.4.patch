@@ -1,0 +1,13 @@
+diff --git a/node_modules/expo-modules-jsi/apple/scripts/build-xcframework.sh b/node_modules/expo-modules-jsi/apple/scripts/build-xcframework.sh
+index 56bcb4c..545102d 100755
+--- a/node_modules/expo-modules-jsi/apple/scripts/build-xcframework.sh
++++ b/node_modules/expo-modules-jsi/apple/scripts/build-xcframework.sh
+@@ -221,6 +221,8 @@ build_slice() {
+     -disableAutomaticPackageResolution \
+     -skipPackagePluginValidation \
+     -skipMacroValidation \
++    -IDEPackageSupportDisableManifestSandbox=YES \
++    -IDEPackageSupportDisablePluginExecutionSandbox=YES \
+     -parallelizeTargets \
+     SYMROOT="${BUILD_PRODUCTS_PATH}" \
+     OBJROOT="${DERIVED_DATA_PATH}/Build/Intermediates.noindex" \
