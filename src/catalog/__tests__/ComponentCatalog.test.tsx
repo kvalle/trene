@@ -1,6 +1,6 @@
 import { AccessibilityInfo } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import ComponentCatalog, { AppShellDetailScreen, ButtonDetailScreen, CompactActionDetailScreen, DisclosureCardDetailScreen, IconDetailScreen, MonthCalendarDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen, TypographyDetailScreen } from '../ComponentCatalog';
+import ComponentCatalog, { AppShellDetailScreen, ButtonDetailScreen, CheckboxRowDetailScreen, CompactActionDetailScreen, DisclosureCardDetailScreen, IconDetailScreen, MonthCalendarDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen, TypographyDetailScreen } from '../ComponentCatalog';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 
 jest.mock('@react-navigation/native', () => ({
@@ -42,6 +42,7 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('FormSection')).toBeOnTheScreen();
   expect(screen.getByText('NumericField')).toBeOnTheScreen();
   expect(screen.getByText('SingleSelectionGroup')).toBeOnTheScreen();
+  expect(screen.getByText('CheckboxRow')).toBeOnTheScreen();
   expect(screen.getByText('NAVIGASJON OG STRUKTUR')).toBeOnTheScreen();
   expect(screen.getByText('Hero')).toBeOnTheScreen();
   expect(screen.getByText('ListContainer')).toBeOnTheScreen();
@@ -85,6 +86,7 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('NavigationRowDetail')).toBeOnTheScreen();
   expect(screen.getByText('SearchFieldDetail')).toBeOnTheScreen();
   expect(screen.getByText('SingleSelectionGroupDetail')).toBeOnTheScreen();
+  expect(screen.getByText('CheckboxRowDetail')).toBeOnTheScreen();
 
   fireEvent(screen.getByLabelText('Mørk modus'), 'valueChange', true);
   expect(screen.getByLabelText('Mørk modus')).toBeOnTheScreen();
@@ -134,6 +136,22 @@ it('shows and operates every SingleSelectionGroup state', () => {
   fireEvent.press(screen.getByTestId('catalog-singleselection-unselected'));
   expect(screen.getByTestId('catalog-singleselection-unselected')).toHaveProp('accessibilityState', { checked: true, disabled: false });
   expect(screen.getByTestId('catalog-singleselection-selected')).toHaveProp('accessibilityState', { checked: false, disabled: false });
+});
+
+it.each(['light', 'dark'] as const)('shows and operates every CheckboxRow state in the %s theme', (scheme) => {
+  render(<AppThemeProvider scheme={scheme}><CheckboxRowDetailScreen /></AppThemeProvider>);
+  expect(screen.getByText('Bruk når')).toBeOnTheScreen();
+  expect(screen.getByTestId('catalog-checkboxrow-checked')).toHaveProp('accessibilityState', { checked: true, disabled: false });
+  expect(screen.getByTestId('catalog-checkboxrow-unchecked')).toHaveProp('accessibilityState', { checked: false, disabled: false });
+  expect(screen.getByTestId('catalog-checkboxrow-locked')).toHaveProp('accessibilityState', { checked: true, disabled: true });
+  expect(screen.getByTestId('catalog-checkboxrow-disabled')).toHaveProp('accessibilityState', { checked: false, disabled: true });
+  expect(screen.getByTestId('catalog-checkboxrow-count-count')).toHaveTextContent('8');
+
+  fireEvent.press(screen.getByTestId('catalog-checkboxrow-interactive-first'));
+  expect(screen.getByTestId('catalog-checkboxrow-interactive-first')).toHaveProp('accessibilityState', { checked: false, disabled: false });
+  expect(screen.getByTestId('catalog-checkboxrow-interactive-second')).toHaveProp('accessibilityState', { checked: true, disabled: true });
+  fireEvent.press(screen.getByTestId('catalog-checkboxrow-interactive-third'));
+  expect(screen.getByTestId('catalog-checkboxrow-interactive-second')).toHaveProp('accessibilityState', { checked: true, disabled: false });
 });
 
 it('shows the interactive and long-text PositiveStatus states', () => {

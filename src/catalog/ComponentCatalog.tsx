@@ -17,6 +17,7 @@ import { ErrorAlert } from '../ui/ErrorAlert';
 import { FieldError } from '../ui/FieldError';
 import { FormSection } from '../ui/FormSection';
 import { Hero } from '../ui/Hero';
+import { CheckboxRow } from '../ui/CheckboxRow';
 import { Icon, iconNames, type IconName, type IconSize } from '../ui/Icon';
 import { Loader } from '../ui/Loader';
 import { MonthCalendar, type MonthCalendarDay } from '../ui/MonthCalendar';
@@ -58,6 +59,7 @@ type CatalogStackParamList = {
   SearchFieldDetail: undefined;
   SelectionRowDetail: undefined;
   SingleSelectionGroupDetail: undefined;
+  CheckboxRowDetail: undefined;
   SectionedDetailDetail: undefined;
   StackExample: undefined;
   ModalExample: undefined;
@@ -184,6 +186,14 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         usage: 'Bruk når brukeren skal velge nøyaktig ett alternativ fra en kort, synlig liste.',
         route: 'SingleSelectionGroupDetail',
         testID: 'catalog-item-singleselectiongroup',
+      },
+      {
+        id: 'checkboxrow',
+        name: 'CheckboxRow',
+        description: 'Rad med ledende avkrysningsboks, tittel og valgfritt antall for flervalg i en liste.',
+        usage: 'Bruk når brukeren kan velge flere uavhengige alternativer fra en liste, for eksempel i et filter.',
+        route: 'CheckboxRowDetail',
+        testID: 'catalog-item-checkboxrow',
       },
       {
         id: 'numericfield',
@@ -381,6 +391,7 @@ function CatalogNavigator({
         <Stack.Screen name="MonthCalendarDetail" component={MonthCalendarDetailScreen} options={{ title: 'MonthCalendar' }} />
         <Stack.Screen name="SelectionRowDetail" component={SelectionRowDetailScreen} options={{ title: 'SelectionRow' }} />
         <Stack.Screen name="SingleSelectionGroupDetail" component={SingleSelectionGroupDetailScreen} options={{ title: 'SingleSelectionGroup' }} />
+        <Stack.Screen name="CheckboxRowDetail" component={CheckboxRowDetailScreen} options={{ title: 'CheckboxRow' }} />
         <Stack.Screen name="SectionedDetailDetail" component={SectionedDetailDetailScreen} options={{ title: 'Seksjonert detalj' }} />
         <Stack.Screen name="StackExample" component={StackExampleScreen} options={{ title: 'Stack' }} />
         <Stack.Screen name="ModalExample" component={ModalExampleScreen} options={{ presentation: 'modal', title: 'Modal' }} />
@@ -1368,6 +1379,62 @@ function SelectionRowDetailScreen() {
           <SelectionRow title="Normal" showSeparator onPress={() => {}} testID="catalog-selectionrow-normal" />
           <SelectionRow title="Deaktivert" disabled showSeparator onPress={() => {}} testID="catalog-selectionrow-disabled" />
           <SelectionRow title="Opptatt" busy onPress={() => {}} testID="catalog-selectionrow-busy" />
+        </ListContainer>
+      </View>
+    </ScrollView>
+  );
+}
+
+export function CheckboxRowDetailScreen() {
+  const { colors } = useAppTheme();
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set(['first', 'second']));
+  const options = [
+    { id: 'first', title: 'Første alternativ', count: 12 },
+    { id: 'second', title: 'Andre alternativ', count: 4 },
+    { id: 'third', title: 'Tredje alternativ', count: 0 },
+  ];
+  const toggle = (id: string, checked: boolean) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-checkboxrow">
+      <DetailHeader
+        name="CheckboxRow"
+        description="Rad med ledende avkrysningsboks, tittel og valgfritt antall i etterfølgende plass. Hele raden er trykkbar. Låst tilstand er avkrysset og kan ikke fjernes."
+        usage="Bruk når brukeren kan velge flere uavhengige alternativer fra en liste, for eksempel i et filter. Bruk låst tilstand når minst ett valg må være igjen. Bruk SingleSelectionGroup når bare ett valg er mulig."
+      />
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Tilstander</Text>
+        <ListContainer>
+          <CheckboxRow title="Avkrysset" checked showSeparator onCheckedChange={() => {}} testID="catalog-checkboxrow-checked" />
+          <CheckboxRow title="Ikke avkrysset" checked={false} showSeparator onCheckedChange={() => {}} testID="catalog-checkboxrow-unchecked" />
+          <CheckboxRow title="Låst" checked locked showSeparator testID="catalog-checkboxrow-locked" />
+          <CheckboxRow title="Deaktivert" checked={false} disabled showSeparator testID="catalog-checkboxrow-disabled" />
+          <CheckboxRow title="Med antall" checked count={8} onCheckedChange={() => {}} testID="catalog-checkboxrow-count" />
+        </ListContainer>
+      </View>
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Interaktivt flervalg (siste valg låses)</Text>
+        <ListContainer>
+          {options.map((option, index) => {
+            const checked = selected.has(option.id);
+            return (
+              <CheckboxRow
+                key={option.id}
+                title={option.title}
+                count={option.count}
+                checked={checked}
+                locked={checked && selected.size === 1}
+                showSeparator={index < options.length - 1}
+                onCheckedChange={(next) => toggle(option.id, next)}
+                testID={`catalog-checkboxrow-interactive-${option.id}`}
+              />
+            );
+          })}
         </ListContainer>
       </View>
     </ScrollView>
