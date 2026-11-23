@@ -6,7 +6,8 @@ import { useEffect } from 'react';
 import { HomeScreen } from '../HomeScreen';
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
-import { getActiveWorkoutId, startWorkout } from '../../database/workouts';
+import { DuplicateTrainingContextNameError, listTrainingContextChoices } from '../../database/trainingContexts';
+import { createTrainingContextAndStartWorkout, getActiveWorkoutId, startWorkout } from '../../database/workouts';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 import { TrainingDataDeletionProvider, useTrainingDataDeletionStatus } from '../../trainingDataDeletion';
 import { WorkoutSetDraftProvider } from '../../workoutSetDrafts';
@@ -20,17 +21,26 @@ jest.mock('@react-navigation/native', () => ({
   usePreventRemove: jest.fn(),
 }));
 jest.mock('../../database/workouts', () => ({
+  createTrainingContextAndStartWorkout: jest.fn(),
   getActiveWorkoutId: jest.fn(),
   startWorkout: jest.fn(),
+}));
+jest.mock('../../database/trainingContexts', () => ({
+  ...jest.requireActual('../../database/trainingContexts'),
+  listTrainingContextChoices: jest.fn(),
 }));
 
 const database = {} as Database;
 const mockedGetActiveWorkoutId = jest.mocked(getActiveWorkoutId);
 const mockedStartWorkout = jest.mocked(startWorkout);
+const mockedCreateAndStart = jest.mocked(createTrainingContextAndStartWorkout);
+const mockedChoices = jest.mocked(listTrainingContextChoices);
+const standard = { id: 1, name: 'Standard', archived: false, lastUsedAt: '2026-01-01T10:00:00Z' };
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockedGetActiveWorkoutId.mockResolvedValue(null);
+  mockedChoices.mockResolvedValue([standard]);
 });
 
 test('shows the empty Home actions and opens them hierarchically', async () => {
@@ -76,6 +86,8 @@ test('persists the workout before opening it and resumes an existing workout', a
   expect(await screen.findByRole('button', { name: 'Starter trening' })).toBeDisabled();
   await act(async () => finishStart(7));
   await waitFor(() => expect(navigate).toHaveBeenCalledWith('Workout'));
+  expect(mockedStartWorkout).toHaveBeenCalledWith(database, 1);
+  expect(screen.queryByText('Hva skal du trene?')).not.toBeOnTheScreen();
 
   mockedGetActiveWorkoutId.mockResolvedValue(7);
   renderScreen();
@@ -185,6 +197,103 @@ test('disables all secondary actions and blocks navigation while starting', asyn
 
   await act(async () => finishStart(7));
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Starter trening' })).not.toBeOnTheScreen());
+});
+
+describe('with several active kontekster', () => {
+  beforeEach(() => {
+    mockedChoices.mockResolvedValue([
+      standard,
+      { id: 2, name: 'Arkivert', archived: true, lastUsedAt: '2026-06-01T10:00:00Z' },
+      { id: 3, name: 'Fysio', archived: false, lastUsedAt: '2026-03-01T10:00:00Z' },
+      { id: 4, name: 'Treningssenter', archived: false, lastUsedAt: null },
+    ]);
+  });
+
+  test('asks what to train with active kontekster by most recently used and starts the chosen one', async () => {
+    const navigate = jest.fn();
+    mockedStartWorkout.mockResolvedValue(9);
+    renderScreen({ navigate });
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Start trening' }));
+
+    expect(await screen.findByRole('header', { name: 'Hva skal du trene?' })).toBeOnTheScreen();
+    const rows = screen.getAllByTestId(/^workout-start-training-context-\d+$/);
+    expect(rows.map((row) => row.props.accessibilityLabel)).toEqual(['Fysio', 'Standard', 'Treningssenter']);
+    expect(screen.getByRole('button', { name: '+ Ny kontekst…' })).toBeOnTheScreen();
+    expect(mockedStartWorkout).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Fysio' }));
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('Workout'));
+    expect(mockedStartWorkout).toHaveBeenCalledWith(database, 3);
+    expect(screen.queryByText('Hva skal du trene?')).not.toBeOnTheScreen();
+  });
+
+  test('cancels the choice without starting anything', async () => {
+    const navigate = jest.fn();
+    renderScreen({ navigate });
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Start trening' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Avbryt' }));
+
+    await waitFor(() => expect(screen.queryByText('Hva skal du trene?')).not.toBeOnTheScreen());
+    expect(mockedStartWorkout).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Start trening' })).toBeEnabled();
+  });
+
+  test('creates a kontekst and starts an empty treningsøkt in it', async () => {
+    const navigate = jest.fn();
+    mockedCreateAndStart
+      .mockRejectedValueOnce(new DuplicateTrainingContextNameError())
+      .mockResolvedValueOnce(10);
+    renderScreen({ navigate });
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Start trening' }));
+    fireEvent.press(await screen.findByRole('button', { name: '+ Ny kontekst…' }));
+    expect(await screen.findByRole('header', { name: 'Ny kontekst' })).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Opprett og start' }));
+    expect(await screen.findByText('Skriv inn et navn')).toBeOnTheScreen();
+    expect(mockedCreateAndStart).not.toHaveBeenCalled();
+
+    fireEvent.changeText(screen.getByTestId('workout-start-training-context-name-input'), '  fysio ');
+    fireEvent.press(screen.getByRole('button', { name: 'Opprett og start' }));
+    expect(await screen.findByText('En kontekst med dette navnet finnes allerede')).toBeOnTheScreen();
+    expect(navigate).not.toHaveBeenCalled();
+
+    fireEvent.changeText(screen.getByTestId('workout-start-training-context-name-input'), ' Hjemme ');
+    fireEvent.press(screen.getByRole('button', { name: 'Opprett og start' }));
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('Workout'));
+    expect(mockedCreateAndStart).toHaveBeenLastCalledWith(database, 'Hjemme', 'hjemme');
+    expect(mockedStartWorkout).not.toHaveBeenCalled();
+  });
+
+  test('shows the start error when starting in the chosen kontekst fails', async () => {
+    const navigate = jest.fn();
+    mockedStartWorkout.mockRejectedValueOnce(new Error('failed'));
+    renderScreen({ navigate });
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Start trening' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Standard' }));
+
+    expect(await screen.findByText('Kunne ikke laste inn')).toBeOnTheScreen();
+    expect(screen.queryByText('Hva skal du trene?')).not.toBeOnTheScreen();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+});
+
+test('resumes an active workout without asking for a kontekst', async () => {
+  const navigate = jest.fn();
+  mockedGetActiveWorkoutId.mockResolvedValue(7);
+  renderScreen({ navigate });
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Fortsett trening' }));
+
+  expect(navigate).toHaveBeenCalledWith('Workout');
+  expect(mockedChoices).not.toHaveBeenCalled();
+  expect(mockedStartWorkout).not.toHaveBeenCalled();
 });
 
 function renderScreen(

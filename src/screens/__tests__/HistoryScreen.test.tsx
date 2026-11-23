@@ -5,6 +5,7 @@ import { AccessibilityInfo, Text } from 'react-native';
 
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
+import { listTrainingContextChoices } from '../../database/trainingContexts';
 import { getActiveWorkoutId, listCompletedWorkouts, startWorkout } from '../../database/workouts';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 import { HistoryScreen } from '../HistoryScreen';
@@ -23,15 +24,21 @@ jest.mock('../../database/workouts', () => ({
   listCompletedWorkouts: jest.fn(),
   startWorkout: jest.fn(),
 }));
+jest.mock('../../database/trainingContexts', () => ({
+  ...jest.requireActual('../../database/trainingContexts'),
+  listTrainingContextChoices: jest.fn(),
+}));
 
 const database = {} as Database;
 const mockedActiveWorkout = jest.mocked(getActiveWorkoutId);
 const mockedList = jest.mocked(listCompletedWorkouts);
 const mockedStart = jest.mocked(startWorkout);
+const mockedChoices = jest.mocked(listTrainingContextChoices);
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockedActiveWorkout.mockResolvedValue(null);
+  mockedChoices.mockResolvedValue([{ id: 1, name: 'Standard', archived: false, lastUsedAt: null }]);
 });
 
 test('announces that completed workouts are loading', () => {
@@ -206,6 +213,23 @@ test('persists a new workout before leaving the empty state', async () => {
   expect(navigate).not.toHaveBeenCalled();
   await act(async () => finishStart(8));
   expect(navigate).toHaveBeenCalledWith('Workout');
+});
+
+test('asks for a kontekst from the empty state when several are active', async () => {
+  const navigate = jest.fn();
+  mockedList.mockResolvedValue([]);
+  mockedChoices.mockResolvedValue([
+    { id: 1, name: 'Standard', archived: false, lastUsedAt: null },
+    { id: 2, name: 'Fysio', archived: false, lastUsedAt: null },
+  ]);
+  mockedStart.mockResolvedValue(8);
+  renderScreen({ navigate });
+
+  fireEvent.press(await screen.findByRole('button', { name: 'Start trening' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'Fysio' }));
+
+  await waitFor(() => expect(navigate).toHaveBeenCalledWith('Workout'));
+  expect(mockedStart).toHaveBeenCalledWith(database, 2);
 });
 
 test('blocks navigation again for each new workout start', async () => {

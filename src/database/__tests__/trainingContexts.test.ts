@@ -6,6 +6,7 @@ import type { Database, DatabaseValue } from '../types';
 import {
   createTrainingContext,
   DuplicateTrainingContextNameError,
+  listTrainingContextChoices,
   listTrainingContexts,
   loadLastTrainingContextExercises,
   loadTrainingContextDetail,
@@ -132,5 +133,28 @@ describe('training context persistence', () => {
       id: fysio, name: 'Fysio', workoutCount: 0, lastExercises: [],
     });
     expect(await loadTrainingContextDetail(database, 99)).toBeNull();
+  });
+
+  test('lists start choices with archived state and the start time of the latest treningsøkt', async () => {
+    const database = await setup();
+    const fysio = await create(database, 'Fysio');
+    const archived = await create(database, 'Gammel');
+    await database.runAsync("UPDATE training_contexts SET archived_at = 'then' WHERE id = ?", archived);
+    for (const startedAt of ['2026-01-01T10:00:00Z', '2026-03-01T10:00:00Z']) {
+      await database.runAsync(
+        "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', ?, ?)",
+        startedAt, startedAt,
+      );
+    }
+    await database.runAsync(
+      "INSERT INTO workouts (training_context_id, status, started_at) VALUES (?, 'active', '2026-02-01T10:00:00Z')",
+      fysio,
+    );
+
+    expect(await listTrainingContextChoices(database)).toEqual([
+      { id: 1, name: 'Standard', archived: false, lastUsedAt: '2026-03-01T10:00:00Z' },
+      { id: fysio, name: 'Fysio', archived: false, lastUsedAt: '2026-02-01T10:00:00Z' },
+      { id: archived, name: 'Gammel', archived: true, lastUsedAt: null },
+    ]);
   });
 });

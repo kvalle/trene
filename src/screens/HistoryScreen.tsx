@@ -8,7 +8,6 @@ import { useDatabase } from '../database/DatabaseContext';
 import {
   getActiveWorkoutId,
   listCompletedWorkouts,
-  startWorkout,
   type CompletedWorkoutListItem,
 } from '../database/workouts';
 import { buildMonthOverview, monthKey } from '../domain/monthOverview';
@@ -24,6 +23,7 @@ import { MonthCalendar } from '../ui/MonthCalendar';
 import { NavigationRow } from '../ui/NavigationRow';
 import { PageStatus } from '../ui/PageStatus';
 import { useActiveWorkoutVisibility } from '../activeWorkoutVisibility/ActiveWorkoutVisibilityContext';
+import { useWorkoutStart } from './WorkoutStartDialog';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'History'>;
 type State =
@@ -36,9 +36,16 @@ export function HistoryScreen({ navigation, route }: Props) {
   const { reconcile } = useActiveWorkoutVisibility();
   const [state, setState] = useState<State>({ status: 'loading' });
   const [reload, setReload] = useState(0);
-  const [starting, setStarting] = useState(false);
   const [startFailed, setStartFailed] = useState(false);
   const allowNavigation = useRef(false);
+  const { start, starting, dialog: workoutStartDialog } = useWorkoutStart({
+    onStarted: () => {
+      void reconcile();
+      allowNavigation.current = true;
+      navigation.navigate('Workout');
+    },
+    onFailed: () => setStartFailed(true),
+  });
   const retryRef = useRef<View>(null);
   const emptyActionRef = useRef<View>(null);
   const monthRefs = useRef(new Map<string, View>());
@@ -96,18 +103,8 @@ export function HistoryScreen({ navigation, route }: Props) {
       return;
     }
     allowNavigation.current = false;
-    setStarting(true);
     setStartFailed(false);
-    try {
-      await startWorkout(database);
-      void reconcile();
-      allowNavigation.current = true;
-      navigation.navigate('Workout');
-    } catch {
-      setStartFailed(true);
-    } finally {
-      setStarting(false);
-    }
+    await start();
   }
 
   if (state.status === 'loading') {
@@ -131,6 +128,7 @@ export function HistoryScreen({ navigation, route }: Props) {
         ref={emptyActionRef}
       />
       {startFailed ? <ErrorAlert message="Kunne ikke starte treningen." /> : null}
+      {workoutStartDialog}
     </HistoryStatus>
   );
 

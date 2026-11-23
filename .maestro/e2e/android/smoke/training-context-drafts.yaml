@@ -1,0 +1,193 @@
+appId: com.kjetilvalle.trene
+name: Start treningsøkter in separate kontekster with their own drafts
+tags:
+  - smoke
+  - android
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Klar for en trening?"
+    timeout: 120000
+
+# With only "Standard", Start trening starts directly without asking.
+- tapOn: "Start trening"
+- assertVisible: "Ingen øvelser lagt til ennå"
+- assertNotVisible: "Kontekst: .*"
+- tapOn: "Legg til øvelse"
+- tapOn: "Opprett første øvelse"
+- tapOn:
+    id: "exercise-name-input"
+- setClipboard: "Knebøy"
+- pasteText
+- tapOn:
+    id: "create-exercise-submit"
+- tapOn: "Rediger sett 1 for Knebøy"
+- pressKey: back
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Repetisjoner for Knebøy"
+- inputText: "5"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Belastning for Knebøy"
+- inputText: "80"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Repetisjoner for Knebøy"
+- extendedWaitUntil:
+    visible: "80 kg · 5 repetisjoner"
+    timeout: 30000
+- pressKey: back
+- tapOn: "Lukk redigering av sett 1 for Knebøy"
+- scrollUntilVisible:
+    element:
+      text: "Marker sett 1 som gjennomført for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Marker sett 1 som gjennomført for Knebøy"
+- extendedWaitUntil:
+    visible: "Gjennomført"
+    timeout: 30000
+- tapOn: "Ferdig"
+- tapOn: "Fullfør trening"
+- extendedWaitUntil:
+    visible: "Fullført trening"
+    timeout: 30000
+- tapOn: "Tilbake til forsiden"
+
+# Add a second kontekst, so that Start trening asks what to train.
+- extendedWaitUntil:
+    visible: "Klar for en trening?"
+    timeout: 30000
+- tapOn: "Kontekster"
+- tapOn:
+    id: "training-contexts-create"
+- tapOn:
+    id: "training-context-name-input"
+- setClipboard: "Fysio"
+- pasteText
+- tapOn:
+    id: "create-training-context-submit"
+- extendedWaitUntil:
+    visible: "Fysio"
+    timeout: 30000
+- pressKey: back
+
+# Create a kontekst from the start dialog and complete a treningsøkt in it.
+- extendedWaitUntil:
+    visible: "Klar for en trening?"
+    timeout: 30000
+- tapOn: "Start trening"
+- extendedWaitUntil:
+    visible: "Hva skal du trene?"
+    timeout: 30000
+- assertVisible: "Standard"
+- assertVisible: "Fysio"
+- tapOn: "\\+ Ny kontekst…"
+- assertVisible: "Ny kontekst"
+- tapOn:
+    id: "workout-start-training-context-name-input"
+- setClipboard: "Hjemme"
+- pasteText
+- tapOn:
+    id: "workout-start-create-submit"
+- extendedWaitUntil:
+    visible: "Kontekst: Hjemme"
+    timeout: 30000
+- assertVisible: "Ingen øvelser lagt til ennå"
+- tapOn: "Legg til øvelse"
+- tapOn: "Knebøy"
+# Never used in Hjemme, so it gets one empty planned set rather than 80 kg.
+- extendedWaitUntil:
+    visible: "Rediger sett 1 for Knebøy"
+    timeout: 30000
+- assertNotVisible: "80 kg · 5 repetisjoner"
+- tapOn: "Rediger sett 1 for Knebøy"
+- pressKey: back
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Repetisjoner for Knebøy"
+- inputText: "10"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Belastning for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Belastning for Knebøy"
+- inputText: "20"
+- pressKey: back
+- scrollUntilVisible:
+    element:
+      text: "Repetisjoner for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Repetisjoner for Knebøy"
+- extendedWaitUntil:
+    visible: "20 kg · 10 repetisjoner"
+    timeout: 30000
+- pressKey: back
+- tapOn: "Lukk redigering av sett 1 for Knebøy"
+- scrollUntilVisible:
+    element:
+      text: "Marker sett 1 som gjennomført for Knebøy"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Marker sett 1 som gjennomført for Knebøy"
+- extendedWaitUntil:
+    visible: "Gjennomført"
+    timeout: 30000
+- tapOn: "Ferdig"
+- tapOn: "Fullfør trening"
+- extendedWaitUntil:
+    visible: "Fullført trening"
+    timeout: 30000
+- tapOn: "Tilbake til forsiden"
+
+# Each kontekst starts from its own latest completed treningsøkt.
+- extendedWaitUntil:
+    visible: "Klar for en trening?"
+    timeout: 30000
+- tapOn: "Start trening"
+- extendedWaitUntil:
+    visible: "Hva skal du trene?"
+    timeout: 30000
+- tapOn: "Standard"
+- extendedWaitUntil:
+    visible: "Kontekst: Standard"
+    timeout: 30000
+- tapOn: "Knebøy"
+- assertVisible: "80 kg · 5 repetisjoner"
+- tapOn: "Avbryt"
+- tapOn: "Avbryt treningen"
+- extendedWaitUntil:
+    visible: "Start trening"
+    timeout: 30000
+
+- tapOn: "Start trening"
+- extendedWaitUntil:
+    visible: "Hva skal du trene?"
+    timeout: 30000
+- tapOn: "Hjemme"
+- extendedWaitUntil:
+    visible: "Kontekst: Hjemme"
+    timeout: 30000
+- tapOn: "Knebøy"
+- assertVisible: "20 kg · 10 repetisjoner"
+- assertNotVisible: "80 kg · 5 repetisjoner"

@@ -5,7 +5,7 @@ import { AccessibilityInfo, AppState, findNodeHandle, ScrollView, StyleSheet, Vi
 
 import type { RootStackParamList } from '../AppNavigator';
 import { useDatabase } from '../database/DatabaseContext';
-import { getActiveWorkoutId, startWorkout } from '../database/workouts';
+import { getActiveWorkoutId } from '../database/workouts';
 import { useAppTheme } from '../ui/AppThemeProvider';
 import { Button } from '../ui/Button';
 import { ErrorAlert } from '../ui/ErrorAlert';
@@ -15,6 +15,7 @@ import { useTrainingDataDeletionStatus } from '../trainingDataDeletion';
 import { PositiveStatus } from '../ui/PositiveStatus';
 import { useWorkoutSetDrafts } from '../workoutSetDrafts';
 import { useActiveWorkoutVisibility } from '../activeWorkoutVisibility/ActiveWorkoutVisibilityContext';
+import { useWorkoutStart } from './WorkoutStartDialog';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -25,11 +26,18 @@ export function HomeScreen({ navigation, route }: Props) {
   const { drafts } = useWorkoutSetDrafts();
   const { reconcile } = useActiveWorkoutVisibility();
   const [activeWorkoutId, setActiveWorkoutId] = useState<number | null>();
-  const [starting, setStarting] = useState(false);
   const [error, setError] = useState(false);
   const [reload, setReload] = useState(0);
   const allowNavigation = useRef(false);
   const startWorkoutRef = useRef<View>(null);
+  const { start, starting, dialog: workoutStartDialog } = useWorkoutStart({
+    onStarted: () => {
+      void reconcile();
+      allowNavigation.current = true;
+      navigation.navigate('Workout');
+    },
+    onFailed: () => setError(true),
+  });
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -62,18 +70,9 @@ export function HomeScreen({ navigation, route }: Props) {
       navigation.navigate('Workout');
       return;
     }
-    setStarting(true);
+    allowNavigation.current = false;
     setError(false);
-    try {
-      await startWorkout(database);
-      void reconcile();
-      allowNavigation.current = true;
-      navigation.navigate('Workout');
-    } catch {
-      setError(true);
-    } finally {
-      setStarting(false);
-    }
+    await start();
   }
 
   const hasUnsavedDraft = activeWorkoutId !== null && Object.values(drafts).some((draft) =>
@@ -151,6 +150,7 @@ export function HomeScreen({ navigation, route }: Props) {
         />
         </View>
       </ScrollView>
+      {workoutStartDialog}
       {deleted && (
         <PositiveStatus
           message="Alle treningsdata er slettet."

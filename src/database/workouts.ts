@@ -1,6 +1,7 @@
 import { exerciseNameKey, validateExerciseName } from '../domain/exerciseName';
 import { isValidLoad, isValidRepetitions } from '../domain/workoutSet';
 import { DuplicateExerciseNameError } from './exercises';
+import { insertTrainingContext } from './trainingContexts';
 import { databaseOperation, type Database } from './types';
 
 export interface AvailableExercise {
@@ -23,13 +24,19 @@ export interface WorkoutExercise {
   sets: WorkoutSet[];
 }
 
-export interface ActiveWorkout {
+interface Workout {
   id: number;
   startedAt: string;
   exercises: WorkoutExercise[];
 }
 
-export interface CompletedWorkout extends ActiveWorkout {
+export interface ActiveWorkout extends Workout {
+  trainingContext: { id: number; name: string };
+  /** Number of kontekster that exist, archived ones included. */
+  trainingContextCount: number;
+}
+
+export interface CompletedWorkout extends Workout {
   completedAt: string;
 }
 
@@ -106,54 +113,74 @@ async function getActiveWorkoutIdWithDatabase(database: Database): Promise<numbe
   ))?.id ?? null;
 }
 
-async function startWorkoutWithDatabase(database: Database): Promise<number> {
+async function startWorkoutWithDatabase(database: Database, trainingContextId: number): Promise<number> {
   return transaction(database, async () => {
     const existing = await getActiveWorkoutIdWithDatabase(database);
     if (existing !== null) return existing;
-    // Until kontekster can be chosen, every treningsøkt starts in the default
-    // kontekst "Standard", which is the oldest active one.
-    const trainingContext = await database.getFirstAsync<{ id: number }>(
-      'SELECT id FROM training_contexts WHERE archived_at IS NULL ORDER BY id LIMIT 1',
-    );
-    if (!trainingContext) throw new Error('No active training context exists');
-    const workoutId = (await database.runAsync(
-      "INSERT INTO workouts (training_context_id, status, started_at) VALUES (?, 'active', ?)",
-      trainingContext.id,
-      new Date().toISOString(),
-    )).lastInsertRowId;
-    const template = await database.getFirstAsync<WorkoutRow>(`
-      SELECT id FROM workouts WHERE status = 'completed'
-      ORDER BY completed_at DESC, id ASC LIMIT 1
-    `);
-    if (!template) return workoutId;
-
-    const templateExercises = await database.getAllAsync<{
-      id: number;
-      exercise_id: number;
-      position: number;
-    }>(`
-      SELECT id, exercise_id, position FROM workout_exercises
-      WHERE workout_id = ? ORDER BY position ASC
-    `, template.id);
-    for (const templateExercise of templateExercises) {
-      const workoutExerciseId = (await database.runAsync(
-        'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, ?)',
-        workoutId, templateExercise.exercise_id, templateExercise.position,
-      )).lastInsertRowId;
-      const templateSets = await database.getAllAsync<{ load_kg: number; repetitions: number }>(`
-        SELECT load_kg, repetitions FROM workout_sets
-        WHERE workout_exercise_id = ? AND confirmed_at IS NOT NULL
-        ORDER BY id ASC
-      `, templateExercise.id);
-      for (const set of templateSets) {
-        await database.runAsync(
-          'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions) VALUES (?, ?, ?)',
-          workoutExerciseId, set.load_kg, set.repetitions,
-        );
-      }
-    }
-    return workoutId;
+    return insertWorkoutFromLatestInTrainingContext(database, trainingContextId);
   });
+}
+
+async function createTrainingContextAndStartWorkoutWithDatabase(
+  database: Database,
+  name: string,
+  key: string,
+): Promise<number> {
+  return transaction(database, async () => {
+    if (await getActiveWorkoutIdWithDatabase(database) !== null) {
+      throw new Error('An active workout already exists');
+    }
+    const trainingContextId = await insertTrainingContext(database, name, key);
+    return insertWorkoutFromLatestInTrainingContext(database, trainingContextId);
+  });
+}
+
+async function insertWorkoutFromLatestInTrainingContext(
+  database: Database,
+  trainingContextId: number,
+): Promise<number> {
+  const trainingContext = await database.getFirstAsync<{ id: number }>(
+    'SELECT id FROM training_contexts WHERE id = ? AND archived_at IS NULL',
+    trainingContextId,
+  );
+  if (!trainingContext) throw new Error('Active training context not found');
+  const workoutId = (await database.runAsync(
+    "INSERT INTO workouts (training_context_id, status, started_at) VALUES (?, 'active', ?)",
+    trainingContextId,
+    new Date().toISOString(),
+  )).lastInsertRowId;
+  const template = await database.getFirstAsync<WorkoutRow>(`
+    SELECT id FROM workouts WHERE status = 'completed' AND training_context_id = ?
+    ORDER BY completed_at DESC, id ASC LIMIT 1
+  `, trainingContextId);
+  if (!template) return workoutId;
+
+  const templateExercises = await database.getAllAsync<{
+    id: number;
+    exercise_id: number;
+    position: number;
+  }>(`
+    SELECT id, exercise_id, position FROM workout_exercises
+    WHERE workout_id = ? ORDER BY position ASC
+  `, template.id);
+  for (const templateExercise of templateExercises) {
+    const workoutExerciseId = (await database.runAsync(
+      'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, ?)',
+      workoutId, templateExercise.exercise_id, templateExercise.position,
+    )).lastInsertRowId;
+    const templateSets = await database.getAllAsync<{ load_kg: number; repetitions: number }>(`
+      SELECT load_kg, repetitions FROM workout_sets
+      WHERE workout_exercise_id = ? AND confirmed_at IS NOT NULL
+      ORDER BY id ASC
+    `, templateExercise.id);
+    for (const set of templateSets) {
+      await database.runAsync(
+        'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions) VALUES (?, ?, ?)',
+        workoutExerciseId, set.load_kg, set.repetitions,
+      );
+    }
+  }
+  return workoutId;
 }
 
 async function cancelActiveWorkoutWithDatabase(database: Database, workoutId: number): Promise<void> {
@@ -419,9 +446,20 @@ async function reorderActiveWorkoutExercisesWithDatabase(
 }
 
 async function loadActiveWorkoutWithDatabase(database: Database): Promise<ActiveWorkout | null> {
-  const workout = await database.getFirstAsync<{ id: number; started_at: string }>(
-    "SELECT id, started_at FROM workouts WHERE status = 'active'",
-  );
+  const workout = await database.getFirstAsync<{
+    id: number;
+    started_at: string;
+    training_context_id: number;
+    training_context_name: string;
+    training_context_count: number;
+  }>(`
+    SELECT workouts.id, workouts.started_at, workouts.training_context_id,
+      training_contexts.name AS training_context_name,
+      (SELECT COUNT(*) FROM training_contexts) AS training_context_count
+    FROM workouts
+    JOIN training_contexts ON training_contexts.id = workouts.training_context_id
+    WHERE workouts.status = 'active'
+  `);
   if (!workout) return null;
   const workoutExercises = await database.getAllAsync<WorkoutExerciseRow>(`
     SELECT workout_exercises.id, workout_exercises.exercise_id, exercises.name,
@@ -442,6 +480,8 @@ async function loadActiveWorkoutWithDatabase(database: Database): Promise<Active
   return {
     id: workout.id,
     startedAt: workout.started_at,
+    trainingContext: { id: workout.training_context_id, name: workout.training_context_name },
+    trainingContextCount: workout.training_context_count,
     exercises: workoutExercises.map((workoutExercise) => ({
       id: workoutExercise.id,
       exerciseId: workoutExercise.exercise_id,
@@ -569,11 +609,12 @@ async function addWorkoutExercise(database: Database, workoutId: number, exercis
       JOIN workout_exercises AS history_exercise ON history_exercise.workout_id = history.id
       JOIN workout_sets AS history_set ON history_set.workout_exercise_id = history_exercise.id
       WHERE history.status = 'completed' AND history_exercise.exercise_id = ?
+        AND history.training_context_id = (SELECT training_context_id FROM workouts WHERE id = ?)
         AND history_set.confirmed_at IS NOT NULL
       ORDER BY history.completed_at DESC, history.id ASC LIMIT 1
     ) AND workout_sets.confirmed_at IS NOT NULL
     ORDER BY workout_sets.id ASC
-  `, exerciseId);
+  `, exerciseId, workoutId);
   if (historySets.length === 0) {
     await database.runAsync('INSERT INTO workout_sets (workout_exercise_id) VALUES (?)', workoutExerciseId);
   } else {
@@ -623,6 +664,9 @@ async function createExerciseInWorkoutWithDatabase(
 
 export const getActiveWorkoutId = databaseOperation(getActiveWorkoutIdWithDatabase);
 export const startWorkout = databaseOperation(startWorkoutWithDatabase);
+export const createTrainingContextAndStartWorkout = databaseOperation(
+  createTrainingContextAndStartWorkoutWithDatabase,
+);
 export const cancelActiveWorkout = databaseOperation(cancelActiveWorkoutWithDatabase);
 export const deleteCompletedWorkout = databaseOperation(deleteCompletedWorkoutWithDatabase);
 export const completeWorkout = databaseOperation(completeWorkoutWithDatabase);

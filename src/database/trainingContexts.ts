@@ -59,7 +59,44 @@ async function listTrainingContextsWithDatabase(database: Database): Promise<Tra
     .sort((left, right) => bokmalCollator.compare(left.name, right.name) || left.id - right.id);
 }
 
-async function createTrainingContextWithDatabase(
+/**
+ * Kontekster offered when a treningsøkt starts, with archived ones included so
+ * that callers can tell how many kontekster exist in total.
+ */
+export interface TrainingContextChoice {
+  id: number;
+  name: string;
+  archived: boolean;
+  /** Start time of the most recent treningsøkt in the kontekst, if any. */
+  lastUsedAt: string | null;
+}
+
+async function listTrainingContextChoicesWithDatabase(database: Database): Promise<TrainingContextChoice[]> {
+  const rows = await database.getAllAsync<{
+    id: number;
+    name: string;
+    archived_at: string | null;
+    last_used_at: string | null;
+  }>(`
+    SELECT training_contexts.id, training_contexts.name, training_contexts.archived_at,
+      (SELECT MAX(workouts.started_at) FROM workouts
+        WHERE workouts.training_context_id = training_contexts.id) AS last_used_at
+    FROM training_contexts
+    ORDER BY training_contexts.id ASC
+  `);
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    archived: row.archived_at !== null,
+    lastUsedAt: row.last_used_at,
+  }));
+}
+
+/**
+ * Inserts a kontekst with a normalized name. Callers own the transaction.
+ * Throws `DuplicateTrainingContextNameError` when the name is taken.
+ */
+export async function insertTrainingContext(
   database: Database,
   name: string,
   key: string,
@@ -159,7 +196,8 @@ export class TrainingContextNotFoundError extends Error {
 }
 
 export const listTrainingContexts = databaseOperation(listTrainingContextsWithDatabase);
-export const createTrainingContext = databaseOperation(createTrainingContextWithDatabase);
+export const createTrainingContext = databaseOperation(insertTrainingContext);
+export const listTrainingContextChoices = databaseOperation(listTrainingContextChoicesWithDatabase);
 export const renameTrainingContext = databaseOperation(renameTrainingContextWithDatabase);
 export const loadLastTrainingContextExercises = databaseOperation(loadLastTrainingContextExercisesWithDatabase);
 export const loadTrainingContextDetail = databaseOperation(loadTrainingContextDetailWithDatabase);
