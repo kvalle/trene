@@ -857,9 +857,16 @@ export function WorkoutScreen({ navigation, route }: Props) {
       scrollEnabled={!dragSession}
       scrollEventThrottle={16}
     >
-      <Text style={[typography.metadata, { color: colors.muted }]}>
-        Startet {formatDateTime(new Date(state.workout.startedAt))}
-      </Text>
+      <View>
+        {state.workout.trainingContextCount > 1 && (
+          <Text style={[typography.metadata, { color: colors.muted }]} testID="workout-training-context">
+            Kontekst: {state.workout.trainingContext.name}
+          </Text>
+        )}
+        <Text style={[typography.metadata, { color: colors.muted }]}>
+          Startet {formatDateTime(new Date(state.workout.startedAt))}
+        </Text>
+      </View>
       {state.workout.exercises.length === 0 && (
         <Text style={[typography.body, styles.empty, { color: colors.text }]}>Ingen øvelser lagt til ennå</Text>
       )}

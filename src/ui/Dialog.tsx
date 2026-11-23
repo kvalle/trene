@@ -1,4 +1,4 @@
-import { AccessibilityInfo, findNodeHandle, Modal, StyleSheet, Text, View, type ModalProps, type Text as TextType, type View as ViewType } from 'react-native';
+import { AccessibilityInfo, findNodeHandle, KeyboardAvoidingView, Modal, StyleSheet, Text, View, type ModalProps, type Text as TextType, type View as ViewType } from 'react-native';
 
 import { radii, typography } from '../theme';
 import { useAppTheme } from './AppThemeProvider';
@@ -23,12 +23,13 @@ export function Dialog({ title, children, initialFocusRef, titleRef, testID, ...
 
   return (
     <Modal {...modalProps} animationType="none" transparent onShow={handleShow}>
-      <View accessibilityViewIsModal style={styles.backdrop}>
+      {/* Keeps dialogs with text fields above the on-screen keyboard. */}
+      <KeyboardAvoidingView accessibilityViewIsModal behavior="padding" style={styles.backdrop}>
         <View testID={testID} style={[styles.dialog, { backgroundColor: colors.surface }]}>
           <Text ref={titleRef} accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>{title}</Text>
           {children}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

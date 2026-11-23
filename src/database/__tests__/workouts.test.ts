@@ -5,6 +5,7 @@ import { join } from 'node:path';
 
 import { exerciseNameKey } from '../../domain/exerciseName';
 import { createExercise } from '../exercises';
+import { createTrainingContext, DuplicateTrainingContextNameError } from '../trainingContexts';
 import { migrateDatabase } from '../migrate';
 import type { Database, DatabaseValue } from '../types';
 import {
@@ -13,6 +14,7 @@ import {
   cancelActiveWorkout,
   completeWorkout,
   createExerciseInWorkout,
+  createTrainingContextAndStartWorkout,
   countExercises,
   confirmWorkoutSet,
   deleteCompletedWorkout,
@@ -30,6 +32,10 @@ import {
   startWorkout,
   unconfirmWorkoutSet,
 } from '../workouts';
+
+/** Id of the kontekst "Standard" created by the migration. */
+const STANDARD_ID = 1;
+const STANDARD = { id: STANDARD_ID, name: 'Standard' };
 
 class TestDatabase implements Database {
   private readonly database: DatabaseSync;
@@ -56,13 +62,13 @@ describe('active workout persistence', () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
 
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     await database.runAsync(
       "UPDATE workouts SET started_at = '2026-08-05T09:15:00Z' WHERE id = ?",
       workoutId,
     );
 
-    expect(await startWorkout(database)).toBe(workoutId);
+    expect(await startWorkout(database, STANDARD_ID)).toBe(workoutId);
     expect(await getActiveWorkoutId(database)).toBe(workoutId);
     expect(await database.getFirstAsync(
       'SELECT training_contexts.name FROM workouts JOIN training_contexts ON training_contexts.id = workouts.training_context_id WHERE workouts.id = ?',
@@ -71,6 +77,7 @@ describe('active workout persistence', () => {
     expect(await loadActiveWorkout(database)).toEqual({
       id: workoutId,
       startedAt: '2026-08-05T09:15:00Z',
+      trainingContext: STANDARD, trainingContextCount: 1,
       exercises: [],
     });
   });
@@ -119,11 +126,12 @@ describe('active workout persistence', () => {
       squat.lastInsertRowId,
     );
 
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
 
     expect(await loadActiveWorkout(database)).toEqual({
       id: workoutId,
       startedAt: expect.any(String),
+      trainingContext: STANDARD, trainingContextCount: 1,
       exercises: [
         {
           id: expect.any(Number), exerciseId: pressId, name: 'Benkpress', position: 0,
@@ -158,7 +166,7 @@ describe('active workout persistence', () => {
       );
     }
 
-    await startWorkout(database);
+    await startWorkout(database, STANDARD_ID);
 
     expect((await loadActiveWorkout(database))?.exercises[0].sets[0].loadKg).toBe(80);
   });
@@ -167,7 +175,7 @@ describe('active workout persistence', () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
-    const activeId = await startWorkout(database);
+    const activeId = await startWorkout(database, STANDARD_ID);
     await addExerciseToWorkout(database, activeId, exerciseId);
     const activeBefore = await loadActiveWorkout(database);
     const completed = await database.runAsync(
@@ -182,7 +190,7 @@ describe('active workout persistence', () => {
       completedExercise.lastInsertRowId,
     );
 
-    expect(await startWorkout(database)).toBe(activeId);
+    expect(await startWorkout(database, STANDARD_ID)).toBe(activeId);
     expect(await loadActiveWorkout(database)).toEqual(activeBefore);
   });
 
@@ -212,7 +220,7 @@ describe('active workout persistence', () => {
     );
     await database.execAsync(trigger);
 
-    await expect(startWorkout(database)).rejects.toThrow('write failed');
+    await expect(startWorkout(database, STANDARD_ID)).rejects.toThrow('write failed');
     expect(await getActiveWorkoutId(database)).toBeNull();
     expect(await database.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM workouts'))
       .toEqual({ count: 1 });
@@ -221,7 +229,7 @@ describe('active workout persistence', () => {
   test('hides existing workout exercises and adds exercises at stable positions with an empty planned set', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const kneboyId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const aloftId = await createExercise(database, 'Åløft', exerciseNameKey('Åløft'));
 
@@ -233,6 +241,7 @@ describe('active workout persistence', () => {
     expect(await loadActiveWorkout(database)).toEqual({
       id: workoutId,
       startedAt: expect.any(String),
+      trainingContext: STANDARD, trainingContextCount: 1,
       exercises: [
         { id: expect.any(Number), exerciseId: aloftId, name: 'Åløft', position: 0,
           sets: [{ id: expect.any(Number), loadKg: null, repetitions: null, confirmedAt: null }] },
@@ -249,7 +258,7 @@ describe('active workout persistence', () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
-    const activeId = await startWorkout(database);
+    const activeId = await startWorkout(database, STANDARD_ID);
     const oldWorkout = await database.runAsync(
       "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'a', '2026-01-01')",
     );
@@ -291,7 +300,7 @@ describe('active workout persistence', () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
-    const activeId = await startWorkout(database);
+    const activeId = await startWorkout(database, STANDARD_ID);
     const firstWorkout = await database.runAsync(
       "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'a', '2026-02-01')",
     );
@@ -332,7 +341,7 @@ describe('active workout persistence', () => {
     try {
       await migrateDatabase(database);
       const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
-      const activeId = await startWorkout(database);
+      const activeId = await startWorkout(database, STANDARD_ID);
       const oldWorkout = await database.runAsync(
         "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'a', '2026-01-01')",
       );
@@ -380,7 +389,7 @@ describe('active workout persistence', () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
-    const activeId = await startWorkout(database);
+    const activeId = await startWorkout(database, STANDARD_ID);
     const history = await database.runAsync(
       "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'a', '2026-01-01')",
     );
@@ -406,6 +415,7 @@ describe('active workout persistence', () => {
     expect(await loadActiveWorkout(database)).toEqual({
       id: activeId,
       startedAt: expect.any(String),
+      trainingContext: STANDARD, trainingContextCount: 1,
       exercises: [],
     });
     expect(await listAvailableExercises(database, activeId)).toEqual([
@@ -416,7 +426,7 @@ describe('active workout persistence', () => {
   test('creates and selects an exercise atomically', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
 
     const exerciseId = await createExerciseInWorkout(
       database, workoutId, 'Benkpress', exerciseNameKey('Benkpress'),
@@ -442,7 +452,7 @@ describe('active workout persistence', () => {
       "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, 80, 5, 'after')",
       completedWorkoutExercise.lastInsertRowId,
     );
-    const activeId = await startWorkout(database);
+    const activeId = await startWorkout(database, STANDARD_ID);
 
     await cancelActiveWorkout(database, activeId);
 
@@ -460,7 +470,7 @@ describe('active workout persistence', () => {
   test('rolls back cancellation when deletion fails', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const activeId = await startWorkout(database);
+    const activeId = await startWorkout(database, STANDARD_ID);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     await addExerciseToWorkout(database, activeId, exerciseId);
     const workoutBefore = await loadActiveWorkout(database);
@@ -494,7 +504,7 @@ describe('active workout persistence', () => {
       );
       workouts.push({ workoutId: workout.lastInsertRowId, workoutExerciseId: workoutExercise.lastInsertRowId });
     }
-    const activeId = await startWorkout(database);
+    const activeId = await startWorkout(database, STANDARD_ID);
 
     await expect(deleteCompletedWorkout(database, workouts[1].workoutId)).resolves.toEqual({
       focusWorkoutId: workouts[0].workoutId,
@@ -548,7 +558,7 @@ describe('active workout persistence', () => {
   test('atomically completes and prunes a workout while preserving card and set order', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const firstExerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const secondExerciseId = await createExercise(database, 'Benkpress', exerciseNameKey('Benkpress'));
     const emptyExerciseId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
@@ -632,7 +642,7 @@ describe('active workout persistence', () => {
       'INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions) VALUES (?, 90, 3)',
       plannedWorkoutExercise.lastInsertRowId,
     );
-    await startWorkout(database);
+    await startWorkout(database, STANDARD_ID);
 
     expect(await listCompletedWorkouts(database)).toEqual([
       { id: firstTie.lastInsertRowId, completedAt: '2026-02-01', exerciseCount: 2 },
@@ -644,7 +654,7 @@ describe('active workout persistence', () => {
   test('loads the current exercise name in completed workout detail', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const exerciseId = await createExercise(database, 'Gammelt navn', exerciseNameKey('Gammelt navn'));
     await addExerciseToWorkout(database, workoutId, exerciseId);
     const setId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
@@ -661,7 +671,7 @@ describe('active workout persistence', () => {
   test('rejects completion without a completed set', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
 
     await expect(completeWorkout(database, workoutId, 'now')).rejects.toThrow('Completable workout not found');
     expect(await getActiveWorkoutId(database)).toBe(workoutId);
@@ -670,7 +680,7 @@ describe('active workout persistence', () => {
   test('rolls back every completion change when the transaction fails', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     await addExerciseToWorkout(database, workoutId, exerciseId);
     const setId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
@@ -691,7 +701,7 @@ describe('active workout persistence', () => {
   test('rolls back exercise creation when selection fails', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     await database.runAsync("UPDATE workouts SET status = 'completed', completed_at = 'now' WHERE id = ?", workoutId);
 
     await expect(createExerciseInWorkout(
@@ -703,7 +713,7 @@ describe('active workout persistence', () => {
   test('keeps set insertion order stable across status changes', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     await addExerciseToWorkout(database, workoutId, exerciseId);
     const workoutExerciseId = (await loadActiveWorkout(database))!.exercises[0].id;
@@ -734,7 +744,7 @@ describe('active workout persistence', () => {
   test('updates only a completed set in the specified active workout without changing its status', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     await addExerciseToWorkout(database, workoutId, exerciseId);
     const exercise = (await loadActiveWorkout(database))!.exercises[0];
@@ -761,7 +771,7 @@ describe('active workout persistence', () => {
   test('rolls back a failed completed-set update', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     await addExerciseToWorkout(database, workoutId, exerciseId);
     const setId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
@@ -781,7 +791,7 @@ describe('active workout persistence', () => {
   test('deletes only a completed set from the specified active workout and rolls back failures', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     await addExerciseToWorkout(database, workoutId, exerciseId);
     const exercise = (await loadActiveWorkout(database))!.exercises[0];
@@ -812,7 +822,7 @@ describe('active workout persistence', () => {
   test('deletes only planned sets from an active workout', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     await addExerciseToWorkout(database, workoutId, exerciseId);
     const setId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
@@ -829,7 +839,7 @@ describe('active workout persistence', () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const history = await database.runAsync(
       "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (1, 'completed', 'before', 'after')",
     );
@@ -856,7 +866,7 @@ describe('active workout persistence', () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     await addExerciseToWorkout(database, workoutId, exerciseId);
     const activeExercise = (await loadActiveWorkout(database))!.exercises[0];
     const history = await database.runAsync(
@@ -879,7 +889,7 @@ describe('active workout persistence', () => {
   test('adds a set from the last fully valid planned set, otherwise empty', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     await addExerciseToWorkout(database, workoutId, exerciseId);
     const exercise = (await loadActiveWorkout(database))!.exercises[0];
@@ -903,7 +913,7 @@ describe('active workout persistence', () => {
   test('removes only the active workout exercise and keeps remaining positions contiguous', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const kneboyId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const markloftId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
     await addExerciseToWorkout(database, workoutId, kneboyId);
@@ -921,7 +931,7 @@ describe('active workout persistence', () => {
   test('keeps unique insertion order across interleaved set confirmations and later additions', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const firstId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const secondId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
     const thirdId = await createExercise(database, 'Benkpress', exerciseNameKey('Benkpress'));
@@ -941,7 +951,7 @@ describe('active workout persistence', () => {
   describe('exercise reordering', () => {
     async function createWorkoutWithThreeExercises(database: TestDatabase) {
       await migrateDatabase(database);
-      const workoutId = await startWorkout(database);
+      const workoutId = await startWorkout(database, STANDARD_ID);
       for (const name of ['Knebøy', 'Benkpress', 'Markløft']) {
         const exerciseId = await createExercise(database, name, exerciseNameKey(name));
         await addExerciseToWorkout(database, workoutId, exerciseId);
@@ -1033,7 +1043,7 @@ describe('active workout persistence', () => {
     test('rejects reordering when the active workout has fewer than two exercises', async () => {
       const database = new TestDatabase();
       await migrateDatabase(database);
-      const workoutId = await startWorkout(database);
+      const workoutId = await startWorkout(database, STANDARD_ID);
 
       await expect(reorderActiveWorkoutExercises(database, workoutId, []))
         .rejects.toThrow('Workout requires at least two exercises to reorder');
@@ -1087,7 +1097,7 @@ describe('active workout persistence', () => {
           { id: second.id, position: 2 },
         ]);
 
-      const nextWorkoutId = await startWorkout(database);
+      const nextWorkoutId = await startWorkout(database, STANDARD_ID);
       expect((await loadActiveWorkout(database))!.exercises.map(({ exerciseId, position }) => ({ exerciseId, position })))
         .toEqual([
           { exerciseId: third.exerciseId, position: 0 },
@@ -1101,7 +1111,7 @@ describe('active workout persistence', () => {
   test('compacts positions when completion removes an empty exercise', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const emptyId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     const retainedId = await createExercise(database, 'Markløft', exerciseNameKey('Markløft'));
     await addExerciseToWorkout(database, workoutId, emptyId);
@@ -1122,7 +1132,7 @@ describe('active workout persistence', () => {
   test('rolls back failed set additions and exercise removals', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     await addExerciseToWorkout(database, workoutId, exerciseId);
     const exercise = (await loadActiveWorkout(database))!.exercises[0];
@@ -1138,6 +1148,7 @@ describe('active workout persistence', () => {
     expect(await loadActiveWorkout(database)).toEqual({
       id: workoutId,
       startedAt: expect.any(String),
+      trainingContext: STANDARD, trainingContextCount: 1,
       exercises: [exercise],
     });
   });
@@ -1145,7 +1156,7 @@ describe('active workout persistence', () => {
   test('rolls back a failed confirmation without false success', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     await addExerciseToWorkout(database, workoutId, exerciseId);
     const setId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
@@ -1164,7 +1175,7 @@ describe('active workout persistence', () => {
   test('keeps the previous planned values when autosave fails', async () => {
     const database = new TestDatabase();
     await migrateDatabase(database);
-    const workoutId = await startWorkout(database);
+    const workoutId = await startWorkout(database, STANDARD_ID);
     const exerciseId = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
     await addExerciseToWorkout(database, workoutId, exerciseId);
     const setId = (await loadActiveWorkout(database))!.exercises[0].sets[0].id;
@@ -1179,5 +1190,158 @@ describe('active workout persistence', () => {
     expect((await loadActiveWorkout(database))!.exercises[0].sets[0]).toEqual({
       id: setId, loadKg: 80, repetitions: 5, confirmedAt: null,
     });
+  });
+});
+
+describe('treningsøkter in kontekster', () => {
+  async function setup() {
+    const database = new TestDatabase();
+    await migrateDatabase(database);
+    const fysio = await createTrainingContext(database, 'Fysio', exerciseNameKey('Fysio'));
+    const squat = await createExercise(database, 'Knebøy', exerciseNameKey('Knebøy'));
+    const press = await createExercise(database, 'Benkpress', exerciseNameKey('Benkpress'));
+    return { database, fysio, squat, press };
+  }
+
+  async function completed(
+    database: Database,
+    trainingContextId: number,
+    completedAt: string,
+    exercises: [exerciseId: number, loadKg: number][],
+  ) {
+    const workoutId = (await database.runAsync(
+      "INSERT INTO workouts (training_context_id, status, started_at, completed_at) VALUES (?, 'completed', ?, ?)",
+      trainingContextId, completedAt, completedAt,
+    )).lastInsertRowId;
+    for (const [position, [exerciseId, loadKg]] of exercises.entries()) {
+      const workoutExerciseId = (await database.runAsync(
+        'INSERT INTO workout_exercises (workout_id, exercise_id, position) VALUES (?, ?, ?)',
+        workoutId, exerciseId, position,
+      )).lastInsertRowId;
+      await database.runAsync(
+        "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) VALUES (?, ?, 10, 'done')",
+        workoutExerciseId, loadKg,
+      );
+    }
+  }
+
+  const draft = async (database: Database) => (await loadActiveWorkout(database))?.exercises.map((exercise) => [
+    exercise.name, exercise.sets.map((set) => set.loadKg),
+  ]);
+
+  test('derives the draft from the latest completed treningsøkt in the chosen kontekst', async () => {
+    const { database, fysio, squat, press } = await setup();
+    await completed(database, STANDARD_ID, '2026-01-01', [[squat, 60]]);
+    await completed(database, fysio, '2026-01-02', [[press, 20]]);
+    await completed(database, STANDARD_ID, '2026-01-03', [[squat, 70], [press, 50]]);
+    await completed(database, fysio, '2026-01-04', [[squat, 10]]);
+
+    const standardWorkoutId = await startWorkout(database, STANDARD_ID);
+    expect(await draft(database)).toEqual([['Knebøy', [70]], ['Benkpress', [50]]]);
+    expect((await loadActiveWorkout(database))?.trainingContext).toEqual(STANDARD);
+    await cancelActiveWorkout(database, standardWorkoutId);
+
+    await startWorkout(database, fysio);
+    expect(await draft(database)).toEqual([['Knebøy', [10]]]);
+    expect(await loadActiveWorkout(database)).toMatchObject({
+      trainingContext: { id: fysio, name: 'Fysio' },
+      trainingContextCount: 2,
+    });
+  });
+
+  test('starts an empty treningsøkt in a kontekst without completed treningsøkter', async () => {
+    const { database, fysio, squat } = await setup();
+    await completed(database, STANDARD_ID, '2026-01-01', [[squat, 60]]);
+
+    await startWorkout(database, fysio);
+
+    expect(await draft(database)).toEqual([]);
+  });
+
+  test('resumes the active treningsøkt regardless of the requested kontekst', async () => {
+    const { database, fysio } = await setup();
+    const workoutId = await startWorkout(database, STANDARD_ID);
+
+    expect(await startWorkout(database, fysio)).toBe(workoutId);
+    expect((await loadActiveWorkout(database))?.trainingContext).toEqual(STANDARD);
+  });
+
+  test('rejects starting in an archived or missing kontekst', async () => {
+    const { database, fysio } = await setup();
+    await database.runAsync("UPDATE training_contexts SET archived_at = 'then' WHERE id = ?", fysio);
+
+    await expect(startWorkout(database, fysio)).rejects.toThrow('Active training context not found');
+    await expect(startWorkout(database, 99)).rejects.toThrow('Active training context not found');
+    expect(await getActiveWorkoutId(database)).toBeNull();
+  });
+
+  test('adds an exercise with sets from its last use in the same kontekst, or one empty planned set', async () => {
+    const { database, fysio, squat, press } = await setup();
+    await completed(database, fysio, '2026-01-01', [[squat, 15]]);
+    await completed(database, STANDARD_ID, '2026-01-02', [[squat, 80], [press, 50]]);
+
+    const workoutId = await startWorkout(database, fysio);
+    await removeExerciseFromWorkout(database, workoutId, (await loadActiveWorkout(database))!.exercises[0].id);
+    await addExerciseToWorkout(database, workoutId, press);
+    await addExerciseToWorkout(database, workoutId, squat);
+
+    expect(await draft(database)).toEqual([['Benkpress', [null]], ['Knebøy', [15]]]);
+  });
+
+  test('completing and skipping exercises only affects the next draft in the same kontekst', async () => {
+    const { database, fysio, squat, press } = await setup();
+    await completed(database, STANDARD_ID, '2026-01-01', [[squat, 60], [press, 40]]);
+    await completed(database, fysio, '2026-01-02', [[squat, 10], [press, 5]]);
+
+    const workoutId = await startWorkout(database, fysio);
+    const pressSet = (await loadActiveWorkout(database))!.exercises[1].sets[0];
+    await confirmWorkoutSet(database, workoutId, pressSet.id, 7.5, 12);
+    await completeWorkout(database, workoutId);
+
+    const nextFysio = await startWorkout(database, fysio);
+    expect(await draft(database)).toEqual([['Benkpress', [7.5]]]);
+    await cancelActiveWorkout(database, nextFysio);
+    await startWorkout(database, STANDARD_ID);
+    expect(await draft(database)).toEqual([['Knebøy', [60]], ['Benkpress', [40]]]);
+  });
+
+  test('creates a kontekst and starts an empty treningsøkt in it in one step', async () => {
+    const { database, squat } = await setup();
+    await completed(database, STANDARD_ID, '2026-01-01', [[squat, 60]]);
+
+    const workoutId = await createTrainingContextAndStartWorkout(database, 'Treningssenter', exerciseNameKey('Treningssenter'));
+
+    expect(await getActiveWorkoutId(database)).toBe(workoutId);
+    expect(await loadActiveWorkout(database)).toMatchObject({
+      trainingContext: { name: 'Treningssenter' },
+      trainingContextCount: 3,
+      exercises: [],
+    });
+  });
+
+  test('creates nothing when the name is taken, a treningsøkt is active or starting fails', async () => {
+    const { database } = await setup();
+    const count = async () => (await database.getFirstAsync<{ count: number }>(
+      'SELECT (SELECT COUNT(*) FROM training_contexts) + (SELECT COUNT(*) FROM workouts) AS count',
+    ))?.count;
+    const before = await count();
+
+    await expect(createTrainingContextAndStartWorkout(database, 'FYSIO', exerciseNameKey('FYSIO')))
+      .rejects.toBeInstanceOf(DuplicateTrainingContextNameError);
+    await expect(createTrainingContextAndStartWorkout(database, ' fysio', exerciseNameKey('Ny')))
+      .rejects.toThrow('normalized identity');
+    await database.execAsync(`
+      CREATE TRIGGER reject_workout BEFORE INSERT ON workouts
+      BEGIN SELECT RAISE(ABORT, 'write failed'); END;
+    `);
+    await expect(createTrainingContextAndStartWorkout(database, 'Ny', exerciseNameKey('Ny')))
+      .rejects.toThrow('write failed');
+    expect(await count()).toBe(before);
+
+    await database.execAsync('DROP TRIGGER reject_workout;');
+    await startWorkout(database, STANDARD_ID);
+    await expect(createTrainingContextAndStartWorkout(database, 'Ny', exerciseNameKey('Ny')))
+      .rejects.toThrow('An active workout already exists');
+    expect(await count()).toBe(before! + 1);
   });
 });

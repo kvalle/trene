@@ -228,6 +228,8 @@ bruker fareikon, svak fareflate og farekant i tillegg til tekst; farge eller iko
 skal ikke være eneste signal om feil.
 
 Dialog er grunnkomponenten, med bekreftende og destruktiv variant.
+Dialogen flytter seg over skjermtastaturet, slik at tekstfelt og handlinger
+i en dialog forblir synlige mens personen skriver.
 Forhåndsvisning av gjenoppretting er et flertrinns brukseksempel, ikke en egen
 komponent. Låst sikkerhetsstopp er et ikke-avvisbart feileksempel komponert av
 dialog og feilinnhold, heller ikke en egen komponent.

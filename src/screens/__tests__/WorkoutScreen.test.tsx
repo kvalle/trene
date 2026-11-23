@@ -72,6 +72,7 @@ const mockedRemoveExercise = jest.mocked(removeExerciseFromWorkout);
 const mockedReorderExercises = jest.mocked(reorderActiveWorkoutExercises);
 const mockedUnconfirm = jest.mocked(unconfirmWorkoutSet);
 const STARTED_AT = new Date(2026, 7, 5, 10, 0).toISOString();
+const ONE_CONTEXT = { trainingContext: { id: 1, name: 'Standard' }, trainingContextCount: 1 };
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -84,7 +85,7 @@ beforeEach(() => {
 
 const workoutWithSets = {
   id: 3,
-  startedAt: STARTED_AT,
+  startedAt: STARTED_AT, ...ONE_CONTEXT,
   exercises: [{
     id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
     sets: [
@@ -102,7 +103,7 @@ function exerciseProgress(exerciseId: number) {
 test('shows an active workout and opens its cancellable exercise picker', async () => {
   const navigate = jest.fn();
   const setParams = jest.fn();
-  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises: [] });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, ...ONE_CONTEXT, exercises: [] });
   renderScreen({ navigate, setParams });
 
   const metadata = await screen.findByText('Startet 5. august 2026 kl. 10:00', {}, { timeout: 3000 });
@@ -115,17 +116,36 @@ test('shows an active workout and opens its cancellable exercise picker', async 
   expect(navigate).toHaveBeenCalledWith('ExercisePicker', { workoutId: 3 });
 });
 
+test('shows the kontekst only when more than one kontekst exists', async () => {
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, ...ONE_CONTEXT, exercises: [] });
+  const view = renderScreen();
+  expect(await screen.findByText('Startet 5. august 2026 kl. 10:00', {}, { timeout: 3000 })).toBeOnTheScreen();
+  expect(screen.queryByText(/^Kontekst:/)).not.toBeOnTheScreen();
+  view.unmount();
+
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    trainingContext: { id: 2, name: 'Fysio' },
+    trainingContextCount: 2,
+    exercises: [],
+  });
+  renderScreen();
+  const label = await screen.findByText('Kontekst: Fysio', {}, { timeout: 3000 });
+  expect(label).toHaveStyle({ ...typography.metadata, color: lightColors.muted });
+});
+
 test('keeps loading and total failure distinct from an empty workout and retries loading', async () => {
-  let finishLoad: (workout: { id: number; startedAt: string; exercises: never[] }) => void = () => undefined;
+  let finishLoad: (workout: { id: number; startedAt: string; exercises: never[] } & typeof ONE_CONTEXT) => void = () => undefined;
   mockedLoad
     .mockImplementationOnce(() => new Promise((resolve) => { finishLoad = resolve; }))
     .mockRejectedValueOnce(new Error('read failed'))
-    .mockResolvedValueOnce({ id: 3, startedAt: STARTED_AT, exercises: [] });
+    .mockResolvedValueOnce({ id: 3, startedAt: STARTED_AT, ...ONE_CONTEXT, exercises: [] });
   const initialView = renderScreen();
 
   expect(screen.getByLabelText('Laster treningsøkt')).toBeOnTheScreen();
   expect(screen.queryByText('Ingen øvelser lagt til ennå')).not.toBeOnTheScreen();
-  await act(async () => finishLoad({ id: 3, startedAt: STARTED_AT, exercises: [] }));
+  await act(async () => finishLoad({ id: 3, startedAt: STARTED_AT, ...ONE_CONTEXT, exercises: [] }));
   expect(await screen.findByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
   initialView.unmount();
 
@@ -141,7 +161,7 @@ test('opens and focuses the exercise requested by route params, then consumes th
   const setParams = jest.fn();
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -159,7 +179,7 @@ test('opens a newly added exercise without closing an exercise already open', as
   const navigation = { setParams: jest.fn() };
   const workout = {
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -180,7 +200,7 @@ test('opens a newly added exercise without closing an exercise already open', as
 test('focuses the add-exercise action requested by route params, then consumes them', async () => {
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   const setParams = jest.fn();
-  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises: [] });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, ...ONE_CONTEXT, exercises: [] });
   renderScreen({ setParams }, { focusAddExercise: true });
 
   expect(await screen.findByRole('button', { name: 'Legg til øvelse' })).toBeOnTheScreen();
@@ -191,7 +211,7 @@ test('focuses the add-exercise action requested by route params, then consumes t
 test('shows a compact planned set and opens its editor on request', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [{
       id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
       sets: [{ id: 6, loadKg: null, repetitions: null, confirmedAt: null }],
@@ -224,7 +244,7 @@ test('dismisses the keyboard when the inline editor closes', async () => {
 test('keeps suggested sets compact in source order and permits one editor', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [{
       id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
       sets: [
@@ -248,7 +268,7 @@ test('saves a valid dirty draft before switching editors', async () => {
   let finishSave: () => void = () => undefined;
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [{
       id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
       sets: [
@@ -274,7 +294,7 @@ test('saves a valid dirty draft before switching editors', async () => {
 test('invalid input blocks editor transitions but not exercise card collapse', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [{
       id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
       sets: [
@@ -307,7 +327,7 @@ test('invalid input blocks editor transitions but not exercise card collapse', a
 test('reveals a collapsed invalid editor when another editor is requested', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [
       { id: 4, exerciseId: 5, name: 'Knebøy', position: 0, sets: [{ id: 6, loadKg: 80, repetitions: 5, confirmedAt: null }] },
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [{ id: 11, loadKg: 100, repetitions: 3, confirmedAt: null }] },
@@ -340,7 +360,7 @@ test('shows mixed statuses in stable source order with explicit actions', async 
 test('derives accessible and visual exercise completion from durable set status, including zero sets', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [
       { id: 4, exerciseId: 5, name: 'Fullført', position: 0, sets: [{ id: 6, loadKg: 80, repetitions: 5, confirmedAt: STARTED_AT }] },
       { id: 9, exerciseId: 10, name: 'Delvis', position: 1, sets: workoutWithSets.exercises[0].sets },
@@ -666,7 +686,7 @@ test('does not continue navigation when flushing a dirty draft fails', async () 
 test('starts collapsed and lets every exercise expand and collapse independently', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -697,7 +717,7 @@ test('starts collapsed and lets every exercise expand and collapse independently
 test('exposes only possible reorder actions on exercise headers', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -732,7 +752,7 @@ test('moves exercises in both directions immediately, persists each complete ord
   const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -767,7 +787,7 @@ test('moves exercises in both directions immediately, persists each complete ord
 test('collapses every card when reordered with an accessibility action', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
   });
   renderScreen({}, null);
@@ -786,7 +806,7 @@ test('collapses every card when reordered with an accessibility action', async (
 test('drags an exercise across positions, collapses every card, and persists once on drop', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -826,7 +846,7 @@ test('drags an exercise across positions, collapses every card, and persists onc
 test('does not persist an unchanged drag and keeps cards collapsed', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
   });
   renderScreen({}, null);
@@ -846,7 +866,7 @@ test('blocks navigation and screen actions during an active drag', async () => {
   jest.mocked(usePreventRemove).mockImplementation((_, callback) => { preventRemove = callback as typeof preventRemove; });
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
   });
   renderScreen({ dispatch }, null);
@@ -862,7 +882,7 @@ test('blocks navigation and screen actions during an active drag', async () => {
 test('keeps a dirty set draft attached while dragging and does not save it on collapse', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
   });
   renderScreen({}, null);
@@ -885,7 +905,7 @@ test('keeps a dirty set draft attached while dragging and does not save it on co
 test('cancels a drag without persistence and restores the saved order collapsed', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
   });
   renderScreen({}, null);
@@ -907,7 +927,7 @@ test('removes optional reorder animation when reduced motion is enabled', async 
   const animate = jest.spyOn(LayoutAnimation, 'configureNext');
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
   });
   renderScreen({}, null);
@@ -925,7 +945,7 @@ test('rolls a failed reorder back without losing exercise data or draft values',
   const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -957,7 +977,7 @@ test('rolls a failed drag reorder back and keeps every card collapsed', async ()
   const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [...workoutWithSets.exercises, { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] }],
   });
   mockedReorderExercises.mockRejectedValue(new Error('write failed'));
@@ -982,7 +1002,7 @@ test('blocks navigation and further workout mutations while a reorder is being s
   jest.mocked(usePreventRemove).mockImplementation((_, callback) => { preventRemove = callback as typeof preventRemove; });
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -1006,7 +1026,7 @@ test('blocks navigation and further workout mutations while a reorder is being s
 test('does not reorder while a set save is in progress', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -1054,7 +1074,7 @@ test('starts collapsed again after the workout screen is remounted', async () =>
 test('removes only the deleted exercise from the expansion set', async () => {
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [
       { ...workoutWithSets.exercises[0], sets: [workoutWithSets.exercises[0].sets[1]] },
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -1406,7 +1426,7 @@ test('reloads the active workout from SQLite on foreground', async () => {
     onAppStateChange = listener;
     return { remove: jest.fn() };
   });
-  mockedLoad.mockResolvedValueOnce({ id: 3, startedAt: STARTED_AT, exercises: [] }).mockResolvedValueOnce(workoutWithSets);
+  mockedLoad.mockResolvedValueOnce({ id: 3, startedAt: STARTED_AT, ...ONE_CONTEXT, exercises: [] }).mockResolvedValueOnce(workoutWithSets);
   renderScreen();
   expect(await screen.findByText('Ingen øvelser lagt til ennå')).toBeOnTheScreen();
 
@@ -1424,7 +1444,7 @@ test('preserves expanded exercises when the mounted screen reloads', async () =>
   });
   const workout = {
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [
       ...workoutWithSets.exercises,
       { id: 9, exerciseId: 10, name: 'Markløft', position: 1, sets: [] },
@@ -1553,7 +1573,7 @@ test('focuses the next set after removing the first planned set', async () => {
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   mockedLoad.mockResolvedValue({
     id: 3,
-    startedAt: STARTED_AT,
+    startedAt: STARTED_AT, ...ONE_CONTEXT,
     exercises: [{
       id: 4, exerciseId: 5, name: 'Knebøy', position: 0,
       sets: [
@@ -1679,7 +1699,7 @@ test.each([
   ['populated', [{ id: 4, exerciseId: 5, name: 'Knebøy', position: 0, sets: [] }]],
 ])('confirms cancellation of an %s workout before returning Home', async (_, exercises) => {
   const popTo = jest.fn();
-  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, ...ONE_CONTEXT, exercises });
   mockedCancel.mockResolvedValue();
   renderScreen({ popTo });
 
@@ -1694,7 +1714,7 @@ test.each([
 
 test('closes the dialog without deleting and restores focus to Avbryt', async () => {
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
-  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises: [] });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, ...ONE_CONTEXT, exercises: [] });
   const { UNSAFE_getByType } = renderScreen();
 
   fireEvent.press(await screen.findByRole('button', { name: 'Avbryt' }));
@@ -1708,7 +1728,7 @@ test('closes the dialog without deleting and restores focus to Avbryt', async ()
 });
 
 test('platform Back closes the confirmation dialog first', async () => {
-  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises: [] });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, ...ONE_CONTEXT, exercises: [] });
   const { UNSAFE_getByType } = renderScreen();
 
   fireEvent.press(await screen.findByRole('button', { name: 'Avbryt' }));
@@ -1719,7 +1739,7 @@ test('platform Back closes the confirmation dialog first', async () => {
 });
 
 test('exposes cancellation busy state and ignores dismissal while cancellation is pending', async () => {
-  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises: [] });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, ...ONE_CONTEXT, exercises: [] });
   mockedCancel.mockImplementation(() => new Promise(() => {}));
   const { UNSAFE_getByType } = renderScreen();
 
@@ -1735,7 +1755,7 @@ test('preserves the workout, announces retry, and does not navigate when cancell
   const popTo = jest.fn();
   const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
-  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, exercises: [] });
+  mockedLoad.mockResolvedValue({ id: 3, startedAt: STARTED_AT, ...ONE_CONTEXT, exercises: [] });
   mockedCancel.mockRejectedValue(new Error('write failed'));
   renderScreen({ popTo });
 
