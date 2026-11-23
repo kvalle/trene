@@ -15,7 +15,8 @@ tags:
 - tapOn: "Opprett første øvelse"
 - runFlow:
     when:
-      notVisible: "Opprett øvelse"
+      notVisible:
+        id: "exercise-name-input"
     commands:
       - runFlow:
           when:
@@ -23,10 +24,16 @@ tags:
           commands:
             - tapOn: "Opprett første øvelse"
 - extendedWaitUntil:
-    visible: "Opprett øvelse"
+    visible:
+      id: "exercise-name-input"
     timeout: 30000
 - tapOn:
-    point: "50%,31%"
+    id: "exercise-name-input"
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
 - inputText: "U"
 - assertVisible: "^U$"
 - tapOn:
