@@ -1,0 +1,23 @@
+diff --git a/node_modules/expo-modules-jsi/apple/scripts/build-xcframework.sh b/node_modules/expo-modules-jsi/apple/scripts/build-xcframework.sh
+index 56bcb4c..e476292 100755
+--- a/node_modules/expo-modules-jsi/apple/scripts/build-xcframework.sh
++++ b/node_modules/expo-modules-jsi/apple/scripts/build-xcframework.sh
+@@ -208,6 +208,9 @@ build_slice() {
+   if [[ -n "${DEVELOPER_DIR:-}" ]]; then
+     env_args+=(DEVELOPER_DIR="$DEVELOPER_DIR")
+   fi
++  if [[ -n "${TMPDIR:-}" ]]; then
++    env_args+=(TMPDIR="$TMPDIR")
++  fi
+ 
+   (cd "$PACKAGE_DIR" && env -i "${env_args[@]}" \
+     xcodebuild \
+@@ -221,6 +224,8 @@ build_slice() {
+     -disableAutomaticPackageResolution \
+     -skipPackagePluginValidation \
+     -skipMacroValidation \
++    -IDEPackageSupportDisableManifestSandbox=YES \
++    -IDEPackageSupportDisablePluginExecutionSandbox=YES \
+     -parallelizeTargets \
+     SYMROOT="${BUILD_PRODUCTS_PATH}" \
+     OBJROOT="${DERIVED_DATA_PATH}/Build/Intermediates.noindex" \
