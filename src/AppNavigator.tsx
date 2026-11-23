@@ -14,6 +14,9 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { DataScreen } from './screens/DataScreen';
 import { DeleteTrainingDataScreen } from './screens/DeleteTrainingDataScreen';
 import { AppearanceScreen } from './screens/AppearanceScreen';
+import { TrainingContextsScreen } from './screens/TrainingContextsScreen';
+import { TrainingContextDetailScreen } from './screens/TrainingContextDetailScreen';
+import { CreateTrainingContextScreen } from './screens/CreateTrainingContextScreen';
 import { useAppTheme } from './ui/AppThemeProvider';
 import { getAppStackScreenOptions } from './ui/appShell';
 import { WorkoutSetDraftProvider } from './workoutSetDrafts';
@@ -33,6 +36,9 @@ export type RootStackParamList = {
     workoutId?: number;
   } | undefined;
   ExerciseDetail: { exerciseId: number };
+  TrainingContexts: { createdTrainingContextId?: number } | undefined;
+  CreateTrainingContext: undefined;
+  TrainingContextDetail: { trainingContextId: number };
   Settings: undefined;
   Appearance: undefined;
   ActiveWorkoutVisibility: undefined;
@@ -65,6 +71,13 @@ export function AppNavigator() {
           <Stack.Screen name="CompletedWorkout" component={CompletedWorkoutScreen} options={{ title: 'Fullført trening' }} />
           <Stack.Screen name="History" component={HistoryScreen} options={{ title: 'Tidligere treninger' }} />
           <Stack.Screen name="Exercises" component={ExercisesScreen} options={{ title: 'Øvelser' }} />
+          <Stack.Screen name="TrainingContexts" component={TrainingContextsScreen} options={{ title: 'Kontekster' }} />
+          <Stack.Screen name="TrainingContextDetail" component={TrainingContextDetailScreen} options={{ title: 'Kontekst' }} />
+          <Stack.Screen
+            name="CreateTrainingContext"
+            component={CreateTrainingContextScreen}
+            options={{ presentation: 'modal', title: 'Ny kontekst' }}
+          />
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Innstillinger' }} />
           <Stack.Screen name="Appearance" component={AppearanceScreen} options={{ title: 'Utseende' }} />
           <Stack.Screen name="ActiveWorkoutVisibility" component={ActiveWorkoutVisibilityScreen} options={{ title: 'Notifikasjoner' }} />

@@ -136,6 +136,13 @@ export function HomeScreen({ navigation, route }: Props) {
           testID="home-exercises"
         />
         <Button
+          title="Kontekster"
+          variant="secondary"
+          disabled={starting}
+          onPress={() => navigation.navigate('TrainingContexts')}
+          testID="home-training-contexts"
+        />
+        <Button
           title="Innstillinger"
           variant="secondary"
           disabled={starting}

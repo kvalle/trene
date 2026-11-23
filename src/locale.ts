@@ -30,3 +30,7 @@ export function formatLoad(value: number): string {
 export function formatTime(value: Date): string {
   return new Intl.DateTimeFormat(APP_LOCALE, { timeStyle: 'short' }).format(value);
 }
+
+export function formatWorkoutCount(count: number): string {
+  return `${count} ${count === 1 ? 'trening' : 'treninger'}`;
+}
