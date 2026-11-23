@@ -36,7 +36,7 @@ export type RootStackParamList = {
     workoutId?: number;
   } | undefined;
   ExerciseDetail: { exerciseId: number };
-  TrainingContexts: { createdTrainingContextId?: number } | undefined;
+  TrainingContexts: { createdTrainingContextId?: number; deletedTrainingContext?: boolean } | undefined;
   CreateTrainingContext: undefined;
   TrainingContextDetail: { trainingContextId: number };
   Settings: undefined;

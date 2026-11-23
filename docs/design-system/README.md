@@ -209,6 +209,12 @@ punkter høye, bruker metadatastørrelse og vokser med stor tekst. Fordi markeri
 formidles med farge, skal kallerens tilgjengelighetsetikett beskrive hva
 markeringen betyr.
 
+`Badge` er en liten, ikke-interaktiv statusetikett for en varig status ved en
+ressurs, for eksempel «Arkivert». Den har én nøytral variant: avrundet
+`surfaceAlt`-flate, `border`-kant og fet metadatatekst i `text`. Etiketten leses
+som vanlig tekst, vokser med stor tekst og plasseres nær tittelen den gjelder.
+Den skal ikke brukes for handlinger, feil eller midlertidige meldinger.
+
 Feedback og sidevisninger holdes adskilt. Loader, informasjonsvarsel og
 feilvarsel er komponenter som kan plasseres i ulike kontekster. `PositiveStatus`
 bekrefter en vellykket handling uten å avbryte videre arbeid. Den ligger fast

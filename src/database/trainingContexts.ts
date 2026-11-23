@@ -7,15 +7,26 @@ export const DUPLICATE_TRAINING_CONTEXT_NAME = 'En kontekst med dette navnet fin
 export interface TrainingContextListItem {
   id: number;
   name: string;
+  archived: boolean;
+  /** Number of completed treningsøkter in the kontekst. */
   workoutCount: number;
 }
 
 export interface TrainingContextDetail extends TrainingContextListItem {
   /** Exercise names from the latest completed treningsøkt in the kontekst, in workout order. */
   lastExercises: string[];
+  /** Whether the active treningsøkt belongs to this kontekst. */
+  hasActiveWorkout: boolean;
+  /** Whether this is the only kontekst that is not archived. */
+  isLastActive: boolean;
 }
 
-type TrainingContextRow = { id: number; name: string; workout_count: number };
+type TrainingContextRow = {
+  id: number;
+  name: string;
+  archived_at: string | null;
+  workout_count: number;
+};
 
 const bokmalCollator = new Intl.Collator('nb', { sensitivity: 'accent' });
 
@@ -41,7 +52,7 @@ function isUniqueConstraintError(error: unknown): boolean {
 }
 
 const TRAINING_CONTEXT_SELECT = `
-  SELECT training_contexts.id, training_contexts.name,
+  SELECT training_contexts.id, training_contexts.name, training_contexts.archived_at,
     (SELECT COUNT(*) FROM workouts
       WHERE workouts.training_context_id = training_contexts.id
         AND workouts.status = 'completed') AS workout_count
@@ -49,8 +60,26 @@ const TRAINING_CONTEXT_SELECT = `
 `;
 
 function toListItem(row: TrainingContextRow): TrainingContextListItem {
-  return { id: row.id, name: row.name, workoutCount: row.workout_count };
+  return { id: row.id, name: row.name, archived: row.archived_at !== null, workoutCount: row.workout_count };
 }
+
+async function transaction<T>(database: Database, operation: () => Promise<T>): Promise<T> {
+  await database.execAsync('BEGIN IMMEDIATE;');
+  try {
+    const result = await operation();
+    await database.execAsync('COMMIT;');
+    return result;
+  } catch (error) {
+    await database.execAsync('ROLLBACK;');
+    throw error;
+  }
+}
+
+/** SQL condition that holds when another kontekst than `training_contexts.id` is not archived. */
+const ANOTHER_ACTIVE_TRAINING_CONTEXT = `EXISTS (
+  SELECT 1 FROM training_contexts AS other
+  WHERE other.id <> training_contexts.id AND other.archived_at IS NULL
+)`;
 
 async function listTrainingContextsWithDatabase(database: Database): Promise<TrainingContextListItem[]> {
   const rows = await database.getAllAsync<TrainingContextRow>(TRAINING_CONTEXT_SELECT);
@@ -175,10 +204,65 @@ async function loadTrainingContextDetailWithDatabase(
     trainingContextId,
   );
   if (!row) return null;
+  const state = await database.getFirstAsync<{ has_active_workout: number; active_count: number }>(`
+    SELECT
+      EXISTS (SELECT 1 FROM workouts WHERE training_context_id = ? AND status = 'active') AS has_active_workout,
+      (SELECT COUNT(*) FROM training_contexts WHERE archived_at IS NULL) AS active_count
+  `, trainingContextId);
+  const item = toListItem(row);
   return {
-    ...toListItem(row),
+    ...item,
     lastExercises: await loadLastTrainingContextExercisesWithDatabase(database, trainingContextId),
+    hasActiveWorkout: state?.has_active_workout === 1,
+    isLastActive: !item.archived && state?.active_count === 1,
   };
+}
+
+async function archiveTrainingContextWithDatabase(database: Database, trainingContextId: number): Promise<void> {
+  await transaction(database, async () => {
+    const result = await database.runAsync(`
+      UPDATE training_contexts SET archived_at = ?
+      WHERE id = ? AND archived_at IS NULL AND ${ANOTHER_ACTIVE_TRAINING_CONTEXT}
+    `, new Date().toISOString(), trainingContextId);
+    if (result.changes === 1) return;
+    const existing = await database.getFirstAsync<{ archived_at: string | null }>(
+      'SELECT archived_at FROM training_contexts WHERE id = ?',
+      trainingContextId,
+    );
+    if (!existing) throw new TrainingContextNotFoundError();
+    if (existing.archived_at === null) throw new LastActiveTrainingContextError();
+  });
+}
+
+async function activateTrainingContextWithDatabase(database: Database, trainingContextId: number): Promise<void> {
+  const result = await database.runAsync(
+    'UPDATE training_contexts SET archived_at = NULL WHERE id = ?',
+    trainingContextId,
+  );
+  if (result.changes !== 1) throw new TrainingContextNotFoundError();
+}
+
+/**
+ * Deletes a kontekst without any treningsøkter. The last active kontekst
+ * cannot be deleted, so that a treningsøkt can always be started.
+ */
+async function deleteTrainingContextWithDatabase(database: Database, trainingContextId: number): Promise<void> {
+  await transaction(database, async () => {
+    const result = await database.runAsync(`
+      DELETE FROM training_contexts
+      WHERE id = ?
+        AND NOT EXISTS (SELECT 1 FROM workouts WHERE workouts.training_context_id = training_contexts.id)
+        AND (archived_at IS NOT NULL OR ${ANOTHER_ACTIVE_TRAINING_CONTEXT})
+    `, trainingContextId);
+    if (result.changes === 1) return;
+    const existing = await database.getFirstAsync<{ has_workouts: number }>(`
+      SELECT EXISTS (SELECT 1 FROM workouts WHERE training_context_id = training_contexts.id) AS has_workouts
+      FROM training_contexts WHERE id = ?
+    `, trainingContextId);
+    if (!existing) throw new TrainingContextNotFoundError();
+    if (existing.has_workouts === 1) throw new TrainingContextInUseError();
+    throw new LastActiveTrainingContextError();
+  });
 }
 
 export class DuplicateTrainingContextNameError extends Error {
@@ -195,6 +279,23 @@ export class TrainingContextNotFoundError extends Error {
   }
 }
 
+export class LastActiveTrainingContextError extends Error {
+  constructor() {
+    super('The last active training context cannot be archived or deleted');
+    this.name = 'LastActiveTrainingContextError';
+  }
+}
+
+export class TrainingContextInUseError extends Error {
+  constructor() {
+    super('Training context has workouts');
+    this.name = 'TrainingContextInUseError';
+  }
+}
+
+export const archiveTrainingContext = databaseOperation(archiveTrainingContextWithDatabase);
+export const activateTrainingContext = databaseOperation(activateTrainingContextWithDatabase);
+export const deleteTrainingContext = databaseOperation(deleteTrainingContextWithDatabase);
 export const listTrainingContexts = databaseOperation(listTrainingContextsWithDatabase);
 export const createTrainingContext = databaseOperation(insertTrainingContext);
 export const listTrainingContextChoices = databaseOperation(listTrainingContextChoicesWithDatabase);

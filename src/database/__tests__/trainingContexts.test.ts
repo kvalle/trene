@@ -3,8 +3,14 @@ import { DatabaseSync } from 'node:sqlite';
 import { exerciseNameKey } from '../../domain/exerciseName';
 import { migrateDatabase } from '../migrate';
 import type { Database, DatabaseValue } from '../types';
+import { completeWorkout } from '../workouts';
 import {
+  activateTrainingContext,
+  archiveTrainingContext,
   createTrainingContext,
+  deleteTrainingContext,
+  LastActiveTrainingContextError,
+  TrainingContextInUseError,
   DuplicateTrainingContextNameError,
   listTrainingContextChoices,
   listTrainingContexts,
@@ -76,9 +82,9 @@ describe('training context persistence', () => {
     await workout(database, gym, 'active', null, []);
 
     expect(await listTrainingContexts(database)).toEqual([
-      { id: 1, name: 'Standard', workoutCount: 2 },
-      { id: gym, name: 'Treningssenter', workoutCount: 1 },
-      { id: hytta, name: 'Åsen', workoutCount: 0 },
+      { id: 1, name: 'Standard', archived: false, workoutCount: 2 },
+      { id: gym, name: 'Treningssenter', archived: false, workoutCount: 1 },
+      { id: hytta, name: 'Åsen', archived: false, workoutCount: 0 },
     ]);
   });
 
@@ -121,7 +127,13 @@ describe('training context persistence', () => {
 
     expect(await loadLastTrainingContextExercises(database, 1)).toEqual(['Roing', 'Benkpress']);
     expect(await loadTrainingContextDetail(database, 1)).toEqual({
-      id: 1, name: 'Standard', workoutCount: 2, lastExercises: ['Roing', 'Benkpress'],
+      id: 1,
+      name: 'Standard',
+      archived: false,
+      workoutCount: 2,
+      lastExercises: ['Roing', 'Benkpress'],
+      hasActiveWorkout: true,
+      isLastActive: false,
     });
   });
 
@@ -130,7 +142,13 @@ describe('training context persistence', () => {
     const fysio = await create(database, 'Fysio');
 
     expect(await loadTrainingContextDetail(database, fysio)).toEqual({
-      id: fysio, name: 'Fysio', workoutCount: 0, lastExercises: [],
+      id: fysio,
+      name: 'Fysio',
+      archived: false,
+      workoutCount: 0,
+      lastExercises: [],
+      hasActiveWorkout: false,
+      isLastActive: false,
     });
     expect(await loadTrainingContextDetail(database, 99)).toBeNull();
   });
@@ -156,5 +174,69 @@ describe('training context persistence', () => {
       { id: fysio, name: 'Fysio', archived: false, lastUsedAt: '2026-02-01T10:00:00Z' },
       { id: archived, name: 'Gammel', archived: true, lastUsedAt: null },
     ]);
+  });
+
+  test('archives and activates kontekster, but never the last active one', async () => {
+    const database = await setup();
+    const fysio = await create(database, 'Fysio');
+
+    await archiveTrainingContext(database, fysio);
+    expect(await loadTrainingContextDetail(database, fysio)).toMatchObject({ archived: true, isLastActive: false });
+    expect(await loadTrainingContextDetail(database, 1)).toMatchObject({ archived: false, isLastActive: true });
+    expect((await listTrainingContextChoices(database)).filter((choice) => !choice.archived).map((choice) => choice.id))
+      .toEqual([1]);
+
+    await expect(archiveTrainingContext(database, 1)).rejects.toBeInstanceOf(LastActiveTrainingContextError);
+    await expect(archiveTrainingContext(database, 99)).rejects.toBeInstanceOf(TrainingContextNotFoundError);
+    await archiveTrainingContext(database, fysio);
+
+    await activateTrainingContext(database, fysio);
+    expect(await loadTrainingContextDetail(database, 1)).toMatchObject({ isLastActive: false });
+    await archiveTrainingContext(database, 1);
+    expect((await listTrainingContexts(database)).map(({ name, archived }) => ({ name, archived }))).toEqual([
+      { name: 'Fysio', archived: false },
+      { name: 'Standard', archived: true },
+    ]);
+    await expect(activateTrainingContext(database, 99)).rejects.toBeInstanceOf(TrainingContextNotFoundError);
+  });
+
+  test('lets an active treningsøkt in an archived kontekst be completed', async () => {
+    const database = await setup();
+    const fysio = await create(database, 'Fysio');
+    const knebøy = await exercise(database, 'Knebøy');
+    const workoutId = await workout(database, fysio, 'active', null, [knebøy]);
+    await database.runAsync(
+      "INSERT INTO workout_sets (workout_exercise_id, load_kg, repetitions, confirmed_at) SELECT id, 50, 5, 'now' FROM workout_exercises",
+    );
+
+    await archiveTrainingContext(database, fysio);
+    await completeWorkout(database, workoutId, '2026-11-10T10:00:00Z');
+
+    expect(await loadTrainingContextDetail(database, fysio)).toMatchObject({
+      archived: true, workoutCount: 1, hasActiveWorkout: false,
+    });
+  });
+
+  test('deletes only kontekster without treningsøkter and keeps an active kontekst', async () => {
+    const database = await setup();
+    const used = await create(database, 'Brukt');
+    const inProgress = await create(database, 'Pågår');
+    const unused = await create(database, 'Ubrukt');
+    await workout(database, used, 'completed', '2026-11-01T10:00:00Z', []);
+    await workout(database, inProgress, 'active', null, []);
+
+    await expect(deleteTrainingContext(database, used)).rejects.toBeInstanceOf(TrainingContextInUseError);
+    await expect(deleteTrainingContext(database, inProgress)).rejects.toBeInstanceOf(TrainingContextInUseError);
+    await deleteTrainingContext(database, unused);
+    await expect(deleteTrainingContext(database, unused)).rejects.toBeInstanceOf(TrainingContextNotFoundError);
+    expect((await listTrainingContexts(database)).map((context) => context.name)).toEqual(['Brukt', 'Pågår', 'Standard']);
+
+    await archiveTrainingContext(database, used);
+    await archiveTrainingContext(database, inProgress);
+    await expect(deleteTrainingContext(database, 1)).rejects.toBeInstanceOf(LastActiveTrainingContextError);
+    const archivedUnused = await create(database, 'Arkivert');
+    await archiveTrainingContext(database, archivedUnused);
+    await deleteTrainingContext(database, archivedUnused);
+    expect((await listTrainingContexts(database)).map((context) => context.name)).toEqual(['Brukt', 'Pågår', 'Standard']);
   });
 });
