@@ -150,6 +150,16 @@ trykkflate. Gruppen og valgene eksponerer henholdsvis `radiogroup`- og
 `radio`-semantikk med valgt og deaktivert tilstand. Etiketten kan brytes over
 flere linjer uten at radiokontrollen skjules eller krymper.
 
+Uavhengige flervalg, som valg i et filter, vises som `CheckboxRow` inne i en
+`ListContainer`. Raden har en ledende avkrysningsboks, en tittel og et valgfritt
+etterfølgende antall i `muted` metadatatekst. Hele raden er trykkflate og
+eksponerer `checkbox`-semantikk med avkrysset og deaktivert tilstand; et vist
+antall inngår i det tilgjengelige navnet. Avkrysset boks bruker `primary`-fyll
+med `check`-ikonet i `onPrimary`, mens tom boks har `muted` kant. Tilstanden
+låst er avkrysset, men kan ikke fjernes, for eksempel når minst ett valg må være
+igjen. Låst og deaktivert bruker `muted` for boks og tekst, og eksponeres som
+deaktivert. Bruk `SingleSelectionGroup` når valgene er gjensidig utelukkende.
+
 Hver komponent i katalogen har en egen «Bruk når»-veiledning. Denne beskriver
 komponentens semantiske rolle og skal brukes ved valg mellom visuelt lignende
 komponenter. Veiledningen er også inkludert i katalogsøket.
