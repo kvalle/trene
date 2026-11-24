@@ -34,6 +34,10 @@ export interface ActiveWorkout extends Workout {
   trainingContext: { id: number; name: string };
   /** Number of kontekster that exist, archived ones included. */
   trainingContextCount: number;
+  /** Number of completed treningsøkter in the app, across all kontekster. */
+  completedWorkoutCount: number;
+  /** Number of completed treningsøkter in this treningsøkt's kontekst. */
+  trainingContextCompletedWorkoutCount: number;
 }
 
 export interface CompletedWorkout extends Workout {
@@ -452,10 +456,18 @@ async function loadActiveWorkoutWithDatabase(database: Database): Promise<Active
     training_context_id: number;
     training_context_name: string;
     training_context_count: number;
+    completed_workout_count: number;
+    training_context_completed_workout_count: number;
   }>(`
     SELECT workouts.id, workouts.started_at, workouts.training_context_id,
       training_contexts.name AS training_context_name,
-      (SELECT COUNT(*) FROM training_contexts) AS training_context_count
+      (SELECT COUNT(*) FROM training_contexts) AS training_context_count,
+      (SELECT COUNT(*) FROM workouts AS completed WHERE completed.status = 'completed')
+        AS completed_workout_count,
+      (SELECT COUNT(*) FROM workouts AS completed
+        WHERE completed.status = 'completed'
+          AND completed.training_context_id = workouts.training_context_id)
+        AS training_context_completed_workout_count
     FROM workouts
     JOIN training_contexts ON training_contexts.id = workouts.training_context_id
     WHERE workouts.status = 'active'
@@ -482,6 +494,8 @@ async function loadActiveWorkoutWithDatabase(database: Database): Promise<Active
     startedAt: workout.started_at,
     trainingContext: { id: workout.training_context_id, name: workout.training_context_name },
     trainingContextCount: workout.training_context_count,
+    completedWorkoutCount: workout.completed_workout_count,
+    trainingContextCompletedWorkoutCount: workout.training_context_completed_workout_count,
     exercises: workoutExercises.map((workoutExercise) => ({
       id: workoutExercise.id,
       exerciseId: workoutExercise.exercise_id,

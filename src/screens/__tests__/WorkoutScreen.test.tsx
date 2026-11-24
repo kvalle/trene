@@ -72,7 +72,12 @@ const mockedRemoveExercise = jest.mocked(removeExerciseFromWorkout);
 const mockedReorderExercises = jest.mocked(reorderActiveWorkoutExercises);
 const mockedUnconfirm = jest.mocked(unconfirmWorkoutSet);
 const STARTED_AT = new Date(2026, 7, 5, 10, 0).toISOString();
-const ONE_CONTEXT = { trainingContext: { id: 1, name: 'Standard' }, trainingContextCount: 1 };
+const ONE_CONTEXT = {
+  trainingContext: { id: 1, name: 'Standard' },
+  trainingContextCount: 1,
+  completedWorkoutCount: 1,
+  trainingContextCompletedWorkoutCount: 1,
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -128,11 +133,51 @@ test('shows the kontekst only when more than one kontekst exists', async () => {
     startedAt: STARTED_AT,
     trainingContext: { id: 2, name: 'Fysio' },
     trainingContextCount: 2,
+    completedWorkoutCount: 1,
+    trainingContextCompletedWorkoutCount: 1,
     exercises: [],
   });
   renderScreen();
   const label = await screen.findByText('Kontekst: Fysio', {}, { timeout: 3000 });
   expect(label).toHaveStyle({ ...typography.metadata, color: lightColors.muted });
+});
+
+test('explains the first treningsøkt in the app', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3, startedAt: STARTED_AT, ...ONE_CONTEXT,
+    completedWorkoutCount: 0, trainingContextCompletedWorkoutCount: 0, exercises: [],
+  });
+  renderScreen();
+
+  expect(await screen.findByText('Første trening', {}, { timeout: 3000 })).toBeOnTheScreen();
+  expect(screen.getByText('Legg til øvelsene du gjør. Neste gang du starter en trening, er de fylt ut på forhånd.')).toBeOnTheScreen();
+  expect(screen.queryByText(/^Ny kontekst:/)).not.toBeOnTheScreen();
+});
+
+test('explains an empty treningsøkt in a new kontekst', async () => {
+  mockedLoad.mockResolvedValue({
+    id: 3,
+    startedAt: STARTED_AT,
+    trainingContext: { id: 2, name: 'Fysio' },
+    trainingContextCount: 2,
+    completedWorkoutCount: 4,
+    trainingContextCompletedWorkoutCount: 0,
+    exercises: [],
+  });
+  renderScreen();
+
+  expect(await screen.findByText('Ny kontekst: Fysio', {}, { timeout: 3000 })).toBeOnTheScreen();
+  expect(screen.getByText('Legg til øvelsene du gjør. Neste gang du starter denne konteksten, er de fylt ut på forhånd.')).toBeOnTheScreen();
+  expect(screen.queryByText('Første trening')).not.toBeOnTheScreen();
+});
+
+test('shows no start notice when the treningsøkt is pre-filled', async () => {
+  mockedLoad.mockResolvedValue(workoutWithSets);
+  renderScreen();
+
+  expect(await screen.findByText('Knebøy', {}, { timeout: 3000 })).toBeOnTheScreen();
+  expect(screen.queryByText('Første trening')).not.toBeOnTheScreen();
+  expect(screen.queryByText(/^Ny kontekst:/)).not.toBeOnTheScreen();
 });
 
 test('keeps loading and total failure distinct from an empty workout and retries loading', async () => {

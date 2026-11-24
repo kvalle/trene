@@ -46,6 +46,7 @@ import { DisclosureCard } from '../ui/DisclosureCard';
 import { ErrorAlert } from '../ui/ErrorAlert';
 import { Icon } from '../ui/Icon';
 import { Loader } from '../ui/Loader';
+import { Notice } from '../ui/Notice';
 import { NumericField } from '../ui/NumericField';
 import { PageStatus } from '../ui/PageStatus';
 import { type WorkoutSetDraft, useWorkoutSetDrafts } from '../workoutSetDrafts';
@@ -867,6 +868,21 @@ export function WorkoutScreen({ navigation, route }: Props) {
           Startet {formatDateTime(new Date(state.workout.startedAt))}
         </Text>
       </View>
+      {state.workout.trainingContextCompletedWorkoutCount === 0 && (
+        state.workout.completedWorkoutCount === 0 ? (
+          <Notice
+            message="Legg til øvelsene du gjør. Neste gang du starter en trening, er de fylt ut på forhånd."
+            testID="workout-first-workout-notice"
+            title="Første trening"
+          />
+        ) : (
+          <Notice
+            message="Legg til øvelsene du gjør. Neste gang du starter denne konteksten, er de fylt ut på forhånd."
+            testID="workout-new-training-context-notice"
+            title={`Ny kontekst: ${state.workout.trainingContext.name}`}
+          />
+        )
+      )}
       {state.workout.exercises.length === 0 && (
         <Text style={[typography.body, styles.empty, { color: colors.text }]}>Ingen øvelser lagt til ennå</Text>
       )}

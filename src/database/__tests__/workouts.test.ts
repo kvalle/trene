@@ -78,6 +78,7 @@ describe('active workout persistence', () => {
       id: workoutId,
       startedAt: '2026-08-05T09:15:00Z',
       trainingContext: STANDARD, trainingContextCount: 1,
+      completedWorkoutCount: 0, trainingContextCompletedWorkoutCount: 0,
       exercises: [],
     });
   });
@@ -132,6 +133,7 @@ describe('active workout persistence', () => {
       id: workoutId,
       startedAt: expect.any(String),
       trainingContext: STANDARD, trainingContextCount: 1,
+      completedWorkoutCount: 2, trainingContextCompletedWorkoutCount: 2,
       exercises: [
         {
           id: expect.any(Number), exerciseId: pressId, name: 'Benkpress', position: 0,
@@ -191,7 +193,7 @@ describe('active workout persistence', () => {
     );
 
     expect(await startWorkout(database, STANDARD_ID)).toBe(activeId);
-    expect(await loadActiveWorkout(database)).toEqual(activeBefore);
+    expect(await loadActiveWorkout(database)).toEqual({ ...activeBefore, completedWorkoutCount: 1, trainingContextCompletedWorkoutCount: 1 });
   });
 
   test.each([
@@ -242,6 +244,7 @@ describe('active workout persistence', () => {
       id: workoutId,
       startedAt: expect.any(String),
       trainingContext: STANDARD, trainingContextCount: 1,
+      completedWorkoutCount: 0, trainingContextCompletedWorkoutCount: 0,
       exercises: [
         { id: expect.any(Number), exerciseId: aloftId, name: 'Åløft', position: 0,
           sets: [{ id: expect.any(Number), loadKg: null, repetitions: null, confirmedAt: null }] },
@@ -416,6 +419,7 @@ describe('active workout persistence', () => {
       id: activeId,
       startedAt: expect.any(String),
       trainingContext: STANDARD, trainingContextCount: 1,
+      completedWorkoutCount: 1, trainingContextCompletedWorkoutCount: 1,
       exercises: [],
     });
     expect(await listAvailableExercises(database, activeId)).toEqual([
@@ -1149,6 +1153,7 @@ describe('active workout persistence', () => {
       id: workoutId,
       startedAt: expect.any(String),
       trainingContext: STANDARD, trainingContextCount: 1,
+      completedWorkoutCount: 0, trainingContextCompletedWorkoutCount: 0,
       exercises: [exercise],
     });
   });
@@ -1246,6 +1251,7 @@ describe('treningsøkter in kontekster', () => {
     expect(await loadActiveWorkout(database)).toMatchObject({
       trainingContext: { id: fysio, name: 'Fysio' },
       trainingContextCount: 2,
+      trainingContextCompletedWorkoutCount: 2,
     });
   });
 
@@ -1315,6 +1321,8 @@ describe('treningsøkter in kontekster', () => {
     expect(await loadActiveWorkout(database)).toMatchObject({
       trainingContext: { name: 'Treningssenter' },
       trainingContextCount: 3,
+      completedWorkoutCount: 1,
+      trainingContextCompletedWorkoutCount: 0,
       exercises: [],
     });
   });
