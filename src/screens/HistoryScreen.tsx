@@ -1,20 +1,25 @@
 import { useFocusEffect, usePreventRemove } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, findNodeHandle, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { RootStackParamList } from '../AppNavigator';
 import { useDatabase } from '../database/DatabaseContext';
+import { listTrainingContexts, type TrainingContextListItem } from '../database/trainingContexts';
 import {
   getActiveWorkoutId,
   listCompletedWorkouts,
   type CompletedWorkoutListItem,
 } from '../database/workouts';
+import { historyFilterSummary, selectedHistoryContexts, toggleHistoryContext } from '../domain/historyFilter';
 import { buildMonthOverview, monthKey } from '../domain/monthOverview';
+import { historyFilterPreferenceStore } from '../preferences/historyFilterPreference';
 import { formatTime } from '../locale';
 import { typography } from '../theme';
 import { useAppTheme } from '../ui/AppThemeProvider';
 import { Button } from '../ui/Button';
+import { CheckboxRow } from '../ui/CheckboxRow';
+import { CompactAction } from '../ui/CompactAction';
 import { ErrorAlert } from '../ui/ErrorAlert';
 import { Dialog } from '../ui/Dialog';
 import { DisclosureCard } from '../ui/DisclosureCard';
@@ -29,7 +34,14 @@ type Props = NativeStackScreenProps<RootStackParamList, 'History'>;
 type State =
   | { status: 'loading' }
   | { status: 'failed' }
-  | { status: 'ready'; activeWorkoutId: number | null; workouts: CompletedWorkoutListItem[]; today: Date };
+  | {
+    status: 'ready';
+    activeWorkoutId: number | null;
+    workouts: CompletedWorkoutListItem[];
+    /** Kontekster with completed treningsøkter, in display order. */
+    contexts: TrainingContextListItem[];
+    today: Date;
+  };
 
 export function HistoryScreen({ navigation, route }: Props) {
   const database = useDatabase();
@@ -52,14 +64,45 @@ export function HistoryScreen({ navigation, route }: Props) {
   const [expandedMonths, setExpandedMonths] = useState<Set<string> | null>(null);
   const [dayChoice, setDayChoice] = useState<{ title: string; workouts: CompletedWorkoutListItem[] } | null>(null);
   const dayChoiceTitleRef = useRef<Text>(null);
+  const [hiddenContexts, setHiddenContexts] = useState<Set<number> | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    historyFilterPreferenceStore.read().catch(() => new Set<number>()).then((hidden) => {
+      if (active) setHiddenContexts((current) => current ?? hidden);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const contextIds = useMemo(
+    () => (state.status === 'ready' ? state.contexts.map((context) => context.id) : []),
+    [state],
+  );
+  const selectedContexts = useMemo(
+    () => selectedHistoryContexts(contextIds, hiddenContexts ?? new Set()),
+    [contextIds, hiddenContexts],
+  );
+  const shownWorkouts = useMemo(
+    () => (state.status === 'ready'
+      ? state.workouts.filter((workout) => contextIds.length < 2 || selectedContexts.has(workout.trainingContextId))
+      : []),
+    [contextIds, selectedContexts, state],
+  );
+
+  function updateHiddenContexts(hidden: Set<number>) {
+    setHiddenContexts(hidden);
+    historyFilterPreferenceStore.write(hidden).catch(() => {});
+  }
 
   useFocusEffect(useCallback(() => {
     let active = true;
     // Keep showing the overview while refreshing so expanded months and scroll position survive.
     setState((current) => (current.status === 'ready' && current.workouts.length > 0 ? current : { status: 'loading' }));
-    listCompletedWorkouts(database).then(async (workouts) => {
+    Promise.all([listCompletedWorkouts(database), listTrainingContexts(database)]).then(async ([workouts, all]) => {
       const activeWorkoutId = workouts.length === 0 ? await getActiveWorkoutId(database) : null;
-      if (active) setState({ status: 'ready', workouts, activeWorkoutId, today: new Date() });
+      const contexts = all.filter((context) => context.workoutCount > 0);
+      if (active) setState({ status: 'ready', workouts, contexts, activeWorkoutId, today: new Date() });
     }).catch(
       () => active && setState({ status: 'failed' }),
     );
@@ -80,12 +123,12 @@ export function HistoryScreen({ navigation, route }: Props) {
   useEffect(() => {
     if (state.status !== 'ready') return;
     const focusWorkoutId = route.params?.focusWorkoutId;
-    const focusWorkout = state.workouts.find((workout) => workout.id === focusWorkoutId);
+    const focusWorkout = shownWorkouts.find((workout) => workout.id === focusWorkoutId);
     const focusMonth = focusWorkout ? monthKey(new Date(focusWorkout.completedAt)) : null;
     if (focusMonth) {
       // Keep the remaining workout's calendar visible next to the focused month header.
       setExpandedMonths((current) => {
-        const initial = buildMonthOverview(state.workouts, state.today).initiallyExpanded;
+        const initial = buildMonthOverview(shownWorkouts, state.today).initiallyExpanded;
         const expanded = current ?? new Set(initial ? [initial] : []);
         return expanded.has(focusMonth) ? current : new Set([...expanded, focusMonth]);
       });
@@ -95,7 +138,7 @@ export function HistoryScreen({ navigation, route }: Props) {
     if (!handle) return;
     AccessibilityInfo.setAccessibilityFocus(handle);
     navigation.setParams({ focusWorkoutId: undefined, focusEmptyAction: undefined });
-  }, [navigation, route.params?.focusEmptyAction, route.params?.focusWorkoutId, state]);
+  }, [navigation, route.params?.focusEmptyAction, route.params?.focusWorkoutId, shownWorkouts, state]);
 
   async function openWorkout(activeWorkoutId: number | null) {
     if (activeWorkoutId !== null) {
@@ -107,7 +150,7 @@ export function HistoryScreen({ navigation, route }: Props) {
     await start();
   }
 
-  if (state.status === 'loading') {
+  if (state.status === 'loading' || (state.status === 'ready' && hiddenContexts === null)) {
     return <PageStatus variant="loading" loaderLabel="Laster tidligere treninger" />;
   }
   if (state.status === 'failed') return (
@@ -132,11 +175,58 @@ export function HistoryScreen({ navigation, route }: Props) {
     </HistoryStatus>
   );
 
-  const overview = buildMonthOverview(state.workouts, state.today);
+  const overview = buildMonthOverview(shownWorkouts, state.today);
+  const filterSummary = historyFilterSummary(state.contexts, selectedContexts);
+  const allSelected = selectedContexts.size === state.contexts.length;
   const expanded = expandedMonths ?? new Set(overview.initiallyExpanded ? [overview.initiallyExpanded] : []);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {state.contexts.length >= 2 ? (
+        <DisclosureCard
+          accessibilityLabel={`Filter, ${filterSummary}`}
+          expanded={filterOpen}
+          onPress={() => setFilterOpen((open) => !open)}
+          summary={filterSummary}
+          testID="history-filter"
+          title="Filter"
+        >
+          <ListContainer>
+            {state.contexts.map((context, index) => {
+              const checked = selectedContexts.has(context.id);
+              return (
+                <CheckboxRow
+                  key={context.id}
+                  badge={context.archived ? 'Arkivert' : undefined}
+                  checked={checked}
+                  count={context.workoutCount}
+                  locked={checked && selectedContexts.size === 1}
+                  onCheckedChange={() => updateHiddenContexts(
+                    toggleHistoryContext(contextIds, hiddenContexts ?? new Set(), context.id),
+                  )}
+                  showSeparator={index < state.contexts.length - 1}
+                  testID={`history-filter-context-${context.id}`}
+                  title={context.name}
+                />
+              );
+            })}
+          </ListContainer>
+          {allSelected ? null : (
+            <CompactAction
+              icon="restore"
+              label="Vis alle"
+              onPress={() => {
+                const hidden = new Set(hiddenContexts ?? []);
+                contextIds.forEach((id) => hidden.delete(id));
+                updateHiddenContexts(hidden);
+              }}
+              style={styles.showAll}
+              testID="history-filter-show-all"
+              tone="neutral"
+            />
+          )}
+        </DisclosureCard>
+      ) : null}
       {overview.months.map((month) => {
         const open = expanded.has(month.key);
         return (
@@ -250,4 +340,5 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', flex: 1, gap: 20, justifyContent: 'center', padding: 24 },
   heading: { textAlign: 'center' },
   explanation: { textAlign: 'center' },
+  showAll: { alignSelf: 'flex-start' },
 });

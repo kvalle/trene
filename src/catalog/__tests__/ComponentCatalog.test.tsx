@@ -148,6 +148,7 @@ it.each(['light', 'dark'] as const)('shows and operates every CheckboxRow state 
   expect(screen.getByTestId('catalog-checkboxrow-locked')).toHaveProp('accessibilityState', { checked: true, disabled: true });
   expect(screen.getByTestId('catalog-checkboxrow-disabled')).toHaveProp('accessibilityState', { checked: false, disabled: true });
   expect(screen.getByTestId('catalog-checkboxrow-count-count')).toHaveTextContent('8');
+  expect(screen.getByTestId('catalog-checkboxrow-badge-badge')).toHaveTextContent('Status');
 
   fireEvent.press(screen.getByTestId('catalog-checkboxrow-interactive-first'));
   expect(screen.getByTestId('catalog-checkboxrow-interactive-first')).toHaveProp('accessibilityState', { checked: false, disabled: false });

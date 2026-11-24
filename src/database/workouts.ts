@@ -48,6 +48,7 @@ export interface CompletedWorkoutListItem {
   id: number;
   completedAt: string;
   exerciseCount: number;
+  trainingContextId: number;
 }
 
 export interface CompletedWorkoutDeletion {
@@ -560,8 +561,9 @@ async function listCompletedWorkoutsWithDatabase(database: Database): Promise<Co
     id: number;
     completed_at: string;
     exercise_count: number;
+    training_context_id: number;
   }>(`
-    SELECT workouts.id, workouts.completed_at,
+    SELECT workouts.id, workouts.completed_at, workouts.training_context_id,
       COUNT(workout_exercises.id) AS exercise_count
     FROM workouts
     LEFT JOIN workout_exercises ON workout_exercises.workout_id = workouts.id
@@ -578,6 +580,7 @@ async function listCompletedWorkoutsWithDatabase(database: Database): Promise<Co
     id: row.id,
     completedAt: row.completed_at,
     exerciseCount: row.exercise_count,
+    trainingContextId: row.training_context_id,
   }));
 }
 

@@ -74,3 +74,14 @@ it('omits the count when none is given', () => {
 
   expect(screen.queryByTestId('row-count')).toBeNull();
 });
+
+it('shows an optional badge after the title and includes it in the accessible name', () => {
+  render(
+    <AppThemeProvider scheme="light">
+      <CheckboxRow title="Eksempel" badge="Status" checked count={3} testID="row" />
+    </AppThemeProvider>,
+  );
+
+  expect(screen.getByTestId('row-badge')).toHaveTextContent('Status');
+  expect(screen.getByRole('checkbox', { name: 'Eksempel, Status, 3' })).toBeOnTheScreen();
+});

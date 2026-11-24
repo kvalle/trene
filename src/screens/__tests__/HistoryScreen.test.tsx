@@ -5,8 +5,9 @@ import { AccessibilityInfo, Text } from 'react-native';
 
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import type { Database } from '../../database/types';
-import { listTrainingContextChoices } from '../../database/trainingContexts';
+import { listTrainingContextChoices, listTrainingContexts } from '../../database/trainingContexts';
 import { getActiveWorkoutId, listCompletedWorkouts, startWorkout } from '../../database/workouts';
+import { historyFilterPreferenceStore } from '../../preferences/historyFilterPreference';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 import { HistoryScreen } from '../HistoryScreen';
 
@@ -27,6 +28,10 @@ jest.mock('../../database/workouts', () => ({
 jest.mock('../../database/trainingContexts', () => ({
   ...jest.requireActual('../../database/trainingContexts'),
   listTrainingContextChoices: jest.fn(),
+  listTrainingContexts: jest.fn(),
+}));
+jest.mock('../../preferences/historyFilterPreference', () => ({
+  historyFilterPreferenceStore: { read: jest.fn(), write: jest.fn() },
 }));
 
 const database = {} as Database;
@@ -34,11 +39,17 @@ const mockedActiveWorkout = jest.mocked(getActiveWorkoutId);
 const mockedList = jest.mocked(listCompletedWorkouts);
 const mockedStart = jest.mocked(startWorkout);
 const mockedChoices = jest.mocked(listTrainingContextChoices);
+const mockedContexts = jest.mocked(listTrainingContexts);
+const mockedFilterRead = jest.mocked(historyFilterPreferenceStore.read);
+const mockedFilterWrite = jest.mocked(historyFilterPreferenceStore.write);
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockedActiveWorkout.mockResolvedValue(null);
   mockedChoices.mockResolvedValue([{ id: 1, name: 'Standard', archived: false, lastUsedAt: null }]);
+  mockedContexts.mockResolvedValue([{ id: 1, name: 'Standard', archived: false, workoutCount: 1 }]);
+  mockedFilterRead.mockResolvedValue(new Set());
+  mockedFilterWrite.mockResolvedValue();
 });
 
 test('announces that completed workouts are loading', () => {
@@ -64,9 +75,9 @@ afterEach(() => jest.useRealTimers());
 test('shows one card per month from the current month back to the first workout, with summaries', async () => {
   useClock();
   mockedList.mockResolvedValue([
-    { id: 3, completedAt: local(9, 20), exerciseCount: 1 },
-    { id: 2, completedAt: local(9, 10), exerciseCount: 2 },
-    { id: 1, completedAt: local(8, 25), exerciseCount: 2 },
+    { id: 3, completedAt: local(9, 20), exerciseCount: 1, trainingContextId: 1 },
+    { id: 2, completedAt: local(9, 10), exerciseCount: 2, trainingContextId: 1 },
+    { id: 1, completedAt: local(8, 25), exerciseCount: 2, trainingContextId: 1 },
   ]);
   renderScreen();
 
@@ -86,8 +97,8 @@ test('shows one card per month from the current month back to the first workout,
 test('expands and collapses months independently', async () => {
   useClock();
   mockedList.mockResolvedValue([
-    { id: 2, completedAt: local(11, 2), exerciseCount: 1 },
-    { id: 1, completedAt: local(10, 5), exerciseCount: 1 },
+    { id: 2, completedAt: local(11, 2), exerciseCount: 1, trainingContextId: 1 },
+    { id: 1, completedAt: local(10, 5), exerciseCount: 1, trainingContextId: 1 },
   ]);
   renderScreen();
 
@@ -107,8 +118,8 @@ test('opens the completed workout from its highlighted day', async () => {
   useClock();
   const navigate = jest.fn();
   mockedList.mockResolvedValue([
-    { id: 5, completedAt: local(11, 3, 18), exerciseCount: 1 },
-    { id: 4, completedAt: local(11, 2), exerciseCount: 2 },
+    { id: 5, completedAt: local(11, 3, 18), exerciseCount: 1, trainingContextId: 1 },
+    { id: 4, completedAt: local(11, 2), exerciseCount: 2, trainingContextId: 1 },
   ]);
   renderScreen({ navigate });
 
@@ -123,8 +134,8 @@ test('lets the user choose between several workouts on the same day', async () =
   useClock();
   const navigate = jest.fn();
   mockedList.mockResolvedValue([
-    { id: 7, completedAt: local(11, 3, 18), exerciseCount: 1 },
-    { id: 6, completedAt: local(11, 3, 7), exerciseCount: 3 },
+    { id: 7, completedAt: local(11, 3, 18), exerciseCount: 1, trainingContextId: 1 },
+    { id: 6, completedAt: local(11, 3, 7), exerciseCount: 3, trainingContextId: 1 },
   ]);
   renderScreen({ navigate });
 
@@ -143,8 +154,8 @@ test('dismisses the workout choice without navigating', async () => {
   useClock();
   const navigate = jest.fn();
   mockedList.mockResolvedValue([
-    { id: 7, completedAt: local(11, 3, 18), exerciseCount: 1 },
-    { id: 6, completedAt: local(11, 3, 7), exerciseCount: 3 },
+    { id: 7, completedAt: local(11, 3, 18), exerciseCount: 1, trainingContextId: 1 },
+    { id: 6, completedAt: local(11, 3, 7), exerciseCount: 3, trainingContextId: 1 },
   ]);
   renderScreen({ navigate });
 
@@ -157,8 +168,8 @@ test('dismisses the workout choice without navigating', async () => {
 test('keeps expanded months after returning from a completed workout', async () => {
   useClock();
   const workouts = [
-    { id: 2, completedAt: local(11, 2), exerciseCount: 1 },
-    { id: 1, completedAt: local(10, 5), exerciseCount: 1 },
+    { id: 2, completedAt: local(11, 2), exerciseCount: 1, trainingContextId: 1 },
+    { id: 1, completedAt: local(10, 5), exerciseCount: 1, trainingContextId: 1 },
   ];
   mockedList.mockResolvedValue(workouts);
   const Stack = createNativeStackNavigator();
@@ -288,8 +299,8 @@ test('focuses and expands the month of the requested remaining workout after rel
   const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
   const setParams = jest.fn();
   mockedList.mockResolvedValue([
-    { id: 5, completedAt: local(10, 4), exerciseCount: 2 },
-    { id: 4, completedAt: local(8, 4), exerciseCount: 2 },
+    { id: 5, completedAt: local(10, 4), exerciseCount: 2, trainingContextId: 1 },
+    { id: 4, completedAt: local(8, 4), exerciseCount: 2, trainingContextId: 1 },
   ]);
   renderScreen({ setParams }, { focusWorkoutId: 4 });
 
@@ -308,6 +319,102 @@ test.each([null, 7] as const)('focuses the empty action after deleting the last 
 
   await screen.findByRole('button', { name: activeWorkoutId === null ? 'Start trening' : 'Fortsett trening' });
   expect(focus).toHaveBeenCalled();
+});
+
+describe('kontekst filter', () => {
+  const contexts = [
+    { id: 2, name: 'Fysio', archived: true, workoutCount: 1 },
+    { id: 1, name: 'Standard', archived: false, workoutCount: 2 },
+    { id: 3, name: 'Treningssenter', archived: false, workoutCount: 1 },
+    { id: 4, name: 'Uten historikk', archived: false, workoutCount: 0 },
+  ];
+  const workouts = [
+    { id: 4, completedAt: local(11, 3), exerciseCount: 1, trainingContextId: 3 },
+    { id: 3, completedAt: local(11, 2), exerciseCount: 1, trainingContextId: 1 },
+    { id: 2, completedAt: local(11, 1), exerciseCount: 1, trainingContextId: 2 },
+    { id: 1, completedAt: local(10, 5), exerciseCount: 1, trainingContextId: 1 },
+  ];
+  const november = () => screen.getByTestId('history-month-2026-11');
+
+  beforeEach(() => {
+    useClock();
+    mockedList.mockResolvedValue(workouts);
+    mockedContexts.mockResolvedValue(contexts);
+  });
+
+  test('is hidden and shows every treningsøkt when fewer than two kontekster have history', async () => {
+    mockedContexts.mockResolvedValue([contexts[1], { ...contexts[0], workoutCount: 0 }]);
+    mockedFilterRead.mockResolvedValue(new Set([1]));
+    renderScreen();
+
+    expect(await screen.findByRole('button', { name: /^November 2026, 3 treninger/ })).toBeOnTheScreen();
+    expect(screen.queryByTestId('history-filter')).toBeNull();
+  });
+
+  test('lists kontekster with history, all selected, collapsed by default', async () => {
+    renderScreen();
+
+    const header = await screen.findByRole('button', { name: 'Filter, Viser alle kontekster' });
+    expect(header).toHaveProp('accessibilityState', { expanded: false });
+    expect(screen.getByText('Viser alle kontekster')).toBeOnTheScreen();
+    fireEvent.press(header);
+
+    expect(screen.getByRole('checkbox', { name: 'Fysio, Arkivert, 1' })).toHaveProp('accessibilityState', { checked: true, disabled: false });
+    expect(screen.getByRole('checkbox', { name: 'Standard, 2' })).toBeOnTheScreen();
+    expect(screen.getByRole('checkbox', { name: 'Treningssenter, 1' })).toBeOnTheScreen();
+    expect(screen.queryByText('Uten historikk')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Vis alle' })).toBeNull();
+  });
+
+  test('filters months and calendars, locks the last row, persists hidden ids and shows all again', async () => {
+    renderScreen();
+    fireEvent.press(await screen.findByRole('button', { name: 'Filter, Viser alle kontekster' }));
+    expect(screen.getByRole('button', { name: /^November 2026, 3 treninger/ })).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByRole('checkbox', { name: 'Standard, 2' }));
+    expect(mockedFilterWrite).toHaveBeenLastCalledWith(new Set([1]));
+    expect(screen.getByRole('button', { name: 'Filter, Viser kun Fysio og Treningssenter' })).toBeOnTheScreen();
+    expect(november()).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: /^November 2026, 2 treninger/ })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /mandag 2\. november 2026, 1 trening/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Oktober 2026/ })).toBeNull();
+
+    fireEvent.press(screen.getByRole('checkbox', { name: 'Fysio, Arkivert, 1' }));
+    expect(screen.getByRole('button', { name: 'Filter, Viser kun Treningssenter' })).toBeOnTheScreen();
+    const last = screen.getByRole('checkbox', { name: 'Treningssenter, 1' });
+    expect(last).toHaveProp('accessibilityState', { checked: true, disabled: true });
+    fireEvent.press(last);
+    expect(mockedFilterWrite).toHaveBeenLastCalledWith(new Set([1, 2]));
+    expect(screen.getByRole('button', { name: /^November 2026, 1 trening/ })).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Vis alle' }));
+    expect(mockedFilterWrite).toHaveBeenLastCalledWith(new Set());
+    expect(screen.getByRole('button', { name: 'Filter, Viser alle kontekster' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Vis alle' })).toBeNull();
+    expect(screen.getByRole('button', { name: /^Oktober 2026/ })).toBeOnTheScreen();
+  });
+
+  test('restores the stored selection, ignoring unknown ids and showing new kontekster', async () => {
+    mockedFilterRead.mockResolvedValue(new Set([1, 99]));
+    renderScreen();
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Filter, Viser kun Fysio og Treningssenter' }));
+    expect(screen.getByRole('checkbox', { name: 'Standard, 2' })).toHaveProp('accessibilityState', { checked: false, disabled: false });
+    expect(screen.getByRole('button', { name: /^November 2026, 2 treninger/ })).toBeOnTheScreen();
+  });
+
+  test('summarises a long selection as a count', async () => {
+    const long = [
+      { id: 1, name: 'Styrketrening hjemme', archived: false, workoutCount: 2 },
+      { id: 2, name: 'Fysioterapi', archived: false, workoutCount: 1 },
+      { id: 3, name: 'Treningssenteret', archived: false, workoutCount: 1 },
+    ];
+    mockedContexts.mockResolvedValue(long);
+    mockedFilterRead.mockResolvedValue(new Set([2]));
+    renderScreen();
+
+    expect(await screen.findByRole('button', { name: 'Filter, Viser 2 valgte kontekster' })).toBeOnTheScreen();
+  });
 });
 
 function renderScreen(navigation: Record<string, jest.Mock> = {}, params?: { focusWorkoutId?: number; focusEmptyAction?: boolean }) {
