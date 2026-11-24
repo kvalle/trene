@@ -171,6 +171,16 @@ test('explains an empty treningsøkt in a new kontekst', async () => {
   expect(screen.queryByText('Første trening')).not.toBeOnTheScreen();
 });
 
+test('hides the start notice once the treningsøkt has an exercise', async () => {
+  mockedLoad.mockResolvedValue({
+    ...workoutWithSets, completedWorkoutCount: 0, trainingContextCompletedWorkoutCount: 0,
+  });
+  renderScreen();
+
+  expect(await screen.findByText('Knebøy', {}, { timeout: 3000 })).toBeOnTheScreen();
+  expect(screen.queryByText('Første trening')).not.toBeOnTheScreen();
+});
+
 test('shows no start notice when the treningsøkt is pre-filled', async () => {
   mockedLoad.mockResolvedValue(workoutWithSets);
   renderScreen();

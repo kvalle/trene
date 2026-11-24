@@ -870,7 +870,7 @@ export function WorkoutScreen({ navigation, route }: Props) {
           Startet {formatDateTime(new Date(state.workout.startedAt))}
         </Text>
       </View>
-      {state.workout.trainingContextCompletedWorkoutCount === 0 && (
+      {state.workout.exercises.length === 0 && state.workout.trainingContextCompletedWorkoutCount === 0 && (
         state.workout.completedWorkoutCount === 0 ? (
           <Notice
             message="Legg til øvelsene du gjør. Neste gang du starter en trening, er de fylt ut på forhånd."
