@@ -91,6 +91,11 @@ tags:
 - tapOn: "Fortsett trening"
 - tapOn: "Knebøy"
 - assertVisible: "80,5 kg · 5 repetisjoner"
+- scrollUntilVisible:
+    element:
+      text: "Ferdig"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Ferdig"
 - extendedWaitUntil:
     visible: "Fullfør trening"
