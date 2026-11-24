@@ -26,10 +26,11 @@ export function TrainingContextsScreen({ navigation, route }: Props) {
   const { colors } = useAppTheme();
   const [reload, setReload] = useState(0);
   const [state, setState] = useState<LoadState>({ status: 'loading' });
-  const [created, setCreated] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string>();
   const retryRef = useRef<View>(null);
   const rowRefs = useRef(new Map<number, View>());
   const createdId = route.params?.createdTrainingContextId;
+  const deleted = route.params?.deletedTrainingContext;
 
   useFocusEffect(
     useCallback(() => {
@@ -45,8 +46,14 @@ export function TrainingContextsScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     if (createdId === undefined) return;
-    setCreated(true);
+    setStatusMessage('Konteksten er opprettet.');
   }, [createdId]);
+
+  useEffect(() => {
+    if (!deleted) return;
+    setStatusMessage('Konteksten er slettet.');
+    navigation.setParams({ deletedTrainingContext: undefined });
+  }, [deleted, navigation]);
 
   useEffect(() => {
     if (state.status !== 'ready' || createdId === undefined) return;
@@ -78,47 +85,61 @@ export function TrainingContextsScreen({ navigation, route }: Props) {
     );
   }
 
-  const { trainingContexts } = state;
+  const active = state.trainingContexts.filter((trainingContext) => !trainingContext.archived);
+  const archived = state.trainingContexts.filter((trainingContext) => trainingContext.archived);
+
+  function renderRows(trainingContexts: TrainingContextListItem[]) {
+    return (
+      <ListContainer>
+        {trainingContexts.map((trainingContext, index) => (
+          <NavigationRow
+            accessibilityHint="Åpner detaljer for konteksten"
+            key={trainingContext.id}
+            onPress={() => {
+              setStatusMessage(undefined);
+              navigation.navigate('TrainingContextDetail', { trainingContextId: trainingContext.id });
+            }}
+            ref={(node) => {
+              if (node) rowRefs.current.set(trainingContext.id, node);
+              else rowRefs.current.delete(trainingContext.id);
+            }}
+            showSeparator={index < trainingContexts.length - 1}
+            title={trainingContext.name}
+            metadata={formatWorkoutCount(trainingContext.workoutCount)}
+          />
+        ))}
+      </ListContainer>
+    );
+  }
+
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.container}>
-        {trainingContexts.length === 1 && (
+        {state.trainingContexts.length === 1 && (
           <Text style={[typography.body, { color: colors.text }]}>
             Trener du på flere måter, for eksempel med fysioøvelser hjemme og styrke på
             treningssenteret? Lag en kontekst for hver, så husker appen øvelsene hver for seg.
           </Text>
         )}
-        <ListContainer>
-          {trainingContexts.map((trainingContext, index) => (
-            <NavigationRow
-              accessibilityHint="Åpner detaljer for konteksten"
-              key={trainingContext.id}
-              onPress={() => {
-                setCreated(false);
-                navigation.navigate('TrainingContextDetail', { trainingContextId: trainingContext.id });
-              }}
-              ref={(node) => {
-                if (node) rowRefs.current.set(trainingContext.id, node);
-                else rowRefs.current.delete(trainingContext.id);
-              }}
-              showSeparator={index < trainingContexts.length - 1}
-              title={trainingContext.name}
-              metadata={formatWorkoutCount(trainingContext.workoutCount)}
-            />
-          ))}
-        </ListContainer>
+        {renderRows(active)}
         <Button
           title="Ny kontekst"
           variant="secondary"
-          onPress={() => { setCreated(false); navigation.navigate('CreateTrainingContext'); }}
+          onPress={() => { setStatusMessage(undefined); navigation.navigate('CreateTrainingContext'); }}
           testID="training-contexts-create"
         />
+        {archived.length > 0 && (
+          <View style={styles.section} testID="training-contexts-archived">
+            <Text accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>Arkivert</Text>
+            {renderRows(archived)}
+          </View>
+        )}
       </ScrollView>
-      {created && (
+      {statusMessage && (
         <PositiveStatus
-          message="Konteksten er opprettet."
-          onDismiss={() => setCreated(false)}
-          testID="training-context-created-status"
+          message={statusMessage}
+          onDismiss={() => setStatusMessage(undefined)}
+          testID="training-context-status"
         />
       )}
     </View>
@@ -128,4 +149,5 @@ export function TrainingContextsScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   container: { flexGrow: 1, gap: 20, padding: 20 },
+  section: { gap: 12 },
 });

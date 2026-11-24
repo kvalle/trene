@@ -1,10 +1,14 @@
 import { NavigationContainer } from '@react-navigation/native';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { AccessibilityInfo } from 'react-native';
 
 import { DatabaseProvider } from '../../database/DatabaseContext';
 import {
+  activateTrainingContext,
+  archiveTrainingContext,
   createTrainingContext,
+  deleteTrainingContext,
+  LastActiveTrainingContextError,
   DuplicateTrainingContextNameError,
   DUPLICATE_TRAINING_CONTEXT_NAME,
   listTrainingContexts,
@@ -21,7 +25,10 @@ import { TrainingContextsScreen } from '../TrainingContextsScreen';
 
 jest.mock('../../database/trainingContexts', () => ({
   ...jest.requireActual('../../database/trainingContexts'),
+  activateTrainingContext: jest.fn(),
+  archiveTrainingContext: jest.fn(),
   createTrainingContext: jest.fn(),
+  deleteTrainingContext: jest.fn(),
   listTrainingContexts: jest.fn(),
   loadTrainingContextDetail: jest.fn(),
   renameTrainingContext: jest.fn(),
@@ -40,10 +47,16 @@ const mockedList = jest.mocked(listTrainingContexts);
 const mockedCreate = jest.mocked(createTrainingContext);
 const mockedLoad = jest.mocked(loadTrainingContextDetail);
 const mockedRename = jest.mocked(renameTrainingContext);
+const mockedArchive = jest.mocked(archiveTrainingContext);
+const mockedActivate = jest.mocked(activateTrainingContext);
+const mockedDelete = jest.mocked(deleteTrainingContext);
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockedRename.mockResolvedValue();
+  mockedArchive.mockResolvedValue();
+  mockedActivate.mockResolvedValue();
+  mockedDelete.mockResolvedValue();
 });
 
 function wrap(children: React.ReactNode) {
@@ -56,7 +69,7 @@ function wrap(children: React.ReactNode) {
   );
 }
 
-function renderList(navigation: Record<string, jest.Mock> = {}, params?: { createdTrainingContextId?: number }) {
+function renderList(navigation: Record<string, jest.Mock> = {}, params?: { createdTrainingContextId?: number; deletedTrainingContext?: boolean }) {
   return wrap(
     <TrainingContextsScreen
       navigation={{ navigate: jest.fn(), setParams: jest.fn(), ...navigation } as never}
@@ -85,7 +98,7 @@ function renderDetail(navigation: Record<string, jest.Mock> = {}) {
 
 describe('Kontekster list', () => {
   test('explains why to create more when there is exactly one kontekst', async () => {
-    mockedList.mockResolvedValue([{ id: 1, name: 'Standard', workoutCount: 1 }]);
+    mockedList.mockResolvedValue([{ id: 1, name: 'Standard', archived: false, workoutCount: 1 }]);
     renderList();
 
     expect(await screen.findByText('Standard')).toBeOnTheScreen();
@@ -96,8 +109,8 @@ describe('Kontekster list', () => {
   test('lists each kontekst with its count and opens detail and creation', async () => {
     const navigate = jest.fn();
     mockedList.mockResolvedValue([
-      { id: 1, name: 'Fysio', workoutCount: 12 },
-      { id: 2, name: 'Treningssenter', workoutCount: 0 },
+      { id: 1, name: 'Fysio', archived: false, workoutCount: 12 },
+      { id: 2, name: 'Treningssenter', archived: false, workoutCount: 0 },
     ]);
     renderList({ navigate });
 
@@ -113,8 +126,8 @@ describe('Kontekster list', () => {
   test('confirms a created kontekst with a positive status and focuses its row', async () => {
     const setParams = jest.fn();
     mockedList.mockResolvedValue([
-      { id: 1, name: 'Fysio', workoutCount: 0 },
-      { id: 2, name: 'Standard', workoutCount: 3 },
+      { id: 1, name: 'Fysio', archived: false, workoutCount: 0 },
+      { id: 2, name: 'Standard', archived: false, workoutCount: 3 },
     ]);
     const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
     renderList({ setParams }, { createdTrainingContextId: 1 });
@@ -124,9 +137,38 @@ describe('Kontekster list', () => {
     expect(focus).toHaveBeenCalled();
   });
 
+  test('groups archived kontekster under "Arkivert"', async () => {
+    mockedList.mockResolvedValue([
+      { id: 1, name: 'Fysio', archived: true, workoutCount: 2 },
+      { id: 2, name: 'Standard', archived: false, workoutCount: 3 },
+    ]);
+    renderList();
+
+    expect(await screen.findByRole('header', { name: 'Arkivert' })).toBeOnTheScreen();
+    expect(within(screen.getByTestId('training-contexts-archived')).getByText('Fysio')).toBeOnTheScreen();
+    expect(within(screen.getByTestId('training-contexts-archived')).queryByText('Standard')).not.toBeOnTheScreen();
+  });
+
+  test('has no "Arkivert" section without archived kontekster', async () => {
+    mockedList.mockResolvedValue([{ id: 1, name: 'Standard', archived: false, workoutCount: 0 }]);
+    renderList();
+
+    expect(await screen.findByText('Standard')).toBeOnTheScreen();
+    expect(screen.queryByRole('header', { name: 'Arkivert' })).not.toBeOnTheScreen();
+  });
+
+  test('confirms a deleted kontekst with a positive status', async () => {
+    const setParams = jest.fn();
+    mockedList.mockResolvedValue([{ id: 1, name: 'Standard', archived: false, workoutCount: 0 }]);
+    renderList({ setParams }, { deletedTrainingContext: true });
+
+    expect(await screen.findByText('Konteksten er slettet.')).toBeOnTheScreen();
+    expect(setParams).toHaveBeenCalledWith({ deletedTrainingContext: undefined });
+  });
+
   test('offers retry when loading fails', async () => {
     mockedList.mockRejectedValueOnce(new Error('boom'));
-    mockedList.mockResolvedValueOnce([{ id: 1, name: 'Standard', workoutCount: 0 }]);
+    mockedList.mockResolvedValueOnce([{ id: 1, name: 'Standard', archived: false, workoutCount: 0 }]);
     renderList();
 
     fireEvent.press(await screen.findByRole('button', { name: 'Prøv igjen' }));
@@ -165,7 +207,16 @@ describe('Ny kontekst', () => {
 });
 
 describe('Kontekst detail', () => {
-  const detail = { id: 3, name: 'Fysio', workoutCount: 4, lastExercises: ['Utadrotasjon', 'Skulderpress'] };
+  const detail = {
+    id: 3,
+    name: 'Fysio',
+    archived: false,
+    workoutCount: 4,
+    lastExercises: ['Utadrotasjon', 'Skulderpress'],
+    hasActiveWorkout: false,
+    isLastActive: false,
+  };
+  const unused = { ...detail, workoutCount: 0, lastExercises: [] };
 
   test('shows name, count and the last exercises as a plain list', async () => {
     mockedLoad.mockResolvedValue(detail);
@@ -220,5 +271,112 @@ describe('Kontekst detail', () => {
     fireEvent.press(await screen.findByRole('button', { name: 'Lagre navn' }));
     fireEvent.press(await screen.findByRole('button', { name: 'Tilbake til kontekster' }));
     expect(popTo).toHaveBeenCalledWith('TrainingContexts');
+  });
+
+  test('archives after confirmation and shows the kontekst as archived', async () => {
+    mockedLoad.mockResolvedValueOnce(detail).mockResolvedValue({ ...detail, archived: true });
+    renderDetail();
+
+    expect(await screen.findByText(/vises ikke når du starter en trening. Tidligere treninger beholdes/)).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole('button', { name: 'Arkiver kontekst' }));
+    expect(await screen.findByText('Arkiver Fysio?')).toBeOnTheScreen();
+    expect(mockedArchive).not.toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('training-context-archive-confirm'));
+    });
+
+    expect(mockedArchive).toHaveBeenCalledWith(database, 3);
+    expect(await screen.findByText('Konteksten er arkivert.')).toBeOnTheScreen();
+    expect(screen.getByTestId('training-context-archived-badge')).toHaveTextContent('Arkivert');
+    expect(screen.getByRole('button', { name: 'Aktiver kontekst' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Arkiver kontekst' })).not.toBeOnTheScreen();
+  });
+
+  test('cancels archiving without changes', async () => {
+    mockedLoad.mockResolvedValue(detail);
+    renderDetail();
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Arkiver kontekst' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Avbryt' }));
+    await waitFor(() => expect(screen.queryByText('Arkiver Fysio?')).not.toBeOnTheScreen());
+    expect(mockedArchive).not.toHaveBeenCalled();
+  });
+
+  test('disables archiving the last active kontekst with an explanation', async () => {
+    mockedLoad.mockResolvedValue({ ...detail, isLastActive: true });
+    renderDetail();
+
+    expect(await screen.findByText(/Du må ha minst én aktiv kontekst for å kunne starte en trening/)).toBeOnTheScreen();
+    expect(screen.getByTestId('training-context-archive')).toBeDisabled();
+  });
+
+  test('explains when the database rejects archiving the last active kontekst', async () => {
+    mockedLoad.mockResolvedValue(detail);
+    mockedArchive.mockRejectedValue(new LastActiveTrainingContextError());
+    renderDetail();
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Arkiver kontekst' }));
+    await act(async () => {
+      fireEvent.press(await screen.findByTestId('training-context-archive-confirm'));
+    });
+    expect(await screen.findByText('Konteksten er den eneste aktive og kan ikke arkiveres.')).toBeOnTheScreen();
+  });
+
+  test('activates an archived kontekst with an explanation and a positive status', async () => {
+    mockedLoad.mockResolvedValueOnce({ ...detail, archived: true }).mockResolvedValue(detail);
+    renderDetail();
+
+    expect(await screen.findByTestId('training-context-archived-badge')).toBeOnTheScreen();
+    expect(screen.getByText(/kan du velge den igjen når du starter en trening/)).toBeOnTheScreen();
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', { name: 'Aktiver kontekst' }));
+    });
+
+    expect(mockedActivate).toHaveBeenCalledWith(database, 3);
+    expect(await screen.findByText('Konteksten er aktivert.')).toBeOnTheScreen();
+    expect(screen.queryByTestId('training-context-archived-badge')).not.toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Arkiver kontekst' })).toBeOnTheScreen();
+  });
+
+  test.each([
+    ['history', { workoutCount: 2 }, /har tidligere treninger og kan ikke slettes. Arkiver den i stedet/],
+    ['the active treningsøkt', { hasActiveWorkout: true, workoutCount: 0 }, /brukes av treningen som pågår/],
+    ['being the last active kontekst', { workoutCount: 0, isLastActive: true }, /Du må ha minst én aktiv kontekst. Lag eller aktiver/],
+  ])('disables delete with an explanation because of %s', async (_reason, overrides, explanation) => {
+    mockedLoad.mockResolvedValue({ ...detail, ...overrides });
+    renderDetail();
+
+    expect(await screen.findByText(explanation)).toBeOnTheScreen();
+    expect(screen.getByTestId('training-context-delete')).toBeDisabled();
+  });
+
+  test('deletes an unused kontekst after confirmation and returns to the list', async () => {
+    const popTo = jest.fn();
+    mockedLoad.mockResolvedValue(unused);
+    renderDetail({ popTo });
+
+    expect(await screen.findByText('Konteksten har ingen treninger og kan slettes.')).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole('button', { name: 'Slett kontekst' }));
+    expect(await screen.findByText('Slett Fysio?')).toBeOnTheScreen();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('training-context-delete-confirm'));
+    });
+
+    expect(mockedDelete).toHaveBeenCalledWith(database, 3);
+    expect(popTo).toHaveBeenCalledWith('TrainingContexts', { deletedTrainingContext: true });
+  });
+
+  test('explains a failed delete and reloads the kontekst', async () => {
+    mockedLoad.mockResolvedValueOnce(unused).mockResolvedValue({ ...unused, hasActiveWorkout: true });
+    mockedDelete.mockRejectedValue(new Error('boom'));
+    renderDetail();
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Slett kontekst' }));
+    await act(async () => {
+      fireEvent.press(await screen.findByTestId('training-context-delete-confirm'));
+    });
+
+    expect(await screen.findByText('Kunne ikke slette konteksten. Prøv igjen.')).toBeOnTheScreen();
+    expect(await screen.findByText(/brukes av treningen som pågår/)).toBeOnTheScreen();
   });
 });

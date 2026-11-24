@@ -1,6 +1,6 @@
 import { AccessibilityInfo } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import ComponentCatalog, { AppShellDetailScreen, ButtonDetailScreen, CheckboxRowDetailScreen, CompactActionDetailScreen, DisclosureCardDetailScreen, IconDetailScreen, MonthCalendarDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen, TypographyDetailScreen } from '../ComponentCatalog';
+import ComponentCatalog, { AppShellDetailScreen, BadgeDetailScreen, ButtonDetailScreen, CheckboxRowDetailScreen, CompactActionDetailScreen, DisclosureCardDetailScreen, IconDetailScreen, MonthCalendarDetailScreen, NumericFieldDetailScreen, PositiveStatusDetailScreen, SingleSelectionGroupDetailScreen, TypographyDetailScreen } from '../ComponentCatalog';
 import { AppThemeProvider } from '../../ui/AppThemeProvider';
 
 jest.mock('@react-navigation/native', () => ({
@@ -62,6 +62,8 @@ it('renders production theme contexts and switches theme', () => {
   expect(screen.getByText('DATAVISNING')).toBeOnTheScreen();
   expect(screen.getByText('MonthCalendar')).toBeOnTheScreen();
   expect(screen.getByText('MonthCalendarDetail')).toBeOnTheScreen();
+  expect(screen.getByText('Badge')).toBeOnTheScreen();
+  expect(screen.getByText('BadgeDetail')).toBeOnTheScreen();
   // detail screens are mounted via mock as text fallbacks
   expect(screen.getByText('ButtonDetail')).toBeOnTheScreen();
   expect(screen.getByText('CompactActionDetail')).toBeOnTheScreen();
@@ -233,4 +235,13 @@ it('documents DisclosureCard progress, leading content, reorder states, and expl
   expect(screen.getByText('Dra for å endre rekkefølge')).toHaveStyle({ fontStyle: 'italic' });
   expect(screen.getByTestId('catalog-disclosurecard-reordering-target')).toBeOnTheScreen();
   expect(screen.getByText('Flytt til #3')).toBeOnTheScreen();
+});
+
+it.each(['light', 'dark'] as const)('shows every Badge example in the %s theme', (scheme) => {
+  render(<AppThemeProvider scheme={scheme}><BadgeDetailScreen /></AppThemeProvider>);
+
+  expect(screen.getByText('Bruk når')).toBeOnTheScreen();
+  expect(screen.getByTestId('catalog-badge-standalone')).toHaveTextContent('Status');
+  expect(screen.getByTestId('catalog-badge-title')).toHaveTextContent('Status');
+  expect(screen.getByTestId('catalog-badge-long')).toHaveTextContent('En lengre statusetikett');
 });

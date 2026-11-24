@@ -17,6 +17,7 @@ import { ErrorAlert } from '../ui/ErrorAlert';
 import { FieldError } from '../ui/FieldError';
 import { FormSection } from '../ui/FormSection';
 import { Hero } from '../ui/Hero';
+import { Badge } from '../ui/Badge';
 import { CheckboxRow } from '../ui/CheckboxRow';
 import { Icon, iconNames, type IconName, type IconSize } from '../ui/Icon';
 import { Loader } from '../ui/Loader';
@@ -60,6 +61,7 @@ type CatalogStackParamList = {
   SelectionRowDetail: undefined;
   SingleSelectionGroupDetail: undefined;
   CheckboxRowDetail: undefined;
+  BadgeDetail: undefined;
   SectionedDetailDetail: undefined;
   StackExample: undefined;
   ModalExample: undefined;
@@ -173,6 +175,14 @@ const CATALOG_GROUPS: CatalogGroup[] = [
         usage: 'Bruk når enkeltdager i én måned skal kunne markeres og eventuelt åpnes fra en kalenderoversikt.',
         route: 'MonthCalendarDetail',
         testID: 'catalog-item-monthcalendar',
+      },
+      {
+        id: 'badge',
+        name: 'Badge',
+        description: 'Liten, ikke-interaktiv statusetikett med avrundet flate, kant og fet metadatatekst.',
+        usage: 'Bruk når en ressurs har en varig status som skal vises ved siden av tittelen, for eksempel at den er arkivert. Bruk ikke for handlinger eller midlertidige meldinger.',
+        route: 'BadgeDetail',
+        testID: 'catalog-item-badge',
       },
     ],
   },
@@ -392,6 +402,7 @@ function CatalogNavigator({
         <Stack.Screen name="SelectionRowDetail" component={SelectionRowDetailScreen} options={{ title: 'SelectionRow' }} />
         <Stack.Screen name="SingleSelectionGroupDetail" component={SingleSelectionGroupDetailScreen} options={{ title: 'SingleSelectionGroup' }} />
         <Stack.Screen name="CheckboxRowDetail" component={CheckboxRowDetailScreen} options={{ title: 'CheckboxRow' }} />
+        <Stack.Screen name="BadgeDetail" component={BadgeDetailScreen} options={{ title: 'Badge' }} />
         <Stack.Screen name="SectionedDetailDetail" component={SectionedDetailDetailScreen} options={{ title: 'Seksjonert detalj' }} />
         <Stack.Screen name="StackExample" component={StackExampleScreen} options={{ title: 'Stack' }} />
         <Stack.Screen name="ModalExample" component={ModalExampleScreen} options={{ presentation: 'modal', title: 'Modal' }} />
@@ -1380,6 +1391,35 @@ function SelectionRowDetailScreen() {
           <SelectionRow title="Deaktivert" disabled showSeparator onPress={() => {}} testID="catalog-selectionrow-disabled" />
           <SelectionRow title="Opptatt" busy onPress={() => {}} testID="catalog-selectionrow-busy" />
         </ListContainer>
+      </View>
+    </ScrollView>
+  );
+}
+
+export function BadgeDetailScreen() {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-badge">
+      <DetailHeader
+        name="Badge"
+        description="Liten statusetikett med avrundet surfaceAlt-flate, nøytral kant og fet metadatatekst i text-farge. Etiketten er ikke interaktiv og leses som vanlig tekst."
+        usage="Bruk når en ressurs har en varig status som skal vises ved siden av tittelen, for eksempel at den er arkivert. Bruk ikke for handlinger eller midlertidige meldinger."
+      />
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Alene</Text>
+        <Badge label="Status" testID="catalog-badge-standalone" />
+      </View>
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Under skjermtittel</Text>
+        <View style={styles.group}>
+          <Text style={[typography.screenTitle, { color: colors.text }]}>Ressursnavn</Text>
+          <Badge label="Status" testID="catalog-badge-title" />
+          <Text style={[typography.metadata, { color: colors.muted }]}>Metadata</Text>
+        </View>
+      </View>
+      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[typography.metadata, { color: colors.muted, fontWeight: '700' }]}>Lang etikett</Text>
+        <Badge label="En lengre statusetikett" testID="catalog-badge-long" />
       </View>
     </ScrollView>
   );
