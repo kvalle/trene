@@ -3,10 +3,13 @@ import { Pressable, StyleSheet, Text, View, type PressableProps, type View as Vi
 
 import { typography } from '../theme';
 import { useAppTheme } from './AppThemeProvider';
+import { Badge } from './Badge';
 import { Icon } from './Icon';
 
 type CheckboxRowProps = Omit<PressableProps, 'children' | 'onPress'> & {
   title: string;
+  /** Optional status label after the title, such as "Arkivert". */
+  badge?: string;
   checked: boolean;
   /** Optional trailing count, shown as muted text. */
   count?: number | string;
@@ -20,6 +23,7 @@ type CheckboxRowProps = Omit<PressableProps, 'children' | 'onPress'> & {
 export const CheckboxRow = forwardRef<ViewType, CheckboxRowProps>(function CheckboxRow(
   {
     title,
+    badge,
     checked,
     count,
     locked = false,
@@ -44,7 +48,7 @@ export const CheckboxRow = forwardRef<ViewType, CheckboxRowProps>(function Check
     <Pressable
       {...rest}
       ref={ref}
-      accessibilityLabel={accessibilityLabel ?? (hasCount ? `${title}, ${count}` : title)}
+      accessibilityLabel={accessibilityLabel ?? [title, badge, hasCount ? count : undefined].filter((part) => part !== undefined && part !== '').join(', ')}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: isChecked, disabled: isDisabled, ...accessibilityState }}
       disabled={isDisabled}
@@ -70,7 +74,10 @@ export const CheckboxRow = forwardRef<ViewType, CheckboxRowProps>(function Check
       >
         {isChecked ? <Icon name="check" size={16} color={colors.onPrimary} /> : null}
       </View>
-      <Text style={[typography.control, styles.title, { color: isDisabled ? colors.muted : colors.text }]}>{title}</Text>
+      <View style={styles.label}>
+        <Text style={[typography.control, styles.title, { color: isDisabled ? colors.muted : colors.text }]}>{title}</Text>
+        {badge ? <Badge label={badge} testID={testID ? `${testID}-badge` : undefined} /> : null}
+      </View>
       {hasCount ? (
         <Text style={[typography.metadata, { color: colors.muted }]} testID={testID ? `${testID}-count` : undefined}>
           {count}
@@ -97,5 +104,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 24,
   },
-  title: { flex: 1 },
+  label: { alignItems: 'center', flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  title: { flexShrink: 1 },
 });

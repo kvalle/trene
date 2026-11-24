@@ -380,7 +380,7 @@ describe('active workout persistence', () => {
       ]);
       expect(await loadActiveWorkout(database)).toEqual(beforeRestart);
       expect(await listCompletedWorkouts(database)).toEqual([
-        { id: oldWorkout.lastInsertRowId, completedAt: '2026-01-01', exerciseCount: 1 },
+        { id: oldWorkout.lastInsertRowId, completedAt: '2026-01-01', exerciseCount: 1, trainingContextId: STANDARD_ID },
       ]);
     } finally {
       await database.closeAsync();
@@ -649,9 +649,9 @@ describe('active workout persistence', () => {
     await startWorkout(database, STANDARD_ID);
 
     expect(await listCompletedWorkouts(database)).toEqual([
-      { id: firstTie.lastInsertRowId, completedAt: '2026-02-01', exerciseCount: 2 },
-      { id: secondTie.lastInsertRowId, completedAt: '2026-02-01', exerciseCount: 0 },
-      { id: oldest.lastInsertRowId, completedAt: '2026-01-01', exerciseCount: 1 },
+      { id: firstTie.lastInsertRowId, completedAt: '2026-02-01', exerciseCount: 2, trainingContextId: STANDARD_ID },
+      { id: secondTie.lastInsertRowId, completedAt: '2026-02-01', exerciseCount: 0, trainingContextId: STANDARD_ID },
+      { id: oldest.lastInsertRowId, completedAt: '2026-01-01', exerciseCount: 1, trainingContextId: STANDARD_ID },
     ]);
   });
 

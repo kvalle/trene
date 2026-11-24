@@ -1444,7 +1444,7 @@ export function CheckboxRowDetailScreen() {
     <ScrollView contentContainerStyle={styles.detail} testID="catalog-detail-checkboxrow">
       <DetailHeader
         name="CheckboxRow"
-        description="Rad med ledende avkrysningsboks, tittel og valgfritt antall i etterfølgende plass. Hele raden er trykkbar. Låst tilstand er avkrysset og kan ikke fjernes."
+        description="Rad med ledende avkrysningsboks, tittel, valgfri statusetikett (Badge) etter tittelen og valgfritt antall i etterfølgende plass. Hele raden er trykkbar. Låst tilstand er avkrysset og kan ikke fjernes."
         usage="Bruk når brukeren kan velge flere uavhengige alternativer fra en liste, for eksempel i et filter. Bruk låst tilstand når minst ett valg må være igjen. Bruk SingleSelectionGroup når bare ett valg er mulig."
       />
       <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -1454,7 +1454,8 @@ export function CheckboxRowDetailScreen() {
           <CheckboxRow title="Ikke avkrysset" checked={false} showSeparator onCheckedChange={() => {}} testID="catalog-checkboxrow-unchecked" />
           <CheckboxRow title="Låst" checked locked showSeparator testID="catalog-checkboxrow-locked" />
           <CheckboxRow title="Deaktivert" checked={false} disabled showSeparator testID="catalog-checkboxrow-disabled" />
-          <CheckboxRow title="Med antall" checked count={8} onCheckedChange={() => {}} testID="catalog-checkboxrow-count" />
+          <CheckboxRow title="Med antall" checked count={8} showSeparator onCheckedChange={() => {}} testID="catalog-checkboxrow-count" />
+          <CheckboxRow title="Med etikett" badge="Status" checked count={3} onCheckedChange={() => {}} testID="catalog-checkboxrow-badge" />
         </ListContainer>
       </View>
       <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>

@@ -151,10 +151,11 @@ trykkflate. Gruppen og valgene eksponerer henholdsvis `radiogroup`- og
 flere linjer uten at radiokontrollen skjules eller krymper.
 
 Uavhengige flervalg, som valg i et filter, vises som `CheckboxRow` inne i en
-`ListContainer`. Raden har en ledende avkrysningsboks, en tittel og et valgfritt
+`ListContainer`. Raden har en ledende avkrysningsboks, en tittel, en valgfri
+`Badge` etter tittelen for status som «Arkivert», og et valgfritt
 etterfølgende antall i `muted` metadatatekst. Hele raden er trykkflate og
-eksponerer `checkbox`-semantikk med avkrysset og deaktivert tilstand; et vist
-antall inngår i det tilgjengelige navnet. Avkrysset boks bruker `primary`-fyll
+eksponerer `checkbox`-semantikk med avkrysset og deaktivert tilstand; en vist
+etikett og et vist antall inngår i det tilgjengelige navnet. Avkrysset boks bruker `primary`-fyll
 med `check`-ikonet i `onPrimary`, mens tom boks har `muted` kant. Tilstanden
 låst er avkrysset, men kan ikke fjernes, for eksempel når minst ett valg må være
 igjen. Låst og deaktivert bruker `muted` for boks og tekst, og eksponeres som
